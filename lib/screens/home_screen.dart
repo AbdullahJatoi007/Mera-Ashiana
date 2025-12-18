@@ -13,6 +13,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   String _selectedOption = 'BUY';
+  int _selectedCategoryIndex = 0; // Track active category
 
   @override
   Widget build(BuildContext context) {
@@ -24,68 +25,124 @@ class _HomeScreenState extends State<HomeScreen> {
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
-          // 1. The Header (Search & Buy/Rent Toggle)
+          // 1. Ultra Compact Header
           HomeTopSection(
             selectedOption: _selectedOption,
             statusBarHeight: statusBarHeight,
             onOptionSelected: (value) {
-              setState(() {
-                _selectedOption = value;
-              });
+              setState(() => _selectedOption = value);
             },
           ),
 
-          // 2. Categories Section (Quick Access)
-          SliverToBoxAdapter(
-            child: _buildSectionTitle(loc.categories ?? "Categories", () {}),
+          // 2. Polished Categories (Chip Style)
+          SliverPadding(
+            padding: const EdgeInsets.only(top: 15, bottom: 5),
+            sliver: SliverToBoxAdapter(child: _buildCategoryList()),
           ),
-          SliverToBoxAdapter(child: _buildCategoryGrid()),
 
-          // 3. Featured Projects (Horizontal Scroll)
+          // 3. Featured Projects
           SliverToBoxAdapter(
             child: _buildSectionTitle(loc.exploreProjects, () {}),
           ),
           SliverToBoxAdapter(child: _buildFeaturedProjects()),
 
-          // 4. Recently Added Properties (Vertical List)
+          // 4. Recently Added
           SliverToBoxAdapter(
             child: _buildSectionTitle("Recently Added", () {}),
           ),
-          SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) => _buildPropertyListItem(index),
-              childCount: 10,
+          SliverPadding(
+            padding: const EdgeInsets.only(bottom: 20),
+            sliver: SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) => _buildPropertyListItem(index),
+                childCount: 10,
+              ),
             ),
           ),
-
-          // Bottom Padding for scroll breathing room
-          const SliverToBoxAdapter(child: SizedBox(height: 30)),
         ],
       ),
     );
   }
 
-  // --- UI HELPER METHODS ---
+  // --- RE-POLISHED CATEGORY LIST (CHIP STYLE) ---
+  Widget _buildCategoryList() {
+    final categories = [
+      {'name': 'All', 'icon': Icons.grid_view_rounded},
+      {'name': 'House', 'icon': Icons.home_rounded},
+      {'name': 'Flat', 'icon': Icons.apartment_rounded},
+      {'name': 'Plot', 'icon': Icons.landscape_rounded},
+      {'name': 'Shop', 'icon': Icons.storefront_rounded},
+    ];
 
+    return SizedBox(
+      height: 45,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: categories.length,
+        itemBuilder: (context, index) {
+          bool isSelected = _selectedCategoryIndex == index;
+          return Padding(
+            padding: const EdgeInsets.only(right: 10),
+            child: FilterChip(
+              showCheckmark: false,
+              label: Text(categories[index]['name'] as String),
+              labelStyle: TextStyle(
+                color: isSelected ? Colors.white : AppColors.primaryNavy,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                fontSize: 13,
+              ),
+              avatar: Icon(
+                categories[index]['icon'] as IconData,
+                size: 16,
+                color: isSelected ? Colors.white : AppColors.primaryNavy,
+              ),
+              selected: isSelected,
+              onSelected: (bool selected) {
+                setState(() => _selectedCategoryIndex = index);
+              },
+              backgroundColor: Colors.white,
+              selectedColor: AppColors.primaryNavy,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+                side: BorderSide(
+                  color: isSelected
+                      ? AppColors.primaryNavy
+                      : Colors.grey.shade200,
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  // --- TIGHTENED SECTION TITLE ---
   Widget _buildSectionTitle(String title, VoidCallback onSeeAll) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 10, 12, 8),
+      padding: const EdgeInsets.fromLTRB(20, 15, 12, 5),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
             title,
             style: const TextStyle(
-              fontSize: 18,
+              fontSize: 16, // Slightly smaller for professional look
               fontWeight: FontWeight.bold,
               color: AppColors.primaryNavy,
             ),
           ),
           TextButton(
             onPressed: onSeeAll,
+            style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
             child: const Text(
               "See All",
-              style: TextStyle(color: AppColors.textGrey, fontSize: 13),
+              style: TextStyle(
+                color: Colors.blue,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],
@@ -93,60 +150,27 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildCategoryGrid() {
-    final categories = [
-      {'name': 'House', 'icon': Icons.home_work_outlined},
-      {'name': 'Flat', 'icon': Icons.apartment_outlined},
-      {'name': 'Plot', 'icon': Icons.landscape_outlined},
-      {'name': 'Shop', 'icon': Icons.storefront_outlined},
-    ];
-
-    return Container(
-      height: 100,
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: categories
-            .map(
-              (cat) => Column(
-                children: [
-                  CircleAvatar(
-                    radius: 28,
-                    backgroundColor: AppColors.white,
-                    child: Icon(
-                      cat['icon'] as IconData,
-                      color: AppColors.primaryNavy,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    cat['name'] as String,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            )
-            .toList(),
-      ),
-    );
-  }
-
+  // --- POLISHED FEATURED PROJECTS ---
   Widget _buildFeaturedProjects() {
     return SizedBox(
-      height: 220,
+      height: 180, // Reduced from 220 to optimize space
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         itemCount: 5,
         itemBuilder: (context, index) {
           return Container(
-            width: 280,
-            margin: const EdgeInsets.only(right: 16),
+            width: 260,
+            margin: const EdgeInsets.only(right: 12, bottom: 5),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 5,
+                  offset: const Offset(0, 2),
+                ),
+              ],
               image: const DecorationImage(
                 image: NetworkImage(
                   "https://images.pexels.com/photos/323780/pexels-photo-323780.jpeg",
@@ -156,14 +180,14 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             child: Container(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(16),
                 gradient: LinearGradient(
                   begin: Alignment.bottomCenter,
                   end: Alignment.topCenter,
-                  colors: [Colors.black.withOpacity(0.8), Colors.transparent],
+                  colors: [Colors.black.withOpacity(0.7), Colors.transparent],
                 ),
               ),
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(12),
               child: const Column(
                 mainAxisAlignment: MainAxisAlignment.end,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -173,14 +197,15 @@ class _HomeScreenState extends State<HomeScreen> {
                     style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
-                      fontSize: 16,
+                      fontSize: 14,
                     ),
                   ),
                   Text(
                     "Starting PKR 45 Lakh",
                     style: TextStyle(
-                      color: AppColors.accentYellow,
-                      fontSize: 12,
+                      color: Color(0xFFFFC400),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ],
@@ -192,25 +217,24 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // --- CLEANER PROPERTY LIST ITEM ---
   Widget _buildPropertyListItem(int index) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10),
-        ],
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade100),
       ),
       child: Row(
         children: [
           ClipRRect(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10),
             child: Image.network(
               "https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg",
-              width: 100,
-              height: 100,
+              width: 85,
+              height: 85,
               fit: BoxFit.cover,
             ),
           ),
@@ -221,27 +245,39 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 const Text(
                   "Modern 3-Bed Flat",
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: AppColors.primaryNavy,
+                  ),
                 ),
-                const Text(
-                  "Gulshan-e-Iqbal, Karachi",
-                  style: TextStyle(color: AppColors.textGrey, fontSize: 12),
+                const SizedBox(height: 2),
+                const Row(
+                  children: [
+                    Icon(Icons.location_on, size: 12, color: Colors.grey),
+                    SizedBox(width: 4),
+                    Text(
+                      "Gulshan, Karachi",
+                      style: TextStyle(color: Colors.grey, fontSize: 11),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 8),
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text(
                       "PKR 1.2 Cr",
                       style: TextStyle(
                         color: AppColors.primaryNavy,
                         fontWeight: FontWeight.bold,
+                        fontSize: 14,
                       ),
                     ),
-                    const Spacer(),
                     Icon(
                       Icons.favorite_border,
-                      size: 20,
-                      color: Colors.grey[400],
+                      size: 18,
+                      color: Colors.grey.shade400,
                     ),
                   ],
                 ),

@@ -5,12 +5,12 @@ class DrawerDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16.0),
-      child: Divider(
-        height: 1,
-        thickness: 1,
-      ),
+    return Divider(
+      height: 20, // Reduced from standard
+      thickness: 1,
+      color: Colors.grey.shade100,
+      indent: 20,
+      endIndent: 20,
     );
   }
 }

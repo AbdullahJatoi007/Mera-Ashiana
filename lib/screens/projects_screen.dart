@@ -12,16 +12,6 @@ class ProjectsScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: Text(
-          loc.exploreProjects,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
-        ),
-        backgroundColor: AppColors.white,
-        foregroundColor: AppColors.primaryNavy,
-        elevation: 0,
-        centerTitle: false,
-      ),
       body: ListView.separated(
         padding: const EdgeInsets.all(16),
         itemCount: 2, // Static count for now

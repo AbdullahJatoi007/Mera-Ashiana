@@ -1,40 +1,35 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import '../../profile_screen.dart';
+import 'package:mera_ashiana/screens/profile_screen.dart';
 
 class CustomDrawerHeader extends StatelessWidget {
   const CustomDrawerHeader({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    const Color primaryNavy = Color(0xFF0A1D37);
+    const Color accentYellow = Color(0xFFFFC400);
 
-    return Padding(
-      padding: const EdgeInsets.only(
-        top: 40,
-        bottom: 20,
-        left: 16,
-        right: 16,
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 50, 16, 24),
+      decoration: const BoxDecoration(
+        color: primaryNavy,
+        borderRadius: BorderRadius.only(bottomRight: Radius.circular(30)),
       ),
       child: InkWell(
         onTap: () {
-          Navigator.pop(context); // close drawer
+          Navigator.pop(context);
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (context) => const ProfileScreen(),
-            ),
+            MaterialPageRoute(builder: (context) => const ProfileScreen()),
           );
         },
         child: Row(
           children: <Widget>[
-            CircleAvatar(
-              radius: 30,
-              backgroundColor: colorScheme.primary.withOpacity(0.15),
-              child: Icon(
-                Icons.person,
-                size: 36,
-                color: colorScheme.primary,
-              ),
+            const CircleAvatar(
+              radius: 28,
+              backgroundColor: accentYellow,
+              child: Icon(Icons.person, size: 30, color: primaryNavy),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -44,19 +39,19 @@ class CustomDrawerHeader extends StatelessWidget {
                   Text(
                     'Zubair Ali',
                     style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
                     ),
                   ),
-                  SizedBox(height: 2),
                   Text(
                     'mrzubair@gmail.com',
-                    style: TextStyle(fontSize: 13),
+                    style: TextStyle(fontSize: 12, color: Colors.white70),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right),
+            const Icon(Icons.arrow_forward_ios, size: 16, color: accentYellow),
           ],
         ),
       ),

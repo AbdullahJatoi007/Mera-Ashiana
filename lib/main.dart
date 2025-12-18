@@ -3,6 +3,9 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:mera_ashiana/l10n/app_localizations.dart';
 import 'package:mera_ashiana/screens/auth/login_screen.dart';
 import 'package:mera_ashiana/screens/favourite_screen.dart';
+import 'package:mera_ashiana/screens/search_filter_screen.dart';
+import 'package:mera_ashiana/screens/search_screen.dart';
+import 'package:mera_ashiana/screens/splash_screen.dart';
 
 // Global notifier to manage language across the entire app
 final ValueNotifier<Locale> appLocale = ValueNotifier(const Locale('en'));
@@ -35,7 +38,7 @@ class MyApp extends StatelessWidget {
             colorScheme: ColorScheme.fromSeed(seedColor: Colors.white),
             useMaterial3: true,
           ),
-          home: const LoginScreen(),
+          home: const SplashScreen(),
         );
       },
     );

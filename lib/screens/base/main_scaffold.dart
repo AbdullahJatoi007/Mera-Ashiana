@@ -62,7 +62,7 @@ class _MainScaffoldState extends State<MainScaffold> {
       case 0:
         return 'Mera-Ashiana.com';
       case 1:
-        return loc.currentProjects ?? 'Current Projects';
+        return loc.projects ?? 'Current Projects';
       case 2:
         return loc.propertySearch ?? 'Property Search';
       case 3:
@@ -87,6 +87,7 @@ class _MainScaffoldState extends State<MainScaffold> {
           _getAppBarTitle(context, _selectedIndex),
           style: TextStyle(
             fontWeight: FontWeight.bold,
+            fontSize: 18, // Slightly smaller for a cleaner look
             color: isHome ? Colors.white : AppColors.primaryNavy,
           ),
         ),
@@ -94,60 +95,61 @@ class _MainScaffoldState extends State<MainScaffold> {
           color: isHome ? Colors.white : AppColors.primaryNavy,
         ),
         backgroundColor: isHome ? Colors.transparent : AppColors.white,
-        elevation: isHome ? 0 : 0.5,
+        elevation: 0,
       ),
       body: IndexedStack(index: _selectedIndex, children: _screens),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: _onItemTapped,
-        backgroundColor: AppColors.white,
-        indicatorColor: AppColors.accentYellow.withOpacity(0.2),
-        surfaceTintColor: AppColors.white,
-        destinations: <NavigationDestination>[
-          NavigationDestination(
-            icon: const Icon(Icons.home_outlined, color: AppColors.primaryNavy),
-            selectedIcon: const Icon(Icons.home, color: AppColors.primaryNavy),
-            label: loc.home,
+
+      // --- SLIM BOTTOM NAVIGATION BAR ---
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          border: Border(
+            top: BorderSide(color: Colors.grey.shade200, width: 0.5),
           ),
-          NavigationDestination(
-            icon: const Icon(
-              Icons.cases_outlined,
-              color: AppColors.primaryNavy,
+        ),
+        child: BottomNavigationBar(
+          currentIndex: _selectedIndex,
+          onTap: _onItemTapped,
+          type: BottomNavigationBarType.fixed,
+          // Essential for 5 items
+          backgroundColor: AppColors.white,
+          // --- COLOR UPDATES ---
+          selectedItemColor: const Color(0xFFFFC400),
+          // Your Golden Yellow
+          unselectedItemColor: const Color(0xFF0A1D37).withOpacity(0.4),
+
+          selectedFontSize: 11,
+          // Smaller labels
+          unselectedFontSize: 11,
+          iconSize: 22,
+          // Smaller icons
+          elevation: 0,
+          items: [
+            BottomNavigationBarItem(
+              icon: const Icon(Icons.home_outlined),
+              activeIcon: const Icon(Icons.home),
+              label: loc.home,
             ),
-            selectedIcon: const Icon(Icons.cases, color: AppColors.primaryNavy),
-            label: loc.projects ?? 'Projects',
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.search, color: AppColors.primaryNavy),
-            selectedIcon: const Icon(
-              Icons.search,
-              color: AppColors.primaryNavy,
+            BottomNavigationBarItem(
+              icon: const Icon(Icons.business_center_outlined),
+              activeIcon: const Icon(Icons.business_center),
+              label: loc.projects ?? 'Projects',
             ),
-            label: loc.search ?? 'Search',
-          ),
-          NavigationDestination(
-            icon: const Icon(
-              Icons.favorite_border,
-              color: AppColors.primaryNavy,
+            BottomNavigationBarItem(
+              icon: const Icon(Icons.search),
+              label: loc.search ?? 'Search',
             ),
-            selectedIcon: const Icon(
-              Icons.favorite,
-              color: AppColors.primaryNavy,
+            BottomNavigationBarItem(
+              icon: const Icon(Icons.favorite_border),
+              activeIcon: const Icon(Icons.favorite),
+              label: loc.favorites,
             ),
-            label: loc.favorites,
-          ),
-          NavigationDestination(
-            icon: const Icon(
-              Icons.person_outline,
-              color: AppColors.primaryNavy,
+            BottomNavigationBarItem(
+              icon: const Icon(Icons.person_outline),
+              activeIcon: const Icon(Icons.person),
+              label: loc.editProfile.split(' ').last,
             ),
-            selectedIcon: const Icon(
-              Icons.person,
-              color: AppColors.primaryNavy,
-            ),
-            label: loc.editProfile.split(' ').last,
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

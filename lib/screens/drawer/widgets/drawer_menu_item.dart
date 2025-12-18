@@ -14,21 +14,19 @@ class DrawerMenuItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
     return ListTile(
-      leading: Icon(
-        icon,
-        color: colorScheme.onSurfaceVariant,
-      ),
+      visualDensity: VisualDensity.compact,
+      leading: Icon(icon, color: const Color(0xFF0A1D37), size: 22),
       title: Text(
         title,
-        style: TextStyle(
-          fontSize: 16,
-          color: colorScheme.onSurface,
+        style: const TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w500,
+          color: Color(0xFF0A1D37),
         ),
       ),
       onTap: onTap,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16.0),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20.0),
     );
   }
 }

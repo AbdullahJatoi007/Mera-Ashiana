@@ -7,44 +7,40 @@ class DrawerFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
     return Container(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(20.0),
       decoration: BoxDecoration(
-        border: Border(
-          top: BorderSide(color: colorScheme.outlineVariant.withOpacity(0.5)),
-        ),
+        border: Border(top: BorderSide(color: Colors.grey.shade200)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          // Logout Button
-          ListTile(
-            leading: Icon(
-              Icons.logout,
-              color: colorScheme.error,
-            ),
-            title: Text(
-              'Logout',
-              style: TextStyle(
-                color: colorScheme.error,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
-            ),
+          InkWell(
             onTap: onLogout,
-            contentPadding: EdgeInsets.zero,
-            dense: true,
+            child: Row(
+              children: const [
+                Icon(Icons.logout_rounded, color: Colors.redAccent, size: 20),
+                SizedBox(width: 12),
+                Text(
+                  'Logout',
+                  style: TextStyle(
+                    color: Colors.redAccent,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 8),
-          // App Version
+          const SizedBox(height: 12),
           Align(
             alignment: Alignment.centerLeft,
             child: Text(
-              'App Version 1.0.0',
+              'Version 1.0.3',
               style: TextStyle(
-                color: colorScheme.onSurfaceVariant,
-                fontSize: 12,
+                color: Colors.grey.shade500,
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ),
