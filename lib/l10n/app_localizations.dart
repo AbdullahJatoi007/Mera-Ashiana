@@ -137,7 +137,7 @@ abstract class AppLocalizations {
   /// No description provided for @urdu.
   ///
   /// In en, this message translates to:
-  /// **'اردو'**
+  /// **'Urdu'**
   String get urdu;
 
   /// No description provided for @darkMode.
@@ -145,6 +145,300 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Dark Mode'**
   String get darkMode;
+
+  /// No description provided for @general.
+  ///
+  /// In en, this message translates to:
+  /// **'General'**
+  String get general;
+
+  /// No description provided for @preferences.
+  ///
+  /// In en, this message translates to:
+  /// **'Preferences'**
+  String get preferences;
+
+  /// No description provided for @security.
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy & Security'**
+  String get security;
+
+  /// No description provided for @accountActions.
+  ///
+  /// In en, this message translates to:
+  /// **'Account Actions'**
+  String get accountActions;
+
+  /// No description provided for @logout.
+  ///
+  /// In en, this message translates to:
+  /// **'Logout'**
+  String get logout;
+
+  /// No description provided for @deleteConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Account?'**
+  String get deleteConfirmTitle;
+
+  /// No description provided for @deleteConfirmContent.
+  ///
+  /// In en, this message translates to:
+  /// **'This action is permanent and cannot be undone.'**
+  String get deleteConfirmContent;
+
+  /// No description provided for @cancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get cancel;
+
+  /// No description provided for @home.
+  ///
+  /// In en, this message translates to:
+  /// **'Home'**
+  String get home;
+
+  /// No description provided for @myListings.
+  ///
+  /// In en, this message translates to:
+  /// **'My Listings'**
+  String get myListings;
+
+  /// No description provided for @favorites.
+  ///
+  /// In en, this message translates to:
+  /// **'Favorites'**
+  String get favorites;
+
+  /// No description provided for @messages.
+  ///
+  /// In en, this message translates to:
+  /// **'Messages'**
+  String get messages;
+
+  /// No description provided for @helpSupport.
+  ///
+  /// In en, this message translates to:
+  /// **'Help & Support'**
+  String get helpSupport;
+
+  /// No description provided for @privacyPolicy.
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy Policy'**
+  String get privacyPolicy;
+
+  /// No description provided for @termsConditions.
+  ///
+  /// In en, this message translates to:
+  /// **'Terms & Conditions'**
+  String get termsConditions;
+
+  /// No description provided for @listings.
+  ///
+  /// In en, this message translates to:
+  /// **'Listings'**
+  String get listings;
+
+  /// No description provided for @views.
+  ///
+  /// In en, this message translates to:
+  /// **'Views'**
+  String get views;
+
+  /// No description provided for @paymentMethods.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment Methods'**
+  String get paymentMethods;
+
+  /// No description provided for @contactUs.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact Us'**
+  String get contactUs;
+
+  /// No description provided for @appVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'App Version'**
+  String get appVersion;
+
+  /// No description provided for @logoutConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to log out?'**
+  String get logoutConfirm;
+
+  /// No description provided for @currentProjects.
+  ///
+  /// In en, this message translates to:
+  /// **'Current Projects'**
+  String get currentProjects;
+
+  /// No description provided for @search.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get search;
+
+  /// No description provided for @propertySearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Property Search'**
+  String get propertySearch;
+
+  /// No description provided for @searchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search city, area or project...'**
+  String get searchHint;
+
+  /// No description provided for @recentSearches.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent Searches'**
+  String get recentSearches;
+
+  /// No description provided for @popularAreas.
+  ///
+  /// In en, this message translates to:
+  /// **'Popular Areas'**
+  String get popularAreas;
+
+  /// No description provided for @clearAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear All'**
+  String get clearAll;
+
+  /// No description provided for @filter.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter'**
+  String get filter;
+
+  /// No description provided for @categories.
+  ///
+  /// In en, this message translates to:
+  /// **'Categories'**
+  String get categories;
+
+  /// No description provided for @houses.
+  ///
+  /// In en, this message translates to:
+  /// **'Houses'**
+  String get houses;
+
+  /// No description provided for @apartments.
+  ///
+  /// In en, this message translates to:
+  /// **'Apartments'**
+  String get apartments;
+
+  /// No description provided for @plots.
+  ///
+  /// In en, this message translates to:
+  /// **'Plots'**
+  String get plots;
+
+  /// No description provided for @commercial.
+  ///
+  /// In en, this message translates to:
+  /// **'Commercial'**
+  String get commercial;
+
+  /// No description provided for @projects.
+  ///
+  /// In en, this message translates to:
+  /// **'Projects'**
+  String get projects;
+
+  /// No description provided for @exploreProjects.
+  ///
+  /// In en, this message translates to:
+  /// **'Explore New Projects'**
+  String get exploreProjects;
+
+  /// No description provided for @viewDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'View Details'**
+  String get viewDetails;
+
+  /// No description provided for @startingFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'Starting from'**
+  String get startingFrom;
+
+  /// No description provided for @location.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get location;
+
+  /// No description provided for @underConstruction.
+  ///
+  /// In en, this message translates to:
+  /// **'Under Construction'**
+  String get underConstruction;
+
+  /// No description provided for @readyToMove.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready to Move'**
+  String get readyToMove;
+
+  /// No description provided for @paymentPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment Plan Available'**
+  String get paymentPlan;
+
+  /// No description provided for @residential.
+  ///
+  /// In en, this message translates to:
+  /// **'Residential'**
+  String get residential;
+
+  /// No description provided for @priceRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Price Range'**
+  String get priceRange;
+
+  /// No description provided for @minPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Min Price'**
+  String get minPrice;
+
+  /// No description provided for @maxPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Max Price'**
+  String get maxPrice;
+
+  /// No description provided for @purpose.
+  ///
+  /// In en, this message translates to:
+  /// **'Purpose'**
+  String get purpose;
+
+  /// No description provided for @forSale.
+  ///
+  /// In en, this message translates to:
+  /// **'For Sale'**
+  String get forSale;
+
+  /// No description provided for @forRent.
+  ///
+  /// In en, this message translates to:
+  /// **'For Rent'**
+  String get forRent;
 }
 
 class _AppLocalizationsDelegate

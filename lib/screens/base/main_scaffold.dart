@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:mera_ashiana/l10n/app_localizations.dart';
+import 'package:mera_ashiana/theme/app_colors.dart';
 import 'package:mera_ashiana/screens/favourite_screen.dart';
 import 'package:mera_ashiana/screens/home_screen.dart';
 import 'package:mera_ashiana/screens/profile_screen.dart';
 import 'package:mera_ashiana/screens/projects_screen.dart';
 import 'package:mera_ashiana/screens/search_screen.dart';
 import 'package:mera_ashiana/screens/drawer/custom_drawer.dart';
+
+// Import your new bottom sheet
+import 'package:mera_ashiana/favourite_bottom_sheet.dart';
 
 class MainScaffold extends StatefulWidget {
   const MainScaffold({super.key});
@@ -16,6 +21,9 @@ class MainScaffold extends StatefulWidget {
 class _MainScaffoldState extends State<MainScaffold> {
   int _selectedIndex = 0;
 
+  // Change this to false to test the BottomSheet trigger
+  bool _isUserLoggedIn = false;
+
   static const List<Widget> _screens = <Widget>[
     HomeScreen(),
     ProjectsScreen(),
@@ -25,91 +33,119 @@ class _MainScaffoldState extends State<MainScaffold> {
   ];
 
   void _onItemTapped(int index) {
+    // TRIGGER: If Favourites (Index 3) is tapped and user is NOT logged in
+    if (index == 3 && !_isUserLoggedIn) {
+      _showLoginSheet();
+      return; // Stop execution so the tab doesn't change
+    }
+
     setState(() {
       _selectedIndex = index;
     });
   }
 
-  String _getAppBarTitle(int index) {
+  // Method to display the login form in a bottom sheet
+  void _showLoginSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      // Crucial for form visibility when keyboard opens
+      backgroundColor: Colors.transparent,
+      // Allows custom container styling
+      builder: (context) => const FavouriteBottomSheet(),
+    );
+  }
+
+  String _getAppBarTitle(BuildContext context, int index) {
+    var loc = AppLocalizations.of(context)!;
     switch (index) {
       case 0:
         return 'Mera-Ashiana.com';
       case 1:
-        return 'Current Projects';
+        return loc.currentProjects ?? 'Current Projects';
       case 2:
-        return 'Property Search';
+        return loc.propertySearch ?? 'Property Search';
       case 3:
-        return 'My Favourites';
+        return loc.favorites;
       case 4:
-        return 'Profile';
+        return loc.editProfile.split(' ').last;
       default:
-        return 'Ashiana App';
+        return 'Mera Ashiana';
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final ColorScheme colorScheme = Theme.of(context).colorScheme;
+    var loc = AppLocalizations.of(context)!;
     final bool isHome = _selectedIndex == 0;
 
     return Scaffold(
+      extendBodyBehindAppBar: isHome,
+      drawer: const CustomDrawer(),
       appBar: AppBar(
         title: Text(
-          _getAppBarTitle(_selectedIndex),
+          _getAppBarTitle(context, _selectedIndex),
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            color: isHome ? Colors.white : colorScheme.onSurface,
+            color: isHome ? Colors.white : AppColors.primaryNavy,
           ),
         ),
         iconTheme: IconThemeData(
-          color: isHome ? Colors.white : colorScheme.onSurface,
+          color: isHome ? Colors.white : AppColors.primaryNavy,
         ),
-        backgroundColor:
-        isHome ? Colors.transparent : colorScheme.surface,
-        elevation: isHome ? 0 : 1,
-        scrolledUnderElevation: isHome ? 0 : 1,
+        backgroundColor: isHome ? Colors.transparent : AppColors.white,
+        elevation: isHome ? 0 : 0.5,
       ),
-
-      // Only Home goes behind the AppBar
-      extendBodyBehindAppBar: isHome,
-
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _screens,
-      ),
-
-      drawer: const CustomDrawer(),
-
+      body: IndexedStack(index: _selectedIndex, children: _screens),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: _onItemTapped,
-        backgroundColor: colorScheme.surface,
-        indicatorColor: colorScheme.secondaryContainer,
-        destinations: const <NavigationDestination>[
+        backgroundColor: AppColors.white,
+        indicatorColor: AppColors.accentYellow.withOpacity(0.2),
+        surfaceTintColor: AppColors.white,
+        destinations: <NavigationDestination>[
           NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'Home',
+            icon: const Icon(Icons.home_outlined, color: AppColors.primaryNavy),
+            selectedIcon: const Icon(Icons.home, color: AppColors.primaryNavy),
+            label: loc.home,
           ),
           NavigationDestination(
-            icon: Icon(Icons.cases_outlined),
-            selectedIcon: Icon(Icons.cases),
-            label: 'Projects',
+            icon: const Icon(
+              Icons.cases_outlined,
+              color: AppColors.primaryNavy,
+            ),
+            selectedIcon: const Icon(Icons.cases, color: AppColors.primaryNavy),
+            label: loc.projects ?? 'Projects',
           ),
           NavigationDestination(
-            icon: Icon(Icons.search),
-            selectedIcon: Icon(Icons.search),
-            label: 'Search',
+            icon: const Icon(Icons.search, color: AppColors.primaryNavy),
+            selectedIcon: const Icon(
+              Icons.search,
+              color: AppColors.primaryNavy,
+            ),
+            label: loc.search ?? 'Search',
           ),
           NavigationDestination(
-            icon: Icon(Icons.favorite_border),
-            selectedIcon: Icon(Icons.favorite),
-            label: 'Favourites',
+            icon: const Icon(
+              Icons.favorite_border,
+              color: AppColors.primaryNavy,
+            ),
+            selectedIcon: const Icon(
+              Icons.favorite,
+              color: AppColors.primaryNavy,
+            ),
+            label: loc.favorites,
           ),
           NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
-            label: 'Profile',
+            icon: const Icon(
+              Icons.person_outline,
+              color: AppColors.primaryNavy,
+            ),
+            selectedIcon: const Icon(
+              Icons.person,
+              color: AppColors.primaryNavy,
+            ),
+            label: loc.editProfile.split(' ').last,
           ),
         ],
       ),
