@@ -7,8 +7,6 @@ import 'package:mera_ashiana/screens/profile_screen.dart';
 import 'package:mera_ashiana/screens/projects_screen.dart';
 import 'package:mera_ashiana/screens/search_screen.dart';
 import 'package:mera_ashiana/screens/drawer/custom_drawer.dart';
-
-// Import your new bottom sheet
 import 'package:mera_ashiana/favourite_bottom_sheet.dart';
 
 class MainScaffold extends StatefulWidget {
@@ -20,10 +18,9 @@ class MainScaffold extends StatefulWidget {
 
 class _MainScaffoldState extends State<MainScaffold> {
   int _selectedIndex = 0;
+  final bool _isUserLoggedIn = false; // Mock login state
 
-  // Change this to false to test the BottomSheet trigger
-  bool _isUserLoggedIn = false;
-
+  // Navigation screens
   static const List<Widget> _screens = <Widget>[
     HomeScreen(),
     ProjectsScreen(),
@@ -33,25 +30,20 @@ class _MainScaffoldState extends State<MainScaffold> {
   ];
 
   void _onItemTapped(int index) {
-    // TRIGGER: If Favourites (Index 3) is tapped and user is NOT logged in
     if (index == 3 && !_isUserLoggedIn) {
       _showLoginSheet();
-      return; // Stop execution so the tab doesn't change
+      return;
     }
-
     setState(() {
       _selectedIndex = index;
     });
   }
 
-  // Method to display the login form in a bottom sheet
   void _showLoginSheet() {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      // Crucial for form visibility when keyboard opens
       backgroundColor: Colors.transparent,
-      // Allows custom container styling
       builder: (context) => const FavouriteBottomSheet(),
     );
   }
@@ -79,77 +71,88 @@ class _MainScaffoldState extends State<MainScaffold> {
     var loc = AppLocalizations.of(context)!;
     final bool isHome = _selectedIndex == 0;
 
-    return Scaffold(
-      extendBodyBehindAppBar: isHome,
-      drawer: const CustomDrawer(),
-      appBar: AppBar(
-        title: Text(
-          _getAppBarTitle(context, _selectedIndex),
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 18, // Slightly smaller for a cleaner look
+    // PopScope prevents the app from closing when swiping back on sub-tabs
+    return PopScope(
+      canPop: _selectedIndex == 0, // System can only pop if we are on Home
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return; // Already handled by system if true
+
+        // If we are on any tab other than Home, go back to Home first
+        if (_selectedIndex != 0) {
+          setState(() => _selectedIndex = 0);
+        }
+      },
+      child: Scaffold(
+        extendBodyBehindAppBar: isHome,
+        drawer: const CustomDrawer(),
+        appBar: AppBar(
+          centerTitle: true,
+          title: Text(
+            _getAppBarTitle(context, _selectedIndex),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+              color: isHome ? Colors.white : AppColors.primaryNavy,
+            ),
+          ),
+          iconTheme: IconThemeData(
             color: isHome ? Colors.white : AppColors.primaryNavy,
           ),
-        ),
-        iconTheme: IconThemeData(
-          color: isHome ? Colors.white : AppColors.primaryNavy,
-        ),
-        backgroundColor: isHome ? Colors.transparent : AppColors.white,
-        elevation: 0,
-      ),
-      body: IndexedStack(index: _selectedIndex, children: _screens),
-
-      // --- SLIM BOTTOM NAVIGATION BAR ---
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          border: Border(
-            top: BorderSide(color: Colors.grey.shade200, width: 0.5),
-          ),
-        ),
-        child: BottomNavigationBar(
-          currentIndex: _selectedIndex,
-          onTap: _onItemTapped,
-          type: BottomNavigationBarType.fixed,
-          // Essential for 5 items
-          backgroundColor: AppColors.white,
-          // --- COLOR UPDATES ---
-          selectedItemColor: const Color(0xFFFFC400),
-          // Your Golden Yellow
-          unselectedItemColor: const Color(0xFF0A1D37).withOpacity(0.4),
-
-          selectedFontSize: 11,
-          // Smaller labels
-          unselectedFontSize: 11,
-          iconSize: 22,
-          // Smaller icons
+          backgroundColor: isHome ? Colors.transparent : AppColors.white,
           elevation: 0,
-          items: [
-            BottomNavigationBarItem(
-              icon: const Icon(Icons.home_outlined),
-              activeIcon: const Icon(Icons.home),
-              label: loc.home,
-            ),
-            BottomNavigationBarItem(
-              icon: const Icon(Icons.business_center_outlined),
-              activeIcon: const Icon(Icons.business_center),
-              label: loc.projects ?? 'Projects',
-            ),
-            BottomNavigationBarItem(
-              icon: const Icon(Icons.search),
-              label: loc.search ?? 'Search',
-            ),
-            BottomNavigationBarItem(
-              icon: const Icon(Icons.favorite_border),
-              activeIcon: const Icon(Icons.favorite),
-              label: loc.favorites,
-            ),
-            BottomNavigationBarItem(
-              icon: const Icon(Icons.person_outline),
-              activeIcon: const Icon(Icons.person),
-              label: loc.editProfile.split(' ').last,
-            ),
-          ],
+          surfaceTintColor: Colors.transparent, // Prevents grey tint on scroll
         ),
+        body: IndexedStack(index: _selectedIndex, children: _screens),
+        bottomNavigationBar: _buildBottomNav(loc),
+      ),
+    );
+  }
+
+  Widget _buildBottomNav(AppLocalizations loc) {
+    return Container(
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(color: Colors.grey.shade200, width: 0.5),
+        ),
+      ),
+      child: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: AppColors.white,
+        selectedItemColor: AppColors.accentYellow,
+        unselectedItemColor: AppColors.primaryNavy.withOpacity(0.4),
+        selectedFontSize: 11,
+        unselectedFontSize: 11,
+        iconSize: 22,
+        elevation: 0,
+        items: [
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.home_outlined),
+            activeIcon: const Icon(Icons.home),
+            label: loc.home,
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.business_center_outlined),
+            activeIcon: const Icon(Icons.business_center),
+            label: loc.projects ?? 'Projects',
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.search),
+            activeIcon: const Icon(Icons.search),
+            label: loc.search ?? 'Search',
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.favorite_border),
+            activeIcon: const Icon(Icons.favorite),
+            label: loc.favorites,
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.person_outline),
+            activeIcon: const Icon(Icons.person),
+            label: loc.editProfile.split(' ').last,
+          ),
+        ],
       ),
     );
   }

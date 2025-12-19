@@ -18,7 +18,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
   _navigateToHome() async {
     // Wait for 3-4 seconds (adjust based on your Lottie animation length)
-    await Future.delayed(const Duration(seconds: 8));
+    await Future.delayed(const Duration(seconds: 4));
 
     if (!mounted) return;
 
