@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mera_ashiana/screens/project_details_screen.dart';
 import 'package:mera_ashiana/theme/app_colors.dart';
 import 'package:mera_ashiana/l10n/app_localizations.dart';
 
@@ -217,7 +218,15 @@ class ProjectsScreen extends StatelessWidget {
                               ],
                             ),
                             child: ElevatedButton(
-                              onPressed: () {},
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const ProjectDetailsScreen(),
+                                  ),
+                                );
+                              },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.accentYellow,
                                 foregroundColor: AppColors.primaryNavy,

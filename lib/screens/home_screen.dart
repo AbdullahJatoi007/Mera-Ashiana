@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mera_ashiana/screens/home/home_top_section.dart';
+import 'package:mera_ashiana/screens/project_details_screen.dart';
 import 'package:mera_ashiana/theme/app_colors.dart';
 import 'package:mera_ashiana/l10n/app_localizations.dart';
 import 'package:mera_ashiana/screens/home/widgets/home_top_section.dart';
@@ -7,18 +8,36 @@ import 'package:mera_ashiana/screens/home/widgets/home_top_section.dart';
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
+
   @override
   State<HomeScreen> createState() => _HomeScreenState();
+
+
 }
+
 
 class _HomeScreenState extends State<HomeScreen> {
   String _selectedOption = 'BUY';
   int _selectedCategoryIndex = 0; // Track active category
 
+
+
+
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context)!;
     final double statusBarHeight = MediaQuery.of(context).padding.top;
+
+    void onSeeAll() {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ProjectDetailsScreen(),
+        ),
+      );
+    }
+
+
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -42,7 +61,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
           // 3. Featured Projects
           SliverToBoxAdapter(
-            child: _buildSectionTitle(loc.exploreProjects, () {}),
+            child: _buildSectionTitle(loc.exploreProjects,onSeeAll),
+
           ),
           SliverToBoxAdapter(child: _buildFeaturedProjects()),
 

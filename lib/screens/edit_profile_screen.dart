@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:mera_ashiana/l10n/app_localizations.dart';
 import 'package:mera_ashiana/theme/app_colors.dart';
+import 'package:mera_ashiana/helpers/image_picker_helper.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -12,12 +15,16 @@ class EditProfileScreen extends StatefulWidget {
 class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
 
+  File? _profileImage;
+
   final TextEditingController _nameController = TextEditingController(
     text: "Zubair Ali",
   );
+
   final TextEditingController _emailController = TextEditingController(
     text: "mrzubair@gmail.com",
   );
+
   final TextEditingController _phoneController = TextEditingController(
     text: "+92 300 1234567",
   );
@@ -30,19 +37,58 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     super.dispose();
   }
 
+  // ---------------- IMAGE PICKER OPTIONS ----------------
+  void _showImagePickerOptions() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text("Choose from Gallery"),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final image = await ImagePickerHelper.pickFromGallery();
+                  if (image != null) {
+                    setState(() => _profileImage = image);
+                  }
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text("Take Photo"),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final image = await ImagePickerHelper.pickFromCamera();
+                  if (image != null) {
+                    setState(() => _profileImage = image);
+                  }
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // ---------------- UI ----------------
   @override
   Widget build(BuildContext context) {
-    var loc = AppLocalizations.of(context)!;
-    // Check if the current theme is dark
+    final loc = AppLocalizations.of(context)!;
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      // 1. Dynamic Background
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(loc.editProfile),
         centerTitle: true,
-        // 2. Dynamic AppBar color
         backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         elevation: 0,
         iconTheme: IconThemeData(
@@ -61,18 +107,29 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             key: _formKey,
             child: Column(
               children: [
+                // ---------------- PROFILE IMAGE ----------------
                 Center(
                   child: Stack(
                     children: [
-                      CircleAvatar(
-                        radius: 60,
-                        backgroundColor: AppColors.primaryNavy.withOpacity(0.1),
-                        child: Icon(
-                          Icons.person,
-                          size: 80,
-                          color: isDark
-                              ? AppColors.accentYellow
-                              : AppColors.primaryNavy,
+                      GestureDetector(
+                        onTap: _showImagePickerOptions,
+                        child: CircleAvatar(
+                          radius: 60,
+                          backgroundColor: AppColors.primaryNavy.withOpacity(
+                            0.1,
+                          ),
+                          backgroundImage: _profileImage != null
+                              ? FileImage(_profileImage!)
+                              : null,
+                          child: _profileImage == null
+                              ? Icon(
+                                  Icons.person,
+                                  size: 80,
+                                  color: isDark
+                                      ? AppColors.accentYellow
+                                      : AppColors.primaryNavy,
+                                )
+                              : null,
                         ),
                       ),
                       Positioned(
@@ -87,13 +144,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                               size: 18,
                               color: AppColors.primaryNavy,
                             ),
-                            onPressed: () {},
+                            onPressed: _showImagePickerOptions,
                           ),
                         ),
                       ),
                     ],
                   ),
                 ),
+
                 const SizedBox(height: 40),
 
                 _buildTextField(
@@ -103,6 +161,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   icon: Icons.person_outline,
                 ),
                 const SizedBox(height: 16),
+
                 _buildTextField(
                   context: context,
                   label: "Email Address",
@@ -111,6 +170,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   keyboardType: TextInputType.emailAddress,
                 ),
                 const SizedBox(height: 16),
+
                 _buildTextField(
                   context: context,
                   label: "Phone Number",
@@ -157,6 +217,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
+  // ---------------- TEXT FIELD ----------------
   Widget _buildTextField({
     required BuildContext context,
     required String label,
@@ -169,7 +230,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
-      // 3. Dynamic Text Color
       style: TextStyle(color: isDark ? Colors.white : AppColors.textDark),
       decoration: InputDecoration(
         labelText: label,
@@ -180,28 +240,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           icon,
           color: isDark ? AppColors.accentYellow : AppColors.primaryNavy,
         ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: isDark ? Colors.white24 : AppColors.borderGrey,
-          ),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: isDark ? Colors.white24 : AppColors.borderGrey,
-          ),
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.accentYellow, width: 2),
         ),
         filled: true,
-        // 4. Dynamic Input Fill Color
         fillColor: isDark ? const Color(0xFF2C2C2C) : AppColors.white,
       ),
-      validator: (value) =>
-          (value == null || value.isEmpty) ? 'Required' : null,
+      validator: (value) => value == null || value.isEmpty ? 'Required' : null,
     );
   }
 }
