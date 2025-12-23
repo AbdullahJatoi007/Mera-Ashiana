@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:mera_ashiana/l10n/app_localizations.dart';
 import 'package:mera_ashiana/theme/app_colors.dart';
-import 'package:mera_ashiana/screens/favourite_screen.dart';
-import 'package:mera_ashiana/screens/home_screen.dart';
-import 'package:mera_ashiana/screens/profile_screen.dart';
-import 'package:mera_ashiana/screens/projects_screen.dart';
-import 'package:mera_ashiana/screens/search_screen.dart';
+import 'package:mera_ashiana/base_screens/favourite_screen.dart';
+import 'package:mera_ashiana/base_screens/home_screen.dart';
+import 'package:mera_ashiana/base_screens/profile_screen.dart';
+import 'package:mera_ashiana/base_screens/projects_screen.dart';
+import 'package:mera_ashiana/base_screens/search_screen.dart';
 import 'package:mera_ashiana/screens/drawer/custom_drawer.dart';
 import 'package:mera_ashiana/favourite_bottom_sheet.dart';
 

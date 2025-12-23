@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:mera_ashiana/l10n/app_localizations.dart';
 import 'package:mera_ashiana/screens/project_details_screen.dart';
-import 'package:mera_ashiana/screens/projects_screen.dart';
+import 'package:mera_ashiana/base_screens/projects_screen.dart';
 import 'package:mera_ashiana/screens/splash_screen.dart';
 
 // Global notifier to manage language across the entire app

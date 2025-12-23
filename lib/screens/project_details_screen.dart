@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:mera_ashiana/screens/search_screen.dart';
+import 'package:mera_ashiana/base_screens/search_screen.dart';
 
 class ProjectDetailsScreen extends StatefulWidget {
   const ProjectDetailsScreen({super.key});

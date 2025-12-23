@@ -3,6 +3,7 @@ import 'package:mera_ashiana/l10n/app_localizations.dart';
 import 'package:mera_ashiana/theme/app_colors.dart';
 import 'package:mera_ashiana/screens/account_settings_screen.dart';
 import 'package:mera_ashiana/screens/auth/login_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -18,6 +19,16 @@ class ProfileScreen extends StatelessWidget {
 
 class _ProfileContent extends StatelessWidget {
   const _ProfileContent();
+
+  void _launchURL(String url) async {
+    final Uri uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      throw 'Could not launch $url';
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -210,8 +221,11 @@ class _ProfileContent extends StatelessWidget {
             context,
             title: 'Privacy Policy',
             icon: Icons.verified_user_outlined,
-            onTap: () {},
+            onTap: () {
+              _launchURL('https://www.zameen.com/terms.html');
+            },
           ),
+
           _buildSettingsTile(
             context,
             title: loc.logout,
