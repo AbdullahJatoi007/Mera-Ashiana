@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mera_ashiana/l10n/app_localizations.dart';
+import 'package:mera_ashiana/screens/real_estate_registration_screen.dart';
 import 'package:mera_ashiana/theme/app_colors.dart';
 import 'package:mera_ashiana/screens/account_settings_screen.dart';
 import 'package:mera_ashiana/screens/auth/login_screen.dart';
@@ -28,7 +29,6 @@ class _ProfileContent extends StatelessWidget {
       throw 'Could not launch $url';
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -207,7 +207,20 @@ class _ProfileContent extends StatelessWidget {
           ),
           _buildSettingsTile(
             context,
-            title: 'Payment Methods',
+           title: 'Agency Settings',
+            icon: Icons.real_estate_agent_sharp,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const RealEstateRegistrationScreen(),
+                ),
+              );
+            },
+          ),
+          _buildSettingsTile(
+            context,
+              title: loc.paymentMethods,
             icon: Icons.payment_outlined,
             onTap: () {},
           ),
@@ -219,7 +232,7 @@ class _ProfileContent extends StatelessWidget {
           ),
           _buildSettingsTile(
             context,
-            title: 'Privacy Policy',
+            title: loc.privacyPolicy,
             icon: Icons.verified_user_outlined,
             onTap: () {
               _launchURL('https://www.zameen.com/terms.html');

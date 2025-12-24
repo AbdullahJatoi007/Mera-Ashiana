@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mera_ashiana/screens/search_filter_screen.dart';
 
 class HomeTopSection extends StatelessWidget {
   const HomeTopSection({
@@ -201,24 +202,33 @@ class _SlimSearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 42, // Slim search bar
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      child: Row(
-        children: [
-          Icon(Icons.search, color: iconColor, size: 18),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              'Search properties...',
-              style: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+    return GestureDetector(
+      onTap: () {
+        // Navigate to the search filter screen
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const SearchFilterScreen()),
+        );
+      },
+      child: Container(
+        height: 42, // Slim search bar
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        child: Row(
+          children: [
+            Icon(Icons.search, color: iconColor, size: 18),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Search properties...',
+                style: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:mera_ashiana/l10n/app_localizations.dart';
-import 'package:mera_ashiana/screens/project_details_screen.dart';
-import 'package:mera_ashiana/base_screens/projects_screen.dart';
 import 'package:mera_ashiana/screens/splash_screen.dart';
+import 'package:mera_ashiana/theme/app_theme.dart';
 
-// Global notifier to manage language across the entire app
+// Global notifiers
 final ValueNotifier<Locale> appLocale = ValueNotifier(const Locale('en'));
+final ValueNotifier<ThemeMode> appThemeMode = ValueNotifier(ThemeMode.system);
 
 void main() {
   runApp(const MyApp());
@@ -19,24 +19,31 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return ValueListenableBuilder<Locale>(
       valueListenable: appLocale,
-      builder: (context, currentLocale, child) {
-        return MaterialApp(
-          title: 'Mera Ashiana',
-          debugShowCheckedModeBanner: false,
-          locale: currentLocale,
-          // Global locale
-          supportedLocales: const [Locale('en'), Locale('ur')],
-          localizationsDelegates: const [
-            AppLocalizations.delegate,
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          theme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(seedColor: Colors.white),
-            useMaterial3: true,
-          ),
-          home: const SplashScreen(),
+      builder: (context, currentLocale, _) {
+        return ValueListenableBuilder<ThemeMode>(
+          valueListenable: appThemeMode,
+          builder: (context, currentThemeMode, _) {
+            return MaterialApp(
+              title: 'Mera Ashiana',
+              debugShowCheckedModeBanner: false,
+              locale: currentLocale,
+              supportedLocales: const [Locale('en'), Locale('ur')],
+              localizationsDelegates: const [
+                AppLocalizations.delegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+
+              // Theme configuration
+              theme: AppTheme.lightTheme,
+              darkTheme: AppTheme.darkTheme,
+              themeMode: currentThemeMode,
+
+              // Use a const home to prevent splash screen rebuilds
+              home: const SplashScreen(),
+            );
+          },
         );
       },
     );
