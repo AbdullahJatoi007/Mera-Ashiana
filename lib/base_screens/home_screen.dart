@@ -1,90 +1,113 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart'; // Added for ScrollDirection
 import 'package:mera_ashiana/screens/home/home_top_section.dart';
 import 'package:mera_ashiana/screens/project_details_screen.dart';
 import 'package:mera_ashiana/theme/app_colors.dart';
 import 'package:mera_ashiana/l10n/app_localizations.dart';
-import 'package:mera_ashiana/screens/home/widgets/home_top_section.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
-
   @override
   State<HomeScreen> createState() => _HomeScreenState();
-
-
 }
-
 
 class _HomeScreenState extends State<HomeScreen> {
   String _selectedOption = 'BUY';
-  int _selectedCategoryIndex = 0; // Track active category
+  int _selectedCategoryIndex = 0;
 
+  // 1. Create the ScrollController
+  final ScrollController _scrollController = ScrollController();
 
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
+  // 2. Logic to snap the header open or closed
+  void _handleSnap(double maxSnapOffset) {
+    if (!_scrollController.hasClients) return;
+
+    double currentOffset = _scrollController.offset;
+    if (currentOffset > 0 && currentOffset < maxSnapOffset) {
+      // If scrolled less than half, snap back to open. Otherwise, snap to closed.
+      double target = (currentOffset < maxSnapOffset / 2) ? 0 : maxSnapOffset;
+
+      Future.microtask(() {
+        _scrollController.animateTo(
+          target,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOutCubic,
+        );
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context)!;
     final double statusBarHeight = MediaQuery.of(context).padding.top;
 
-    void onSeeAll() {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ProjectDetailsScreen(),
-        ),
-      );
-    }
-
-
+    // The distance between Max (170) and Min (60) height
+    const double maxSnapOffset = 110.0;
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          // 1. Ultra Compact Header
-          HomeTopSection(
-            selectedOption: _selectedOption,
-            statusBarHeight: statusBarHeight,
-            onOptionSelected: (value) {
-              setState(() => _selectedOption = value);
-            },
-          ),
+      // 3. Wrap with NotificationListener to catch the end of a scroll
+      body: NotificationListener<ScrollNotification>(
+        onNotification: (notification) {
+          if (notification is UserScrollNotification &&
+              notification.direction == ScrollDirection.idle) {
+            _handleSnap(maxSnapOffset);
+          }
+          return false;
+        },
+        child: CustomScrollView(
+          controller: _scrollController,
+          physics: const BouncingScrollPhysics(),
+          slivers: [
+            HomeTopSection(
+              selectedOption: _selectedOption,
+              statusBarHeight: statusBarHeight,
+              onOptionSelected: (value) {
+                setState(() => _selectedOption = value);
+              },
+            ),
 
-          // 2. Polished Categories (Chip Style)
-          SliverPadding(
-            padding: const EdgeInsets.only(top: 15, bottom: 5),
-            sliver: SliverToBoxAdapter(child: _buildCategoryList()),
-          ),
+            SliverPadding(
+              padding: const EdgeInsets.only(top: 15, bottom: 5),
+              sliver: SliverToBoxAdapter(child: _buildCategoryList()),
+            ),
 
-          // 3. Featured Projects
-          SliverToBoxAdapter(
-            child: _buildSectionTitle(loc.exploreProjects,onSeeAll),
+            SliverToBoxAdapter(
+              child: _buildSectionTitle(loc.exploreProjects, () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const ProjectDetailsScreen()),
+                );
+              }),
+            ),
+            SliverToBoxAdapter(child: _buildFeaturedProjects()),
 
-          ),
-          SliverToBoxAdapter(child: _buildFeaturedProjects()),
-
-          // 4. Recently Added
-          SliverToBoxAdapter(
-            child: _buildSectionTitle("Recently Added", () {}),
-          ),
-          SliverPadding(
-            padding: const EdgeInsets.only(bottom: 20),
-            sliver: SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) => _buildPropertyListItem(index),
-                childCount: 10,
+            SliverToBoxAdapter(
+              child: _buildSectionTitle("Recently Added", () {}),
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.only(bottom: 20),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                      (context, index) => _buildPropertyListItem(index),
+                  childCount: 10,
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  // --- RE-POLISHED CATEGORY LIST (CHIP STYLE) ---
   Widget _buildCategoryList() {
     final categories = [
       {'name': 'All', 'icon': Icons.grid_view_rounded},
@@ -126,9 +149,7 @@ class _HomeScreenState extends State<HomeScreen> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
                 side: BorderSide(
-                  color: isSelected
-                      ? AppColors.primaryNavy
-                      : Colors.grey.shade200,
+                  color: isSelected ? AppColors.primaryNavy : Colors.grey.shade200,
                 ),
               ),
             ),
@@ -138,7 +159,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // --- TIGHTENED SECTION TITLE ---
   Widget _buildSectionTitle(String title, VoidCallback onSeeAll) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 15, 12, 5),
@@ -148,32 +168,23 @@ class _HomeScreenState extends State<HomeScreen> {
           Text(
             title,
             style: const TextStyle(
-              fontSize: 16, // Slightly smaller for professional look
+              fontSize: 16,
               fontWeight: FontWeight.bold,
               color: AppColors.primaryNavy,
             ),
           ),
           TextButton(
             onPressed: onSeeAll,
-            style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
-            child: const Text(
-              "See All",
-              style: TextStyle(
-                color: Colors.blue,
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            child: const Text("See All", style: TextStyle(color: Colors.blue, fontSize: 12)),
           ),
         ],
       ),
     );
   }
 
-  // --- POLISHED FEATURED PROJECTS ---
   Widget _buildFeaturedProjects() {
     return SizedBox(
-      height: 180, // Reduced from 220 to optimize space
+      height: 180,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -184,17 +195,8 @@ class _HomeScreenState extends State<HomeScreen> {
             margin: const EdgeInsets.only(right: 12, bottom: 5),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 5,
-                  offset: const Offset(0, 2),
-                ),
-              ],
               image: const DecorationImage(
-                image: NetworkImage(
-                  "https://images.pexels.com/photos/323780/pexels-photo-323780.jpeg",
-                ),
+                image: NetworkImage("https://images.pexels.com/photos/323780/pexels-photo-323780.jpeg"),
                 fit: BoxFit.cover,
               ),
             ),
@@ -212,22 +214,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    "Ashiana Gold Residency",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
-                  Text(
-                    "Starting PKR 45 Lakh",
-                    style: TextStyle(
-                      color: Color(0xFFFFC400),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
+                  Text("Ashiana Gold Residency", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  Text("Starting PKR 45 Lakh", style: TextStyle(color: Color(0xFFFFC400), fontSize: 11)),
                 ],
               ),
             ),
@@ -237,7 +225,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // --- CLEANER PROPERTY LIST ITEM ---
   Widget _buildPropertyListItem(int index) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -253,54 +240,18 @@ class _HomeScreenState extends State<HomeScreen> {
             borderRadius: BorderRadius.circular(10),
             child: Image.network(
               "https://images.pexels.com/photos/1571460/pexels-photo-1571460.jpeg",
-              width: 85,
-              height: 85,
-              fit: BoxFit.cover,
+              width: 85, height: 85, fit: BoxFit.cover,
             ),
           ),
           const SizedBox(width: 12),
-          Expanded(
+          const Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  "Modern 3-Bed Flat",
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                    color: AppColors.primaryNavy,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                const Row(
-                  children: [
-                    Icon(Icons.location_on, size: 12, color: Colors.grey),
-                    SizedBox(width: 4),
-                    Text(
-                      "Gulshan, Karachi",
-                      style: TextStyle(color: Colors.grey, fontSize: 11),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      "PKR 1.2 Cr",
-                      style: TextStyle(
-                        color: AppColors.primaryNavy,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
-                    Icon(
-                      Icons.favorite_border,
-                      size: 18,
-                      color: Colors.grey.shade400,
-                    ),
-                  ],
-                ),
+                Text("Modern 3-Bed Flat", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                Text("Gulshan, Karachi", style: TextStyle(color: Colors.grey, fontSize: 11)),
+                SizedBox(height: 8),
+                Text("PKR 1.2 Cr", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
               ],
             ),
           ),
