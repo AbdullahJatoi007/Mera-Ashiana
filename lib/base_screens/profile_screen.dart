@@ -4,6 +4,7 @@ import 'package:mera_ashiana/screens/real_estate_registration_screen.dart';
 import 'package:mera_ashiana/theme/app_colors.dart';
 import 'package:mera_ashiana/screens/account_settings_screen.dart';
 import 'package:mera_ashiana/screens/auth/login_screen.dart';
+import 'package:mera_ashiana/helpers/logout_helper.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -244,7 +245,9 @@ class _ProfileContent extends StatelessWidget {
             title: loc.logout,
             icon: Icons.logout_rounded,
             isDestructive: true,
-            onTap: () => _showLogoutDialog(context, loc),
+            onTap: () {
+              AuthHelper.showLogoutDialog(context);
+            }
           ),
         ],
       ),
@@ -288,31 +291,6 @@ class _ProfileContent extends StatelessWidget {
     );
   }
 
-  // --- Logout Dialog & Metric Card (Condensed versions) ---
-  void _showLogoutDialog(BuildContext context, AppLocalizations loc) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(loc.logout),
-        content: const Text("Are you sure you want to log out?"),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(builder: (context) => const LoginScreen()),
-              (route) => false,
-            ),
-            child: const Text("Logout", style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _MetricCard extends StatelessWidget {

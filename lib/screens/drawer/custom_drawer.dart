@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mera_ashiana/helpers/logout_helper.dart';
 import 'package:mera_ashiana/l10n/app_localizations.dart';
 import 'package:mera_ashiana/theme/app_colors.dart';
 import 'package:mera_ashiana/screens/account_settings_screen.dart';
@@ -111,7 +112,9 @@ class CustomDrawer extends StatelessWidget {
             context,
             loc.logout,
             Icons.logout,
-            () {},
+            () {
+              AuthHelper.showLogoutDialog(context);
+            },
             iconColor: AppColors.errorRed,
             textColor: AppColors.errorRed,
           ),
