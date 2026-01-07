@@ -3,7 +3,6 @@ import 'package:mera_ashiana/helpers/loader_helper.dart';
 import 'package:mera_ashiana/screens/auth/login_screen.dart';
 import 'package:mera_ashiana/base_screens/home_screen.dart';
 import 'package:mera_ashiana/services/auth_service.dart';
-import 'package:mera_ashiana/theme/app_colors.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -33,13 +32,9 @@ class _SignupScreenState extends State<SignupScreen> {
     super.dispose();
   }
 
-  // ---------------- NORMAL SIGNUP ----------------
   void _registerUser() async {
-    if (!_formKey.currentState!.validate()) return;
-    if (!_acceptedTerms) return;
-
+    if (!_formKey.currentState!.validate() || !_acceptedTerms) return;
     LoaderHelper.instance.showLoader(context, message: "Registering...");
-
     try {
       final result = await AuthService.register(
         username: _nameController.text.trim(),
@@ -48,13 +43,7 @@ class _SignupScreenState extends State<SignupScreen> {
         repassword: _confirmPasswordController.text.trim(),
         type: _selectedRoleIndex == 0 ? "user" : "agent",
       );
-
       LoaderHelper.instance.hideLoader(context);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result['message'] ?? 'Registered successfully')),
-      );
-
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const HomeScreen()),
@@ -63,14 +52,17 @@ class _SignupScreenState extends State<SignupScreen> {
       LoaderHelper.instance.hideLoader(context);
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Registration failed: $e')));
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
-      backgroundColor: AppColors.white,
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -80,29 +72,34 @@ class _SignupScreenState extends State<SignupScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: 20),
-                const Text(
+                Text(
                   'Create Account',
                   style: TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.textDark,
+                    color: colorScheme.onSurface,
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Join Ashiana to find your perfect home',
-                  style: TextStyle(color: AppColors.textGrey, fontSize: 16),
+                  style: TextStyle(
+                    color: colorScheme.onSurface.withOpacity(0.6),
+                    fontSize: 16,
+                  ),
                 ),
                 const SizedBox(height: 24),
-                _buildRoleSelector(),
+                _buildRoleSelector(theme),
                 const SizedBox(height: 24),
                 _buildTextField(
+                  theme,
                   _nameController,
                   'Full Name',
                   Icons.person_outline,
                 ),
                 const SizedBox(height: 16),
                 _buildTextField(
+                  theme,
                   _emailController,
                   'Email Address',
                   Icons.email_outlined,
@@ -110,6 +107,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 ),
                 const SizedBox(height: 16),
                 _buildTextField(
+                  theme,
                   _passwordController,
                   'Password',
                   Icons.lock_outline,
@@ -117,6 +115,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 ),
                 const SizedBox(height: 16),
                 _buildTextField(
+                  theme,
                   _confirmPasswordController,
                   'Confirm Password',
                   Icons.lock_reset_outlined,
@@ -129,11 +128,14 @@ class _SignupScreenState extends State<SignupScreen> {
                     Checkbox(
                       value: _acceptedTerms,
                       onChanged: (val) => setState(() => _acceptedTerms = val!),
-                      activeColor: AppColors.primaryNavy,
-                      checkColor: AppColors.accentYellow,
+                      activeColor: colorScheme.primary,
+                      checkColor: colorScheme.secondary,
                     ),
-                    const Expanded(
-                      child: Text('I accept terms & privacy policy'),
+                    Expanded(
+                      child: Text(
+                        'I accept terms & privacy policy',
+                        style: TextStyle(color: colorScheme.onSurface),
+                      ),
                     ),
                   ],
                 ),
@@ -142,8 +144,8 @@ class _SignupScreenState extends State<SignupScreen> {
                   onPressed: _registerUser,
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: AppColors.accentYellow,
-                    foregroundColor: AppColors.primaryNavy,
+                    backgroundColor: colorScheme.secondary,
+                    foregroundColor: colorScheme.onSecondary,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -158,23 +160,24 @@ class _SignupScreenState extends State<SignupScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 20),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text(
+                    Text(
                       'Already have an account?',
-                      style: TextStyle(color: AppColors.textGrey),
+                      style: TextStyle(
+                        color: colorScheme.onSurface.withOpacity(0.6),
+                      ),
                     ),
                     TextButton(
                       onPressed: () => Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(builder: (_) => const LoginScreen()),
                       ),
-                      child: const Text(
+                      child: Text(
                         'Login',
                         style: TextStyle(
-                          color: AppColors.primaryNavy,
+                          color: colorScheme.primary,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -190,22 +193,22 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  Widget _buildRoleSelector() {
+  Widget _buildRoleSelector(ThemeData theme) {
     return LayoutBuilder(
       builder: (context, constraints) {
         return Container(
           padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
-            color: AppColors.background,
+            color: theme.colorScheme.surface,
             borderRadius: BorderRadius.circular(12),
           ),
           child: ToggleButtons(
             isSelected: [_selectedRoleIndex == 0, _selectedRoleIndex == 1],
             onPressed: (index) => setState(() => _selectedRoleIndex = index),
             borderRadius: BorderRadius.circular(8),
-            selectedColor: AppColors.primaryNavy,
-            fillColor: AppColors.accentYellow,
-            color: AppColors.textGrey,
+            selectedColor: theme.colorScheme.onSecondary,
+            fillColor: theme.colorScheme.secondary,
+            color: theme.colorScheme.onSurface.withOpacity(0.5),
             renderBorder: false,
             constraints: BoxConstraints.expand(
               width: (constraints.maxWidth / 2) - 4,
@@ -222,6 +225,7 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   Widget _buildTextField(
+    ThemeData theme,
     TextEditingController controller,
     String label,
     IconData icon, {
@@ -229,6 +233,7 @@ class _SignupScreenState extends State<SignupScreen> {
     bool isConfirmField = false,
     TextInputType? keyboardType,
   }) {
+    final cs = theme.colorScheme;
     bool obscure = isPassword
         ? (isConfirmField ? _isConfirmObscured : _isObscured)
         : false;
@@ -237,51 +242,38 @@ class _SignupScreenState extends State<SignupScreen> {
       controller: controller,
       obscureText: obscure,
       keyboardType: keyboardType,
-      validator: (value) {
-        if (value == null || value.isEmpty) return '$label is required';
-        if (label.contains('Email') && !value.contains('@'))
-          return 'Invalid email';
-        if (label.contains('Password') && value.length < 6)
-          return 'Min 6 characters';
-        if (isConfirmField && value != _passwordController.text)
-          return 'Passwords do not match';
-        return null;
-      },
+      style: TextStyle(color: cs.onSurface),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(color: AppColors.textGrey, fontSize: 14),
-        prefixIcon: Icon(icon, color: AppColors.primaryNavy),
+        labelStyle: TextStyle(
+          color: cs.onSurface.withOpacity(0.5),
+          fontSize: 14,
+        ),
+        prefixIcon: Icon(icon, color: cs.primary),
         suffixIcon: isPassword
             ? IconButton(
                 icon: Icon(
                   obscure ? Icons.visibility_off : Icons.visibility,
-                  color: AppColors.primaryNavy,
+                  color: cs.primary,
                 ),
-                onPressed: () {
-                  setState(() {
-                    if (isConfirmField) {
-                      _isConfirmObscured = !_isConfirmObscured;
-                    } else {
-                      _isObscured = !_isObscured;
-                    }
-                  });
-                },
+                onPressed: () => setState(() {
+                  if (isConfirmField)
+                    _isConfirmObscured = !_isConfirmObscured;
+                  else
+                    _isObscured = !_isObscured;
+                }),
               )
             : null,
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.accentYellow, width: 2),
-        ),
+        filled: true,
+        fillColor: cs.surface,
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.borderGrey),
+          borderSide: BorderSide(color: theme.dividerColor.withOpacity(0.1)),
         ),
-        errorBorder: OutlineInputBorder(
+        focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.errorRed),
+          borderSide: BorderSide(color: cs.secondary, width: 2),
         ),
-        filled: true,
-        fillColor: AppColors.white,
       ),
     );
   }

@@ -3,7 +3,6 @@ import 'package:mera_ashiana/l10n/app_localizations.dart';
 import 'package:mera_ashiana/screens/real_estate_registration_screen.dart';
 import 'package:mera_ashiana/theme/app_colors.dart';
 import 'package:mera_ashiana/screens/account_settings_screen.dart';
-import 'package:mera_ashiana/screens/auth/login_screen.dart';
 import 'package:mera_ashiana/helpers/logout_helper.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -12,9 +11,10 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: AppColors.background,
-      body: _ProfileContent(),
+    // Dynamically get the scaffold color from theme
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: const _ProfileContent(),
     );
   }
 }
@@ -36,39 +36,27 @@ class _ProfileContent extends StatelessWidget {
     var loc = AppLocalizations.of(context)!;
 
     return ListView(
-      padding: EdgeInsets.zero, // Start from the very top
+      padding: EdgeInsets.zero,
       children: <Widget>[
-        // 1. Polished Header
         _buildHeader(context, loc),
-
         const SizedBox(height: 20),
-
-        // 2. Metrics (Listings, Favourites, Views)
         _buildMetricsRow(context, loc),
-
         const SizedBox(height: 25),
-
-        // 3. Main Action Section
         _buildActionSection(context, loc),
       ],
     );
   }
 
   Widget _buildHeader(BuildContext context, AppLocalizations loc) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(24, 60, 24, 40),
-      decoration: const BoxDecoration(
-        // Using a gradient makes the Navy feel deeper and more premium
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF0A1D37), // Primary Navy
-            Color(0xFF162D4D), // Slightly lighter Navy for depth
-          ],
-        ),
-        borderRadius: BorderRadius.only(
+      decoration: BoxDecoration(
+        // Use primary color from theme instead of hardcoded hex
+        color: colorScheme.primary,
+        borderRadius: const BorderRadius.only(
           bottomLeft: Radius.circular(40),
           bottomRight: Radius.circular(40),
         ),
@@ -77,13 +65,13 @@ class _ProfileContent extends StatelessWidget {
         children: [
           Row(
             children: [
-              // Profile Image with Yellow Border
               Stack(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(3),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFFFC400), // Yellow border
+                    decoration: BoxDecoration(
+                      color: colorScheme.secondary,
+                      // Yellow border from secondary
                       shape: BoxShape.circle,
                     ),
                     child: const CircleAvatar(
@@ -94,30 +82,9 @@ class _ProfileContent extends StatelessWidget {
                       ),
                     ),
                   ),
-                  Positioned(
-                    bottom: 0,
-                    right: 4,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: const Color(0xFF0A1D37),
-                          width: 2,
-                        ),
-                      ),
-                      child: const Icon(
-                        Icons.camera_alt,
-                        size: 14,
-                        color: Color(0xFF0A1D37),
-                      ),
-                    ),
-                  ),
                 ],
               ),
               const SizedBox(width: 20),
-              // User Info Section
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -128,6 +95,7 @@ class _ProfileContent extends StatelessWidget {
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
+                        // Keep white for header text on navy
                         letterSpacing: 0.5,
                       ),
                     ),
@@ -137,15 +105,6 @@ class _ProfileContent extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.white.withOpacity(0.7),
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    // Verified Badge
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 5,
                       ),
                     ),
                   ],
@@ -178,14 +137,19 @@ class _ProfileContent extends StatelessWidget {
   }
 
   Widget _buildActionSection(BuildContext context, AppLocalizations loc) {
+    final theme = Theme.of(context);
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        // Dynamic background for the action card
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withOpacity(
+              theme.brightness == Brightness.dark ? 0.2 : 0.03,
+            ),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -208,20 +172,18 @@ class _ProfileContent extends StatelessWidget {
           ),
           _buildSettingsTile(
             context,
-           title: 'Agency Settings',
+            title: 'Agency Settings',
             icon: Icons.real_estate_agent_sharp,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const RealEstateRegistrationScreen(),
-                ),
-              );
-            },
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const RealEstateRegistrationScreen(),
+              ),
+            ),
           ),
           _buildSettingsTile(
             context,
-              title: loc.paymentMethods,
+            title: loc.paymentMethods,
             icon: Icons.payment_outlined,
             onTap: () {},
           ),
@@ -235,19 +197,14 @@ class _ProfileContent extends StatelessWidget {
             context,
             title: loc.privacyPolicy,
             icon: Icons.verified_user_outlined,
-            onTap: () {
-              _launchURL('https://www.zameen.com/terms.html');
-            },
+            onTap: () => _launchURL('https://www.zameen.com/terms.html'),
           ),
-
           _buildSettingsTile(
             context,
             title: loc.logout,
             icon: Icons.logout_rounded,
             isDestructive: true,
-            onTap: () {
-              AuthHelper.showLogoutDialog(context);
-            }
+            onTap: () => AuthHelper.showLogoutDialog(context),
           ),
         ],
       ),
@@ -261,9 +218,11 @@ class _ProfileContent extends StatelessWidget {
     required VoidCallback onTap,
     bool isDestructive = false,
   }) {
+    final theme = Theme.of(context);
     final Color color = isDestructive
         ? Colors.redAccent
-        : const Color(0xFF0A1D37);
+        : theme.colorScheme.primary;
+
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
       leading: Container(
@@ -277,20 +236,19 @@ class _ProfileContent extends StatelessWidget {
       title: Text(
         title,
         style: TextStyle(
-          color: isDestructive ? Colors.redAccent : const Color(0xFF0A1D37),
+          color: isDestructive ? Colors.redAccent : theme.colorScheme.onSurface,
           fontWeight: FontWeight.w600,
           fontSize: 15,
         ),
       ),
-      trailing: const Icon(
+      trailing: Icon(
         Icons.arrow_forward_ios,
         size: 14,
-        color: Colors.grey,
+        color: theme.colorScheme.onSurface.withOpacity(0.3),
       ),
       onTap: onTap,
     );
   }
-
 }
 
 class _MetricCard extends StatelessWidget {
@@ -306,31 +264,33 @@ class _MetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.shade100),
+          border: Border.all(color: theme.dividerColor.withOpacity(0.1)),
         ),
         child: Column(
           children: [
-            Icon(icon, color: const Color(0xFF0A1D37), size: 22),
+            Icon(icon, color: theme.colorScheme.primary, size: 22),
             const SizedBox(height: 8),
             Text(
               count,
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 18,
-                color: Color(0xFFFFC400),
+                color: theme.colorScheme.secondary,
               ),
             ),
             Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11,
-                color: Colors.grey,
+                color: theme.colorScheme.onSurface.withOpacity(0.6),
                 fontWeight: FontWeight.w500,
               ),
             ),

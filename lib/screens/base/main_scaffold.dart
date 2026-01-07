@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:mera_ashiana/l10n/app_localizations.dart';
-import 'package:mera_ashiana/theme/app_colors.dart';
 import 'package:mera_ashiana/base_screens/favourite_screen.dart';
 import 'package:mera_ashiana/base_screens/home_screen.dart';
 import 'package:mera_ashiana/base_screens/profile_screen.dart';
@@ -18,9 +17,8 @@ class MainScaffold extends StatefulWidget {
 
 class _MainScaffoldState extends State<MainScaffold> {
   int _selectedIndex = 0;
-  final bool _isUserLoggedIn = false; // Mock login state
+  final bool _isUserLoggedIn = false;
 
-  // Navigation screens
   static const List<Widget> _screens = <Widget>[
     HomeScreen(),
     ProjectsScreen(),
@@ -69,15 +67,14 @@ class _MainScaffoldState extends State<MainScaffold> {
   @override
   Widget build(BuildContext context) {
     var loc = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final bool isHome = _selectedIndex == 0;
 
-    // PopScope prevents the app from closing when swiping back on sub-tabs
     return PopScope(
-      canPop: _selectedIndex == 0, // System can only pop if we are on Home
+      canPop: _selectedIndex == 0,
       onPopInvokedWithResult: (didPop, result) {
-        if (didPop) return; // Already handled by system if true
-
-        // If we are on any tab other than Home, go back to Home first
+        if (didPop) return;
         if (_selectedIndex != 0) {
           setState(() => _selectedIndex = 0);
         }
@@ -92,36 +89,44 @@ class _MainScaffoldState extends State<MainScaffold> {
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 18,
-              color: isHome ? Colors.white : AppColors.primaryNavy,
+              // Fixed: Use White for transparent Home, otherwise use theme text color
+              color: isHome ? Colors.white : colorScheme.onSurface,
             ),
           ),
           iconTheme: IconThemeData(
-            color: isHome ? Colors.white : AppColors.primaryNavy,
+            color: isHome ? Colors.white : colorScheme.primary,
           ),
-          backgroundColor: isHome ? Colors.transparent : AppColors.white,
+          // Fixed: Use transparent for Home, otherwise use theme surface color
+          backgroundColor: isHome ? Colors.transparent : colorScheme.surface,
           elevation: 0,
-          surfaceTintColor: Colors.transparent, // Prevents grey tint on scroll
+          surfaceTintColor: Colors.transparent,
         ),
         body: IndexedStack(index: _selectedIndex, children: _screens),
-        bottomNavigationBar: _buildBottomNav(loc),
+        bottomNavigationBar: _buildBottomNav(loc, theme),
       ),
     );
   }
 
-  Widget _buildBottomNav(AppLocalizations loc) {
+  Widget _buildBottomNav(AppLocalizations loc, ThemeData theme) {
     return Container(
       decoration: BoxDecoration(
         border: Border(
-          top: BorderSide(color: Colors.grey.shade200, width: 0.5),
+          top: BorderSide(
+            // Fixed: Use theme divider color or a subtle version of onSurface
+            color: theme.dividerColor.withOpacity(0.1),
+            width: 0.5,
+          ),
         ),
       ),
       child: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
         type: BottomNavigationBarType.fixed,
-        backgroundColor: AppColors.white,
-        selectedItemColor: AppColors.accentYellow,
-        unselectedItemColor: AppColors.primaryNavy.withOpacity(0.4),
+        // Fixed: Use theme surface color instead of hardcoded white
+        backgroundColor: theme.colorScheme.surface,
+        selectedItemColor: theme.colorScheme.secondary,
+        // Fixed: Use theme text color with opacity for unselected
+        unselectedItemColor: theme.colorScheme.onSurface.withOpacity(0.4),
         selectedFontSize: 11,
         unselectedFontSize: 11,
         iconSize: 22,

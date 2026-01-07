@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:mera_ashiana/helpers/logout_helper.dart';
 import 'package:mera_ashiana/l10n/app_localizations.dart';
-import 'package:mera_ashiana/theme/app_colors.dart';
 import 'package:mera_ashiana/screens/account_settings_screen.dart';
 import 'package:mera_ashiana/screens/drawer/widgets/drawer_header.dart';
-import 'package:mera_ashiana/main.dart'; // Import to access appLocale
+import 'package:mera_ashiana/main.dart';
 
 class CustomDrawer extends StatelessWidget {
   const CustomDrawer({super.key});
@@ -12,9 +11,12 @@ class CustomDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     var loc = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     return Drawer(
-      backgroundColor: AppColors.white,
+      backgroundColor: theme.scaffoldBackgroundColor,
+      // Sync with app background
       child: Column(
         children: <Widget>[
           const CustomDrawerHeader(),
@@ -24,30 +26,37 @@ class CustomDrawer extends StatelessWidget {
               children: <Widget>[
                 _buildMenuItem(
                   context,
+                  theme,
                   loc.home,
                   Icons.home_outlined,
                   () => Navigator.pop(context),
                 ),
                 _buildMenuItem(
                   context,
+                  theme,
                   loc.myListings,
                   Icons.apartment_outlined,
                   () {},
                 ),
                 _buildMenuItem(
                   context,
+                  theme,
                   loc.favorites,
                   Icons.favorite_border,
                   () {},
                 ),
 
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16),
-                  child: Divider(height: 30, color: AppColors.borderGrey),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Divider(
+                    height: 30,
+                    color: theme.dividerColor.withOpacity(0.1),
+                  ),
                 ),
 
                 _buildMenuItem(
                   context,
+                  theme,
                   loc.accountSettings,
                   Icons.settings_outlined,
                   () {
@@ -61,25 +70,36 @@ class CustomDrawer extends StatelessWidget {
                   },
                 ),
 
-                // --- LANGUAGE DROPDOWN ---
+                // Language Dropdown
                 ListTile(
-                  leading: const Icon(
-                    Icons.language,
-                    color: AppColors.primaryNavy,
-                  ),
+                  leading: Icon(Icons.language, color: colorScheme.primary),
                   title: Text(
                     loc.changeLanguage,
-                    style: const TextStyle(
-                      color: AppColors.textDark,
+                    style: TextStyle(
+                      color: colorScheme.onSurface,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
                   trailing: DropdownButton<String>(
+                    dropdownColor: theme.cardColor,
+                    // Dark background for dropdown menu
                     value: appLocale.value.languageCode,
                     underline: const SizedBox(),
                     items: [
-                      DropdownMenuItem(value: 'en', child: Text(loc.english)),
-                      DropdownMenuItem(value: 'ur', child: Text(loc.urdu)),
+                      DropdownMenuItem(
+                        value: 'en',
+                        child: Text(
+                          loc.english,
+                          style: TextStyle(color: colorScheme.onSurface),
+                        ),
+                      ),
+                      DropdownMenuItem(
+                        value: 'ur',
+                        child: Text(
+                          loc.urdu,
+                          style: TextStyle(color: colorScheme.onSurface),
+                        ),
+                      ),
                     ],
                     onChanged: (value) {
                       if (value != null) appLocale.value = Locale(value);
@@ -87,19 +107,24 @@ class CustomDrawer extends StatelessWidget {
                   ),
                 ),
 
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16),
-                  child: Divider(height: 30, color: AppColors.borderGrey),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Divider(
+                    height: 30,
+                    color: theme.dividerColor.withOpacity(0.1),
+                  ),
                 ),
 
                 _buildMenuItem(
                   context,
+                  theme,
                   loc.helpSupport,
                   Icons.help_outline,
                   () {},
                 ),
                 _buildMenuItem(
                   context,
+                  theme,
                   loc.privacyPolicy,
                   Icons.security_outlined,
                   () {},
@@ -107,16 +132,15 @@ class CustomDrawer extends StatelessWidget {
               ],
             ),
           ),
-          const Divider(height: 0, color: AppColors.borderGrey),
+          Divider(height: 0, color: theme.dividerColor.withOpacity(0.1)),
           _buildMenuItem(
             context,
+            theme,
             loc.logout,
             Icons.logout,
-            () {
-              AuthHelper.showLogoutDialog(context);
-            },
-            iconColor: AppColors.errorRed,
-            textColor: AppColors.errorRed,
+            () => AuthHelper.showLogoutDialog(context),
+            iconColor: colorScheme.error,
+            textColor: colorScheme.error,
           ),
           const SizedBox(height: 20),
         ],
@@ -126,6 +150,7 @@ class CustomDrawer extends StatelessWidget {
 
   Widget _buildMenuItem(
     BuildContext context,
+    ThemeData theme,
     String title,
     IconData icon,
     VoidCallback onTap, {
@@ -133,11 +158,11 @@ class CustomDrawer extends StatelessWidget {
     Color? textColor,
   }) {
     return ListTile(
-      leading: Icon(icon, color: iconColor ?? AppColors.primaryNavy),
+      leading: Icon(icon, color: iconColor ?? theme.colorScheme.primary),
       title: Text(
         title,
         style: TextStyle(
-          color: textColor ?? AppColors.textDark,
+          color: textColor ?? theme.colorScheme.onSurface,
           fontWeight: FontWeight.w500,
         ),
       ),

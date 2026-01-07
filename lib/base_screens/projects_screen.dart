@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:mera_ashiana/screens/project_details_screen.dart';
-import 'package:mera_ashiana/theme/app_colors.dart';
 import 'package:mera_ashiana/l10n/app_localizations.dart';
 
 class ProjectsScreen extends StatelessWidget {
@@ -8,14 +7,15 @@ class ProjectsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final loc = AppLocalizations.of(context);
     if (loc == null) return const SizedBox.shrink();
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: theme.scaffoldBackgroundColor, // Use Theme
       body: ListView.separated(
         padding: const EdgeInsets.all(16),
-        itemCount: 2, // Static count for now
+        itemCount: 2,
         separatorBuilder: (context, index) => const SizedBox(height: 16),
         itemBuilder: (context, index) {
           if (index == 0) {
@@ -55,14 +55,18 @@ class ProjectsScreen extends StatelessWidget {
     required bool hasPaymentPlan,
   }) {
     final loc = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.white,
+        color: colorScheme.surface, // Background of card
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primaryNavy.withOpacity(0.06),
+            color: Colors.black.withOpacity(
+              theme.brightness == Brightness.dark ? 0.3 : 0.06,
+            ),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -73,11 +77,10 @@ class ProjectsScreen extends StatelessWidget {
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            onTap: () {}, // Interaction feedback
+            onTap: () {},
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // --- IMAGE SECTION ---
                 Stack(
                   children: [
                     Image.network(
@@ -87,14 +90,13 @@ class ProjectsScreen extends StatelessWidget {
                       fit: BoxFit.cover,
                       errorBuilder: (c, e, s) => Container(
                         height: 220,
-                        color: AppColors.borderGrey,
-                        child: const Icon(
+                        color: theme.dividerColor,
+                        child: Icon(
                           Icons.broken_image,
-                          color: AppColors.textGrey,
+                          color: colorScheme.onSurface.withOpacity(0.5),
                         ),
                       ),
                     ),
-                    // Glassmorphic status badge
                     PositionedDirectional(
                       top: 16,
                       start: 16,
@@ -104,24 +106,22 @@ class ProjectsScreen extends StatelessWidget {
                           vertical: 8,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.primaryNavy.withOpacity(0.9),
+                          color: colorScheme.primary.withOpacity(0.9),
+                          // Primary Navy
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Text(
-                          status.toUpperCase(),
-                          style: const TextStyle(
+                        child: const Text(
+                          "FOR SALE", // Or use 'status' variable
+                          style: TextStyle(
                             color: Colors.white,
                             fontSize: 10,
                             fontWeight: FontWeight.w800,
-                            letterSpacing: 1,
                           ),
                         ),
                       ),
                     ),
                   ],
                 ),
-
-                // --- CONTENT SECTION ---
                 Padding(
                   padding: const EdgeInsets.all(20),
                   child: Column(
@@ -133,10 +133,10 @@ class ProjectsScreen extends StatelessWidget {
                           Expanded(
                             child: Text(
                               name,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
-                                color: AppColors.textDark,
+                                color: colorScheme.onSurface,
                               ),
                             ),
                           ),
@@ -147,12 +147,12 @@ class ProjectsScreen extends StatelessWidget {
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: AppColors.accentYellow.withOpacity(0.2),
+                                color: colorScheme.secondary.withOpacity(0.2),
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 Icons.credit_card,
-                                color: AppColors.primaryNavy,
+                                color: colorScheme.secondary,
                                 size: 18,
                               ),
                             ),
@@ -161,27 +161,27 @@ class ProjectsScreen extends StatelessWidget {
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.location_on,
                             size: 16,
-                            color: AppColors.accentYellow,
+                            color: colorScheme.secondary,
                           ),
                           const SizedBox(width: 4),
                           Text(
                             location,
-                            style: const TextStyle(
-                              color: AppColors.textGrey,
+                            style: TextStyle(
+                              color: colorScheme.onSurface.withOpacity(0.6),
                               fontSize: 14,
                             ),
                           ),
                         ],
                       ),
-
                       const SizedBox(height: 20),
-                      const Divider(height: 1, color: AppColors.borderGrey),
+                      Divider(
+                        height: 1,
+                        color: theme.dividerColor.withOpacity(0.1),
+                      ),
                       const SizedBox(height: 16),
-
-                      // --- PRICE & ACTION ---
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -190,60 +190,43 @@ class ProjectsScreen extends StatelessWidget {
                             children: [
                               Text(
                                 loc.startingFrom,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 12,
-                                  color: AppColors.textGrey,
+                                  color: colorScheme.onSurface.withOpacity(0.5),
                                 ),
                               ),
                               Text(
                                 "PKR $price",
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w900,
-                                  color: AppColors.primaryNavy,
+                                  color: colorScheme.primary,
                                 ),
                               ),
                             ],
                           ),
-                          Container(
-                            decoration: BoxDecoration(
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppColors.accentYellow.withOpacity(
-                                    0.3,
-                                  ),
-                                  blurRadius: 12,
-                                  offset: const Offset(0, 4),
+                          ElevatedButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      const ProjectDetailsScreen(),
                                 ),
-                              ],
-                            ),
-                            child: ElevatedButton(
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        const ProjectDetailsScreen(),
-                                  ),
-                                );
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.accentYellow,
-                                foregroundColor: AppColors.primaryNavy,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 24,
-                                  vertical: 12,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                                elevation: 0,
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: colorScheme.secondary,
+                              foregroundColor: colorScheme.onSecondary,
+                              // Usually Navy on Yellow
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
                               ),
-                              child: Text(
-                                loc.viewDetails,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                            ),
+                            child: Text(
+                              loc.viewDetails,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
                           ),

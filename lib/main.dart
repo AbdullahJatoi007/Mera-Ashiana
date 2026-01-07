@@ -35,7 +35,10 @@ class MyApp extends StatelessWidget {
                 GlobalCupertinoLocalizations.delegate,
               ],
 
-              // Theme configuration
+              // ✅ FIX #1: Disable theme animation for instant switching
+              themeAnimationDuration: Duration.zero,
+
+              // ✅ FIX #2: Use cached theme instances (defined in app_theme.dart)
               theme: AppTheme.lightTheme,
               darkTheme: AppTheme.darkTheme,
               themeMode: currentThemeMode,

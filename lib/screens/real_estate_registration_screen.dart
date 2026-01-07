@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:mera_ashiana/theme/app_colors.dart';
 
 class RealEstateRegistrationScreen extends StatefulWidget {
   const RealEstateRegistrationScreen({super.key});
@@ -12,26 +11,29 @@ class RealEstateRegistrationScreen extends StatefulWidget {
 class _RealEstateRegistrationScreenState
     extends State<RealEstateRegistrationScreen> {
   final _formKey = GlobalKey<FormState>();
-  String _agencyType = 'Agency'; // Default value
+  String _agencyType = 'Agency';
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           "Partner Registration",
           style: TextStyle(
-            color: AppColors.primaryNavy,
+            color: colorScheme.onSurface,
             fontWeight: FontWeight.bold,
             fontSize: 18,
           ),
         ),
         centerTitle: true,
         elevation: 0,
-        backgroundColor: Colors.white,
+        backgroundColor: theme.scaffoldBackgroundColor,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.primaryNavy),
+          icon: Icon(Icons.arrow_back, color: colorScheme.onSurface),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -42,86 +44,84 @@ class _RealEstateRegistrationScreenState
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildProgressHeader(),
+              _buildProgressHeader(theme),
               const SizedBox(height: 30),
 
-              // 1. Profile Photo / Logo
-              _buildLogoSection(),
+              _buildLogoSection(theme),
               const SizedBox(height: 30),
 
-              // 2. Business Type Selector
-              _buildSectionTitle("I am a..."),
-              _buildTypeSelector(),
+              _buildSectionTitle(theme, "I am a..."),
+              _buildTypeSelector(theme),
               const SizedBox(height: 25),
 
-              // 3. Basic Information
-              _buildSectionTitle("Business Details"),
+              _buildSectionTitle(theme, "Business Details"),
               _buildTextField(
+                theme,
                 label: "Agency / Company Name",
                 icon: Icons.business,
               ),
               const SizedBox(height: 15),
               _buildTextField(
+                theme,
                 label: "CEO / Principal Name",
                 icon: Icons.person_outline,
               ),
               const SizedBox(height: 15),
               _buildTextField(
+                theme,
                 label: "NTN / Sales Tax Number",
                 icon: Icons.assignment_ind_outlined,
                 hint: "1234567-8",
               ),
               const SizedBox(height: 25),
 
-              // 4. Contact & Location
-              _buildSectionTitle("Contact Information"),
+              _buildSectionTitle(theme, "Contact Information"),
               _buildTextField(
+                theme,
                 label: "Mobile Number",
                 icon: Icons.phone_android,
                 keyboardType: TextInputType.phone,
               ),
               const SizedBox(height: 15),
               _buildTextField(
+                theme,
                 label: "Email Address",
                 icon: Icons.email_outlined,
               ),
               const SizedBox(height: 15),
               _buildTextField(
+                theme,
                 label: "City / Service Areas",
                 icon: Icons.map_outlined,
                 hint: "e.g., DHA, Bahria, Clifton",
               ),
               const SizedBox(height: 25),
 
-              // 5. Document Upload Section (UI Placeholder)
-              _buildSectionTitle("Legal Documents (CNIC / License)"),
-              _buildUploadPlaceholder("Upload FBR/NTN Certificate"),
+              _buildSectionTitle(theme, "Legal Documents (CNIC / License)"),
+              _buildUploadPlaceholder(theme, "Upload FBR/NTN Certificate"),
               const SizedBox(height: 10),
-              _buildUploadPlaceholder("Upload CNIC (Front & Back)"),
+              _buildUploadPlaceholder(theme, "Upload CNIC (Front & Back)"),
               const SizedBox(height: 30),
 
-              // 6. Submit Button
               SizedBox(
                 width: double.infinity,
                 height: 55,
                 child: ElevatedButton(
                   onPressed: () {
                     if (_formKey.currentState!.validate()) {
-                      // Logic to save data
+                      /* Submit Logic */
                     }
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryNavy,
+                    backgroundColor: colorScheme.primary,
+                    foregroundColor: colorScheme.onPrimary,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                   child: const Text(
                     "SUBMIT FOR VERIFICATION",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
@@ -133,23 +133,25 @@ class _RealEstateRegistrationScreenState
     );
   }
 
-  // --- HELPER COMPONENTS ---
-
-  Widget _buildProgressHeader() {
+  Widget _buildProgressHeader(ThemeData theme) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.background,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: theme.colorScheme.primary.withOpacity(0.2)),
       ),
-      child: const Row(
+      child: Row(
         children: [
-          Icon(Icons.info_outline, color: AppColors.primaryNavy, size: 20),
-          SizedBox(width: 12),
+          Icon(Icons.info_outline, color: theme.colorScheme.primary, size: 20),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
               "Your details will be verified by our team within 24-48 hours.",
-              style: TextStyle(fontSize: 12, color: AppColors.primaryNavy),
+              style: TextStyle(
+                fontSize: 12,
+                color: theme.colorScheme.onSurface.withOpacity(0.8),
+              ),
             ),
           ),
         ],
@@ -157,72 +159,81 @@ class _RealEstateRegistrationScreenState
     );
   }
 
-  Widget _buildLogoSection() {
+  Widget _buildLogoSection(ThemeData theme) {
     return Center(
       child: Column(
         children: [
           CircleAvatar(
             radius: 45,
-            backgroundColor: Colors.grey.shade100,
-            child: const Icon(
+            backgroundColor: theme.colorScheme.surface,
+            child: Icon(
               Icons.add_business_outlined,
               size: 40,
-              color: AppColors.textGrey,
+              color: theme.colorScheme.onSurface.withOpacity(0.3),
             ),
           ),
-          TextButton(onPressed: () {}, child: const Text("Upload Agency Logo")),
+          TextButton(
+            onPressed: () {},
+            child: Text(
+              "Upload Agency Logo",
+              style: TextStyle(color: theme.colorScheme.primary),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildTypeSelector() {
-    return Row(
-      children: [
-        _typeChip("Agency"),
-        const SizedBox(width: 10),
-        _typeChip("Developer"),
-        const SizedBox(width: 10),
-        _typeChip("Freelancer"),
-      ],
+  Widget _buildTypeSelector(ThemeData theme) {
+    final types = ["Agency", "Developer", "Freelancer"];
+    return Wrap(
+      spacing: 10,
+      children: types
+          .map(
+            (type) => ChoiceChip(
+              label: Text(type),
+              selected: _agencyType == type,
+              onSelected: (val) => setState(() => _agencyType = type),
+              selectedColor: theme.colorScheme.secondary,
+              labelStyle: TextStyle(
+                color: _agencyType == type
+                    ? theme.colorScheme.onSecondary
+                    : theme.colorScheme.onSurface,
+                fontWeight: FontWeight.bold,
+              ),
+              backgroundColor: theme.colorScheme.surface,
+            ),
+          )
+          .toList(),
     );
   }
 
-  Widget _typeChip(String label) {
-    bool isSelected = _agencyType == label;
-    return ChoiceChip(
-      label: Text(label),
-      selected: isSelected,
-      onSelected: (val) => setState(() => _agencyType = label),
-      selectedColor: AppColors.accentYellow,
-      labelStyle: TextStyle(
-        color: isSelected ? AppColors.primaryNavy : Colors.black,
-        fontWeight: FontWeight.bold,
-      ),
-    );
-  }
-
-  Widget _buildUploadPlaceholder(String title) {
+  Widget _buildUploadPlaceholder(ThemeData theme, String title) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        border: Border.all(
-          color: AppColors.borderGrey,
-          style: BorderStyle.solid,
-        ),
+        color: theme.colorScheme.surface,
+        border: Border.all(color: theme.dividerColor.withOpacity(0.2)),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(title, style: const TextStyle(fontSize: 13, color: Colors.grey)),
-          const Icon(Icons.cloud_upload_outlined, color: AppColors.primaryNavy),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 13,
+              color: theme.colorScheme.onSurface.withOpacity(0.5),
+            ),
+          ),
+          Icon(Icons.cloud_upload_outlined, color: theme.colorScheme.primary),
         ],
       ),
     );
   }
 
-  Widget _buildTextField({
+  Widget _buildTextField(
+    ThemeData theme, {
     required String label,
     required IconData icon,
     String? hint,
@@ -230,25 +241,34 @@ class _RealEstateRegistrationScreenState
   }) {
     return TextFormField(
       keyboardType: keyboardType,
+      style: TextStyle(color: theme.colorScheme.onSurface),
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
-        prefixIcon: Icon(icon, color: AppColors.primaryNavy, size: 20),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        labelStyle: TextStyle(
+          color: theme.colorScheme.onSurface.withOpacity(0.5),
+        ),
+        prefixIcon: Icon(icon, color: theme.colorScheme.primary, size: 20),
+        filled: true,
+        fillColor: theme.colorScheme.surface,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
         contentPadding: const EdgeInsets.symmetric(vertical: 16),
       ),
     );
   }
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTitle(ThemeData theme, String title) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 12, top: 8),
       child: Text(
         title,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 15,
           fontWeight: FontWeight.bold,
-          color: AppColors.primaryNavy,
+          color: theme.colorScheme.onSurface,
         ),
       ),
     );

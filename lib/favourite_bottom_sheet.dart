@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:mera_ashiana/theme/app_colors.dart';
 import 'package:mera_ashiana/l10n/app_localizations.dart';
 
 class FavouriteBottomSheet extends StatelessWidget {
@@ -8,8 +7,8 @@ class FavouriteBottomSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     var loc = AppLocalizations.of(context)!;
-
-    // This allows the sheet to push up when the keyboard appears
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return Container(
@@ -17,17 +16,16 @@ class FavouriteBottomSheet extends StatelessWidget {
         left: 24,
         right: 24,
         top: 12,
-        bottom: bottomInset + 24, // Responsive padding for keyboard
+        bottom: bottomInset + 24,
       ),
-      decoration: const BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.only(
+      decoration: BoxDecoration(
+        color: theme.cardColor, // Adapts to theme background
+        borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(30),
           topRight: Radius.circular(30),
         ),
       ),
       child: SingleChildScrollView(
-        // Use physics to ensure smooth scrolling when keyboard is open
         physics: const BouncingScrollPhysics(),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -37,57 +35,54 @@ class FavouriteBottomSheet extends StatelessWidget {
               width: 50,
               height: 5,
               decoration: BoxDecoration(
-                color: AppColors.borderGrey,
+                color: theme.dividerColor,
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
             const SizedBox(height: 25),
 
-            // Header Icon & Text
-            const CircleAvatar(
+            CircleAvatar(
               radius: 35,
-              backgroundColor: AppColors.accentYellow,
-              child: Icon(
-                Icons.favorite,
-                color: AppColors.primaryNavy,
-                size: 35,
-              ),
+              backgroundColor: colorScheme.secondary, // Yellow accent
+              child: Icon(Icons.favorite, color: colorScheme.primary, size: 35),
             ),
             const SizedBox(height: 20),
             Text(
-              loc.accountSettings, // Use or add a "Sign In" key
-              style: const TextStyle(
+              loc.accountSettings,
+              style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: AppColors.primaryNavy,
+                color: colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               "Sign in to save properties and sync your favorites.",
               textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.textGrey, fontSize: 14),
+              style: TextStyle(
+                color: colorScheme.onSurface.withOpacity(0.6),
+                fontSize: 14,
+              ),
             ),
             const SizedBox(height: 30),
 
-            // TextFields
-            _buildField(label: "Email", icon: Icons.email_outlined),
+            _buildField(theme, label: "Email", icon: Icons.email_outlined),
             const SizedBox(height: 16),
             _buildField(
+              theme,
               label: "Password",
               icon: Icons.lock_outline,
               isPassword: true,
             ),
 
-            // Forgot Password
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
                 onPressed: () {},
-                child: const Text(
+                child: Text(
                   "Forgot Password?",
                   style: TextStyle(
-                    color: AppColors.primaryNavy,
+                    color: colorScheme.primary,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -101,8 +96,8 @@ class FavouriteBottomSheet extends StatelessWidget {
               height: 55,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryNavy,
-                  foregroundColor: Colors.white,
+                  backgroundColor: colorScheme.primary,
+                  foregroundColor: colorScheme.onPrimary,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(15),
                   ),
@@ -117,45 +112,40 @@ class FavouriteBottomSheet extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
-            // Divider for Social Login
             Row(
               children: [
-                const Expanded(child: Divider(color: AppColors.borderGrey)),
+                Expanded(child: Divider(color: theme.dividerColor)),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Text(
                     "OR",
                     style: TextStyle(
-                      color: AppColors.textGrey.withOpacity(0.6),
+                      color: colorScheme.onSurface.withOpacity(0.4),
                     ),
                   ),
                 ),
-                const Expanded(child: Divider(color: AppColors.borderGrey)),
+                Expanded(child: Divider(color: theme.dividerColor)),
               ],
             ),
             const SizedBox(height: 20),
 
-            // Google Login Button
+            // Google Button
             SizedBox(
               width: double.infinity,
               height: 55,
               child: OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: AppColors.borderGrey),
+                  side: BorderSide(color: theme.dividerColor),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(15),
                   ),
                 ),
-                icon: Image.network(
-                  'https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg',
-                  height: 24,
-                  errorBuilder: (context, error, stackTrace) =>
-                      const Icon(Icons.g_mobiledata, size: 30),
-                ),
-                label: const Text(
+                icon: const Icon(Icons.g_mobiledata, size: 30),
+                // Simplified for theme consistency
+                label: Text(
                   "Continue with Google",
                   style: TextStyle(
-                    color: AppColors.textDark,
+                    color: colorScheme.onSurface,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -164,20 +154,21 @@ class FavouriteBottomSheet extends StatelessWidget {
             ),
             const SizedBox(height: 25),
 
-            // Sign Up Prompt
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text(
+                Text(
                   "Don't have an account?",
-                  style: TextStyle(color: AppColors.textGrey),
+                  style: TextStyle(
+                    color: colorScheme.onSurface.withOpacity(0.6),
+                  ),
                 ),
                 TextButton(
                   onPressed: () {},
-                  child: const Text(
+                  child: Text(
                     "Signup here",
                     style: TextStyle(
-                      color: AppColors.primaryNavy,
+                      color: colorScheme.primary,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -190,29 +181,30 @@ class FavouriteBottomSheet extends StatelessWidget {
     );
   }
 
-  Widget _buildField({
+  Widget _buildField(
+    ThemeData theme, {
     required String label,
     required IconData icon,
     bool isPassword = false,
   }) {
     return TextField(
       obscureText: isPassword,
+      style: TextStyle(color: theme.colorScheme.onSurface),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(color: AppColors.textGrey),
-        prefixIcon: Icon(icon, color: AppColors.primaryNavy),
+        labelStyle: TextStyle(
+          color: theme.colorScheme.onSurface.withOpacity(0.5),
+        ),
+        prefixIcon: Icon(icon, color: theme.colorScheme.primary),
         filled: true,
-        fillColor: AppColors.background,
+        fillColor: theme.colorScheme.surface,
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(15),
-          borderSide: const BorderSide(color: AppColors.borderGrey),
+          borderSide: BorderSide(color: theme.dividerColor),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(15),
-          borderSide: const BorderSide(
-            color: AppColors.primaryNavy,
-            width: 1.5,
-          ),
+          borderSide: BorderSide(color: theme.colorScheme.primary, width: 1.5),
         ),
       ),
     );

@@ -31,35 +31,37 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    const Color primaryNavy = Color(0xFF0A1D37);
-    const Color accentYellow = Color(0xFFFFC400);
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         toolbarHeight: 50,
-        // Reduced height to save space
-        title: const Text(
+        title: Text(
           "Filters",
           style: TextStyle(
-            color: primaryNavy,
+            color: colorScheme.onSurface,
             fontWeight: FontWeight.w800,
             fontSize: 18,
           ),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.close, color: primaryNavy, size: 22),
+          icon: Icon(Icons.close, color: colorScheme.onSurface, size: 22),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
           TextButton(
-            onPressed: () {}, // Reset logic
-            child: const Text(
+            onPressed: () {},
+            child: Text(
               "Reset",
-              style: TextStyle(color: Colors.grey, fontSize: 13),
+              style: TextStyle(
+                color: colorScheme.onSurface.withOpacity(0.5),
+                fontSize: 13,
+              ),
             ),
           ),
         ],
@@ -69,110 +71,98 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              // Tighter horizontal padding
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 1. Unified Location Section
-                  _buildSectionTitle("Location"),
-                  _buildCitySearchField(primaryNavy),
+                  _buildSectionTitle(theme, "Location"),
+                  _buildCitySearchField(theme),
                   const SizedBox(height: 8),
-                  // Reduced gap
-                  _buildCityChips(primaryNavy, accentYellow),
+                  _buildCityChips(theme),
 
-                  const Divider(height: 32, thickness: 0.5),
-                  // Visual separator helps define space
+                  Divider(
+                    height: 32,
+                    thickness: 0.5,
+                    color: theme.dividerColor.withOpacity(0.1),
+                  ),
 
-                  // 2. Purpose & Type (Side by Side or tightly packed)
-                  _buildSectionTitle("Property Purpose"),
-                  _buildPurposeToggle(primaryNavy),
+                  _buildSectionTitle(theme, "Property Purpose"),
+                  _buildPurposeToggle(theme),
 
                   const SizedBox(height: 20),
 
-                  _buildSectionTitle("Property Type"),
-                  _buildTypeGrid(primaryNavy, accentYellow),
+                  _buildSectionTitle(theme, "Property Type"),
+                  _buildTypeGrid(theme),
 
-                  const Divider(height: 32, thickness: 0.5),
+                  Divider(
+                    height: 32,
+                    thickness: 0.5,
+                    color: theme.dividerColor.withOpacity(0.1),
+                  ),
 
-                  // 3. Price Range - Optimized Slider Space
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _buildSectionTitle("Price Range"),
+                      _buildSectionTitle(theme, "Price Range"),
                       Text(
                         "${_priceRange.start.round()}M - ${_priceRange.end.round()}M",
-                        style: const TextStyle(
-                          color: primaryNavy,
+                        style: TextStyle(
+                          color: colorScheme.primary,
                           fontWeight: FontWeight.bold,
                           fontSize: 13,
                         ),
                       ),
                     ],
                   ),
-                  SliderTheme(
-                    data: SliderTheme.of(context).copyWith(
-                      trackHeight: 2,
-                      rangeThumbShape: const RoundRangeSliderThumbShape(
-                        enabledThumbRadius: 8,
-                      ),
-                      overlayShape: const RoundSliderOverlayShape(
-                        overlayRadius: 16,
-                      ),
-                    ),
-                    child: RangeSlider(
-                      values: _priceRange,
-                      min: 0,
-                      max: 500,
-                      divisions: 50,
-                      activeColor: primaryNavy,
-                      inactiveColor: Colors.grey.shade200,
-                      onChanged: (val) => setState(() => _priceRange = val),
-                    ),
-                  ),
+                  _buildPriceSlider(theme),
 
                   const SizedBox(height: 12),
 
-                  // 4. Bedrooms
-                  _buildSectionTitle("Bedrooms"),
-                  _buildBedSelection(primaryNavy, accentYellow),
+                  _buildSectionTitle(theme, "Bedrooms"),
+                  _buildBedSelection(theme),
 
                   const SizedBox(height: 20),
                 ],
               ),
             ),
           ),
-          _buildApplyButton(primaryNavy),
+          _buildApplyButton(theme),
         ],
       ),
     );
   }
 
-  // --- COMPACT UI COMPONENTS ---
-
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTitle(ThemeData theme, String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Text(
         title,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.w700,
-          color: Color(0xFF0A1D37),
+          color: theme.colorScheme.onSurface,
         ),
       ),
     );
   }
 
-  Widget _buildCitySearchField(Color navy) {
+  Widget _buildCitySearchField(ThemeData theme) {
     return SizedBox(
-      height: 40, // Fixed smaller height
+      height: 40,
       child: TextField(
+        style: TextStyle(color: theme.colorScheme.onSurface),
         decoration: InputDecoration(
           hintText: "Search area (e.g. DHA Phase 6)",
-          hintStyle: const TextStyle(fontSize: 13),
-          prefixIcon: Icon(Icons.search, color: navy, size: 18),
+          hintStyle: TextStyle(
+            fontSize: 13,
+            color: theme.colorScheme.onSurface.withOpacity(0.4),
+          ),
+          prefixIcon: Icon(
+            Icons.search,
+            color: theme.colorScheme.primary,
+            size: 18,
+          ),
           filled: true,
-          fillColor: Colors.grey.shade100,
+          fillColor: theme.colorScheme.surface,
           contentPadding: EdgeInsets.zero,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
@@ -183,9 +173,9 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
     );
   }
 
-  Widget _buildCityChips(Color navy, Color yellow) {
+  Widget _buildCityChips(ThemeData theme) {
     return SizedBox(
-      height: 35, // Restricted height for chips
+      height: 35,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: _cities.length,
@@ -198,17 +188,16 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
               label: Text(city),
               selected: isSelected,
               onSelected: (v) => setState(() => _selectedCity = city),
-              selectedColor: navy,
-              backgroundColor: Colors.white,
+              selectedColor: theme.colorScheme.primary,
+              backgroundColor: theme.colorScheme.surface,
               labelStyle: TextStyle(
-                color: isSelected ? Colors.white : navy,
+                color: isSelected ? Colors.white : theme.colorScheme.onSurface,
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
               ),
-              visualDensity: VisualDensity.compact,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
-                side: BorderSide(color: Colors.grey.shade200),
+                side: BorderSide(color: theme.dividerColor.withOpacity(0.1)),
               ),
             ),
           );
@@ -217,12 +206,12 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
     );
   }
 
-  Widget _buildPurposeToggle(Color navy) {
+  Widget _buildPurposeToggle(ThemeData theme) {
     return Container(
-      height: 40, // Slimmer toggle
+      height: 40,
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
-        color: Colors.grey.shade100,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -233,17 +222,18 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
               onTap: () => setState(() => _purpose = label),
               child: Container(
                 decoration: BoxDecoration(
-                  color: isSelected ? Colors.white : Colors.transparent,
+                  color: isSelected
+                      ? theme.colorScheme.primary
+                      : Colors.transparent,
                   borderRadius: BorderRadius.circular(6),
-                  boxShadow: isSelected
-                      ? [BoxShadow(color: Colors.black12, blurRadius: 2)]
-                      : [],
                 ),
                 alignment: Alignment.center,
                 child: Text(
                   label,
                   style: TextStyle(
-                    color: navy,
+                    color: isSelected
+                        ? Colors.white
+                        : theme.colorScheme.onSurface,
                     fontWeight: FontWeight.bold,
                     fontSize: 13,
                   ),
@@ -256,7 +246,7 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
     );
   }
 
-  Widget _buildTypeGrid(Color navy, Color yellow) {
+  Widget _buildTypeGrid(ThemeData theme) {
     return Wrap(
       spacing: 8,
       runSpacing: 8,
@@ -267,16 +257,20 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
             decoration: BoxDecoration(
-              color: isSelected ? navy : Colors.white,
+              color: isSelected
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.surface,
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: isSelected ? navy : Colors.grey.shade300,
+                color: isSelected
+                    ? theme.colorScheme.primary
+                    : theme.dividerColor.withOpacity(0.2),
               ),
             ),
             child: Text(
               type,
               style: TextStyle(
-                color: isSelected ? Colors.white : navy,
+                color: isSelected ? Colors.white : theme.colorScheme.onSurface,
                 fontWeight: FontWeight.w600,
                 fontSize: 12,
               ),
@@ -287,7 +281,28 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
     );
   }
 
-  Widget _buildBedSelection(Color navy, Color yellow) {
+  Widget _buildPriceSlider(ThemeData theme) {
+    return SliderTheme(
+      data: SliderTheme.of(context).copyWith(
+        trackHeight: 2,
+        activeTrackColor: theme.colorScheme.primary,
+        inactiveTrackColor: theme.dividerColor.withOpacity(0.1),
+        thumbColor: theme.colorScheme.secondary,
+        rangeThumbShape: const RoundRangeSliderThumbShape(
+          enabledThumbRadius: 8,
+        ),
+      ),
+      child: RangeSlider(
+        values: _priceRange,
+        min: 0,
+        max: 500,
+        divisions: 50,
+        onChanged: (val) => setState(() => _priceRange = val),
+      ),
+    );
+  }
+
+  Widget _buildBedSelection(ThemeData theme) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [1, 2, 3, 4, "5+"].map((e) {
@@ -295,22 +310,28 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
             _selectedBeds.toString() == e.toString() ||
             (_selectedBeds == 5 && e == "5+");
         return GestureDetector(
-          onTap: () => setState(() => _selectedBeds = e == "5+" ? 5 : e as int),
+          onTap: () => setState(
+            () => _selectedBeds = e == "5?" ? 5 : (e is int ? e : 5),
+          ),
           child: Container(
             width: 55,
             height: 40,
             decoration: BoxDecoration(
-              color: isSelected ? navy : Colors.white,
+              color: isSelected
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.surface,
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: isSelected ? navy : Colors.grey.shade200,
+                color: isSelected
+                    ? theme.colorScheme.primary
+                    : theme.dividerColor.withOpacity(0.1),
               ),
             ),
             alignment: Alignment.center,
             child: Text(
               e.toString(),
               style: TextStyle(
-                color: isSelected ? Colors.white : Colors.grey.shade700,
+                color: isSelected ? Colors.white : theme.colorScheme.onSurface,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -320,19 +341,14 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
     );
   }
 
-  Widget _buildApplyButton(Color navy) {
+  Widget _buildApplyButton(ThemeData theme) {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 30),
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey.shade100)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
-            offset: const Offset(0, -5),
-          ),
-        ],
+        color: theme.colorScheme.surface,
+        border: Border(
+          top: BorderSide(color: theme.dividerColor.withOpacity(0.1)),
+        ),
       ),
       child: SizedBox(
         width: double.infinity,
@@ -340,19 +356,15 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
         child: ElevatedButton(
           onPressed: () => Navigator.pop(context),
           style: ElevatedButton.styleFrom(
-            backgroundColor: navy,
+            backgroundColor: theme.colorScheme.secondary,
+            foregroundColor: theme.colorScheme.onSecondary,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
-            elevation: 0,
           ),
           child: const Text(
             "Apply Filters",
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
           ),
         ),
       ),

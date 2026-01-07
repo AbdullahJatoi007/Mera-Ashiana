@@ -1,7 +1,6 @@
 import 'package:mera_ashiana/screens/auth/login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:mera_ashiana/screens/auth/signup_screen.dart';
-import 'package:mera_ashiana/theme/app_colors.dart';
 import '../base/main_scaffold.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -14,7 +13,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _isObscured = true;
-  bool _rememberMe = false; // New state for Remember Me
+  bool _rememberMe = false;
 
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -36,8 +35,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
-      backgroundColor: AppColors.white,
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(24.0, 20.0, 24.0, 24.0),
@@ -46,52 +48,51 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // 1. Branding Header
-                const Text(
+                Text(
                   'Welcome Back',
                   style: TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.primaryNavy,
+                    color: colorScheme.onSurface,
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Sign in to continue your search for the perfect home.',
-                  style: TextStyle(color: AppColors.textGrey, fontSize: 16),
+                  style: TextStyle(
+                    color: colorScheme.onSurface.withOpacity(0.6),
+                    fontSize: 16,
+                  ),
                 ),
                 const SizedBox(height: 40),
 
-                // 2. Email Field
                 _buildTextField(
+                  theme,
                   controller: _emailController,
                   label: 'Email Address',
                   icon: Icons.email_outlined,
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
-                    if (value == null || !value.contains('@')) {
+                    if (value == null || !value.contains('@'))
                       return 'Please enter a valid email';
-                    }
                     return null;
                   },
                 ),
                 const SizedBox(height: 20),
 
-                // 3. Password Field
                 _buildTextField(
+                  theme,
                   controller: _passwordController,
                   label: 'Password',
                   icon: Icons.lock_outline,
                   isPassword: true,
                   validator: (value) {
-                    if (value == null || value.length < 6) {
+                    if (value == null || value.length < 6)
                       return 'Password must be at least 6 characters';
-                    }
                     return null;
                   },
                 ),
 
-                // 4. Remember Me & Forgot Password Row
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -102,28 +103,25 @@ class _LoginScreenState extends State<LoginScreen> {
                           width: 24,
                           child: Checkbox(
                             value: _rememberMe,
-                            activeColor: AppColors.primaryNavy,
-                            checkColor: AppColors.accentYellow,
-                            onChanged: (val) {
-                              setState(() {
-                                _rememberMe = val!;
-                              });
-                            },
+                            activeColor: colorScheme.primary,
+                            checkColor: colorScheme.secondary,
+                            onChanged: (val) =>
+                                setState(() => _rememberMe = val!),
                           ),
                         ),
                         const SizedBox(width: 8),
-                        const Text(
+                        Text(
                           'Remember me',
-                          style: TextStyle(color: AppColors.textDark),
+                          style: TextStyle(color: colorScheme.onSurface),
                         ),
                       ],
                     ),
                     TextButton(
                       onPressed: () {},
-                      child: const Text(
+                      child: Text(
                         'Forgot Password?',
                         style: TextStyle(
-                          color: AppColors.primaryNavy,
+                          color: colorScheme.primary,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -132,15 +130,13 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 10),
 
-                // 5. Login Button
                 ElevatedButton(
                   onPressed: _handleLogin,
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: AppColors.accentYellow,
-                    foregroundColor: AppColors.primaryNavy,
+                    backgroundColor: colorScheme.secondary,
+                    foregroundColor: colorScheme.onSecondary,
                     elevation: 0,
-                    // Set to 0 to match Signup style
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -153,40 +149,50 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 30),
 
-                // 6. Social Login Divider
-                const Row(
+                Row(
                   children: [
-                    Expanded(child: Divider()),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        "Or login with",
-                        style: TextStyle(color: AppColors.textGrey),
+                    Expanded(
+                      child: Divider(
+                        color: theme.dividerColor.withOpacity(0.1),
                       ),
                     ),
-                    Expanded(child: Divider()),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        "Or login with",
+                        style: TextStyle(
+                          color: colorScheme.onSurface.withOpacity(0.5),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Divider(
+                        color: theme.dividerColor.withOpacity(0.1),
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 20),
 
-                // 7. Full Width Google Button (Facebook Removed)
                 OutlinedButton.icon(
                   onPressed: () {},
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.g_mobiledata,
-                    color: AppColors.primaryNavy,
+                    color: colorScheme.onSurface,
                     size: 32,
                   ),
-                  label: const Text(
+                  label: Text(
                     "Continue with Google",
                     style: TextStyle(
-                      color: AppColors.primaryNavy,
+                      color: colorScheme.onSurface,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    side: const BorderSide(color: AppColors.borderGrey),
+                    side: BorderSide(
+                      color: theme.dividerColor.withOpacity(0.2),
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -196,45 +202,41 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 30),
 
                 TextButton(
-                  onPressed: () {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const MainScaffold(),
-                      ),
-                    );
-                  },
-                  child: const Text(
+                  onPressed: () => Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const MainScaffold(),
+                    ),
+                  ),
+                  child: Text(
                     'Go to home',
                     style: TextStyle(
-                      color: AppColors.primaryNavy,
+                      color: colorScheme.primary,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
 
-                // 8. Signup Redirect
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text(
+                    Text(
                       "Don't have an account?",
-                      style: TextStyle(color: AppColors.textGrey),
+                      style: TextStyle(
+                        color: colorScheme.onSurface.withOpacity(0.6),
+                      ),
                     ),
                     TextButton(
-                      onPressed: () {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const SignupScreen(),
-                          ),
-                        );
-                        // Navigation to SignupScreen would go here
-                      },
-                      child: const Text(
+                      onPressed: () => Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const SignupScreen(),
+                        ),
+                      ),
+                      child: Text(
                         'Register Now',
                         style: TextStyle(
-                          color: AppColors.primaryNavy,
+                          color: colorScheme.primary,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -249,9 +251,8 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // --- PRIVATE HELPER WIDGETS ---
-
-  Widget _buildTextField({
+  Widget _buildTextField(
+    ThemeData theme, {
     required TextEditingController controller,
     required String label,
     required IconData icon,
@@ -259,43 +260,36 @@ class _LoginScreenState extends State<LoginScreen> {
     TextInputType? keyboardType,
     String? Function(String?)? validator,
   }) {
+    final colorScheme = theme.colorScheme;
     return TextFormField(
       controller: controller,
       obscureText: isPassword ? _isObscured : false,
       keyboardType: keyboardType,
       validator: validator,
-      style: const TextStyle(color: AppColors.textDark),
+      style: TextStyle(color: colorScheme.onSurface),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(color: AppColors.textGrey),
-        prefixIcon: Icon(icon, color: AppColors.primaryNavy),
+        labelStyle: TextStyle(color: colorScheme.onSurface.withOpacity(0.5)),
+        prefixIcon: Icon(icon, color: colorScheme.primary),
         suffixIcon: isPassword
             ? IconButton(
-          icon: Icon(
-            _isObscured ? Icons.visibility_off : Icons.visibility,
-            color: AppColors.primaryNavy,
-          ),
-          onPressed: () => setState(() => _isObscured = !_isObscured),
-        )
+                icon: Icon(
+                  _isObscured ? Icons.visibility_off : Icons.visibility,
+                  color: colorScheme.primary,
+                ),
+                onPressed: () => setState(() => _isObscured = !_isObscured),
+              )
             : null,
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.accentYellow, width: 2),
+          borderSide: BorderSide(color: colorScheme.secondary, width: 2),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.borderGrey),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.errorRed),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.errorRed, width: 2),
+          borderSide: BorderSide(color: theme.dividerColor.withOpacity(0.2)),
         ),
         filled: true,
-        fillColor: AppColors.white,
+        fillColor: colorScheme.surface,
       ),
     );
   }

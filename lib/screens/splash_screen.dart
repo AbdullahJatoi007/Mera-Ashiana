@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:lottie/lottie.dart';
 import 'package:mera_ashiana/screens/auth/login_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -17,12 +16,8 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   _navigateToHome() async {
-    // Wait for 3-4 seconds (adjust based on your Lottie animation length)
     await Future.delayed(const Duration(seconds: 4));
-
     if (!mounted) return;
-
-    // Smooth transition to Login Screen
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (context) => const LoginScreen()),
@@ -31,30 +26,42 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Checks if the system is in Dark Mode
-    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      // Uses Navy for Splash in light mode or Dark Background in dark mode
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // 1. The Lottie Animation
-            Image.asset(
-              'assets/images/mera_ashiana_logo.jpeg',
-              // Path to your Lottie file
-              width: 250,
-              height: 250,
+            // Logo Container to handle JPEG backgrounds in Dark Mode
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: isDark
+                    ? [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.3),
+                          blurRadius: 20,
+                        ),
+                      ]
+                    : [],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: Image.asset(
+                  'assets/images/mera_ashiana_logo.jpeg',
+                  width: 250,
+                  height: 250,
+                ),
+              ),
             ),
-
             const SizedBox(height: 20),
-
-            // 2. Your App Name
-            const Text(
+            Text(
               "MERA ASHIANA",
               style: TextStyle(
-                color: Colors.black,
+                color: theme.colorScheme.onSurface,
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
                 letterSpacing: 2.0,
