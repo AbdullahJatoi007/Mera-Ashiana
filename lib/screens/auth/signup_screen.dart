@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mera_ashiana/helpers/loader_helper.dart';
+import 'package:mera_ashiana/helpers/validation_helper.dart';
 import 'package:mera_ashiana/screens/auth/login_screen.dart';
 import 'package:mera_ashiana/base_screens/home_screen.dart';
 import 'package:mera_ashiana/services/auth_service.dart';
@@ -33,8 +34,19 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   void _registerUser() async {
-    if (!_formKey.currentState!.validate() || !_acceptedTerms) return;
+    if (!_formKey.currentState!.validate()) return;
+
+    if (!_acceptedTerms) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please accept the terms & privacy policy'),
+        ),
+      );
+      return;
+    }
+
     LoaderHelper.instance.showLoader(context, message: "Registering...");
+
     try {
       final result = await AuthService.register(
         username: _nameController.text.trim(),
@@ -43,16 +55,27 @@ class _SignupScreenState extends State<SignupScreen> {
         repassword: _confirmPasswordController.text.trim(),
         type: _selectedRoleIndex == 0 ? "user" : "agent",
       );
+
+      if (!mounted) return;
       LoaderHelper.instance.hideLoader(context);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['message'] ?? 'Registered successfully!'),
+        ),
+      );
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const HomeScreen()),
       );
     } catch (e) {
+      if (!mounted) return;
       LoaderHelper.instance.hideLoader(context);
+      final errorMessage = e.toString().replaceAll('Exception:', '').trim();
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      ).showSnackBar(SnackBar(content: Text('Error: $errorMessage')));
     }
   }
 
@@ -104,6 +127,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   'Email Address',
                   Icons.email_outlined,
                   keyboardType: TextInputType.emailAddress,
+                  isEmail: true,
                 ),
                 const SizedBox(height: 16),
                 _buildTextField(
@@ -231,6 +255,7 @@ class _SignupScreenState extends State<SignupScreen> {
     IconData icon, {
     bool isPassword = false,
     bool isConfirmField = false,
+    bool isEmail = false,
     TextInputType? keyboardType,
   }) {
     final cs = theme.colorScheme;
@@ -275,6 +300,23 @@ class _SignupScreenState extends State<SignupScreen> {
           borderSide: BorderSide(color: cs.secondary, width: 2),
         ),
       ),
+      validator: (val) {
+        // --- CALLING HELPER CLASS ---
+        if (isEmail) return ValidationHelper.validateEmail(val);
+
+        if (isPassword) {
+          if (isConfirmField) {
+            return ValidationHelper.validateConfirmPassword(
+              val,
+              _passwordController.text,
+            );
+          }
+          return ValidationHelper.validatePassword(val);
+        }
+
+        if (val == null || val.isEmpty) return '$label is required';
+        return null;
+      },
     );
   }
 }

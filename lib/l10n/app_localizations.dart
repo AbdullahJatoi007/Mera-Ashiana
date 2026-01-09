@@ -251,7 +251,7 @@ abstract class AppLocalizations {
   /// No description provided for @paymentMethods.
   ///
   /// In en, this message translates to:
-  /// **'Payment Methods'**
+  /// **'Payment '**
   String get paymentMethods;
 
   /// No description provided for @contactUs.

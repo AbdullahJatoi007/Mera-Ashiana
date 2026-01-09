@@ -85,7 +85,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get views => 'Views';
 
   @override
-  String get paymentMethods => 'Payment Methods';
+  String get paymentMethods => 'Payment ';
 
   @override
   String get contactUs => 'Contact Us';

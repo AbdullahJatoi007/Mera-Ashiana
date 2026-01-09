@@ -1,11 +1,24 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class AuthService {
-  static const String baseUrl = "https://yourapi.com"; // Replace with your backend API
+  // Replace with your actual backend URL
+  static const String baseUrl = "https://yourapi.com/api";
+
+  // Google recommendation: Persistent secure storage for tokens/cookies
+  static const FlutterSecureStorage _storage = FlutterSecureStorage();
+
+  /// Helper to get common headers with the saved session cookie
+  static Future<Map<String, String>> getAuthHeaders() async {
+    final String? cookie = await _storage.read(key: 'auth_cookie');
+    return {
+      'Content-Type': 'application/json',
+      if (cookie != null) 'cookie': cookie,
+    };
+  }
 
   // ---------------- REGISTER ----------------
-  /// Registers a new user and returns response from backend
   static Future<Map<String, dynamic>> register({
     required String username,
     required String email,
@@ -22,31 +35,33 @@ class AuthService {
       'type': type,
     };
 
-    // --- Logging request ---
-    print('--- REGISTER REQUEST ---');
-    print('POST $url');
-    print('Headers: {"Content-Type": "application/json"}');
-    print('Body: ${jsonEncode(bodyData)}');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(bodyData),
+      );
 
-    final response = await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(bodyData),
-    );
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        // --- COOKIE HANDLING (CRITICAL) ---
+        // We capture the Set-Cookie header to maintain the session
+        final String? rawCookie = response.headers['set-cookie'];
+        if (rawCookie != null) {
+          await _storage.write(key: 'auth_cookie', value: rawCookie);
+        }
 
-    // --- Logging response ---
-    print('--- REGISTER RESPONSE ---');
-    print('Status code: ${response.statusCode}');
-    print('Body: ${response.body}');
-    print('Headers: ${response.headers}');
-
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      return jsonDecode(response.body);
-    } else if (response.statusCode == 405) {
-      throw Exception(
-          'Method Not Allowed (405). Check if your backend expects POST at this endpoint.');
-    } else {
-      throw Exception('Error ${response.statusCode}: ${response.body}');
+        return response.body.isEmpty
+            ? {'message': 'Registered successfully!'}
+            : jsonDecode(response.body);
+      } else {
+        final errorBody = response.body.isNotEmpty
+            ? jsonDecode(response.body)
+            : {};
+        throw errorBody['message'] ?? 'Registration failed';
+      }
+    } catch (e) {
+      // Re-throw for the UI to catch
+      throw e.toString();
     }
   }
 }

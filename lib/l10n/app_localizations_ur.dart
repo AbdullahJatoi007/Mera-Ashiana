@@ -85,7 +85,7 @@ class AppLocalizationsUr extends AppLocalizations {
   String get views => 'مشاہدات';
 
   @override
-  String get paymentMethods => 'ادائیگی کے طریقے';
+  String get paymentMethods => 'ادائیگی';
 
   @override
   String get contactUs => 'ہم سے رابطہ کریں';
