@@ -1,96 +1,156 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 class ProjectDetailsScreen extends StatefulWidget {
-  const ProjectDetailsScreen({super.key});
+  final int? propertyId;
+
+  const ProjectDetailsScreen({super.key, this.propertyId});
 
   @override
   State<ProjectDetailsScreen> createState() => _ProjectDetailsScreenState();
 }
 
 class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
+  bool isLoading = true;
+  bool hasError = false;
+  Map<String, dynamic>? property;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchPropertyDetails();
+  }
+
+  Future<void> fetchPropertyDetails() async {
+    try {
+      final url = widget.propertyId != null
+          ? "http://api.staging.mera-ashiana.com/api/properties/${widget.propertyId}"
+          : "http://api.staging.mera-ashiana.com/api/properties?recent=true";
+
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        setState(() {
+          property = widget.propertyId != null
+              ? decoded['data']
+              : (decoded['data'] as List).first;
+          isLoading = false;
+        });
+      } else {
+        setState(() {
+          hasError = true;
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        hasError = true;
+        isLoading = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    if (isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    if (hasError || property == null) {
+      return Scaffold(
+        body: Center(child: Text("Failed to load property details")),
+      );
+    }
+
+    final cs = theme.colorScheme;
+    final images = (property!['images'] as List? ?? [])
+        .map((e) => "http://api.staging.mera-ashiana.com$e")
+        .toList();
+
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
+      backgroundColor: cs.background,
       body: Stack(
         children: [
           CustomScrollView(
             slivers: [
-              _buildSliverAppBar(theme),
+              _buildSliverAppBar(theme, images),
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.all(20.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildHeaderSection(theme),
+                      _buildHeaderSection(theme, property!),
                       const SizedBox(height: 20),
-
-                      _buildQuickSpecsBox(theme),
+                      _buildQuickSpecsBox(theme, property!),
+                      const SizedBox(height: 20),
+                      _buildSectionTitle(theme, "Description"),
+                      Text(
+                        property!['description'] ?? "",
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: cs.onSurface.withOpacity(0.8),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      if ((property!['amenities'] as List?)?.isNotEmpty ??
+                          false)
+                        _buildSectionTitle(theme, "Amenities"),
+                      if ((property!['amenities'] as List?)?.isNotEmpty ??
+                          false)
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 6,
+                          children: (property!['amenities'] as List)
+                              .map((e) => Chip(label: Text(e.toString())))
+                              .toList(),
+                        ),
                       const SizedBox(height: 30),
-
-                      _buildSectionTitle(theme, "Main Features"),
-                      _buildFeatureGrid(theme, [
-                        {
-                          "icon": Icons.home_work_outlined,
-                          "label": "Built in 2024",
-                        },
-                        {"icon": Icons.layers, "label": "3 Floors"},
-                        {
-                          "icon": Icons.ac_unit,
-                          "label": "Central Air Conditioning",
-                        },
-                        {"icon": Icons.elevator, "label": "Elevator/Lift"},
-                      ]),
-                      const SizedBox(height: 30),
-
-                      _buildSectionTitle(theme, "Plot Features"),
-                      _buildFeatureGrid(theme, [
-                        {"icon": Icons.park_outlined, "label": "Park Facing"},
-                        {
-                          "icon": Icons.grid_view_outlined,
-                          "label": "Boundary Wall",
-                        },
-                        {
-                          "icon": Icons.electric_bolt_outlined,
-                          "label": "Underground Electricity",
-                        },
-                      ]),
-                      const SizedBox(height: 30),
-
-                      _buildSectionTitle(theme, "Communication"),
-                      _buildFeatureGrid(theme, [
-                        {"icon": Icons.wifi, "label": "Broadband Internet"},
-                        {"icon": Icons.tv, "label": "Satellite/Cable Ready"},
-                        {
-                          "icon": Icons.business_center_outlined,
-                          "label": "Business Lounge",
-                        },
-                      ]),
-                      const SizedBox(height: 30),
-
-                      _buildSectionTitle(theme, "Nearby Facilities"),
-                      _buildFeatureGrid(theme, [
-                        {
-                          "icon": Icons.school_outlined,
-                          "label": "Nearby Schools",
-                        },
-                        {
-                          "icon": Icons.local_hospital_outlined,
-                          "label": "Nearby Hospitals",
-                        },
-                        {
-                          "icon": Icons.mosque_outlined,
-                          "label": "Nearby Mosque",
-                        },
-                        {
-                          "icon": Icons.shopping_cart_outlined,
-                          "label": "Shopping Mall",
-                        },
-                      ]),
-
+                      _buildSectionTitle(theme, "Contact Agent"),
+                      Row(
+                        children: [
+                          if (property!['contact_phone'] != null)
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () {
+                                  // launch phone call
+                                },
+                                icon: const Icon(Icons.call),
+                                label: Text(property!['contact_phone']),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          const SizedBox(width: 12),
+                          if (property!['contact_whatsapp'] != null)
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () {
+                                  // launch WhatsApp
+                                },
+                                icon: const Icon(Icons.message_outlined),
+                                label: Text(property!['contact_whatsapp']),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
                       const SizedBox(height: 120),
                     ],
                   ),
@@ -98,17 +158,15 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
               ),
             ],
           ),
-          _buildBottomActionBar(theme),
         ],
       ),
     );
   }
 
-  Widget _buildSliverAppBar(ThemeData theme) {
+  Widget _buildSliverAppBar(ThemeData theme, List<String> images) {
     return SliverAppBar(
       expandedHeight: 280,
       pinned: true,
-      elevation: 0,
       backgroundColor: theme.colorScheme.primary,
       iconTheme: const IconThemeData(color: Colors.white),
       leading: Padding(
@@ -122,15 +180,18 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
         ),
       ),
       flexibleSpace: FlexibleSpaceBar(
-        background: Image.network(
-          'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1000&q=80',
-          fit: BoxFit.cover,
-        ),
+        background: images.isNotEmpty
+            ? PageView.builder(
+                itemCount: images.length,
+                itemBuilder: (context, index) =>
+                    Image.network(images[index], fit: BoxFit.cover),
+              )
+            : const SizedBox(),
       ),
     );
   }
 
-  Widget _buildHeaderSection(ThemeData theme) {
+  Widget _buildHeaderSection(ThemeData theme, Map<String, dynamic> property) {
     final cs = theme.colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -145,7 +206,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
-                "FOR SALE",
+                (property['status'] ?? "sale").toString().toUpperCase(),
                 style: TextStyle(
                   color: cs.onSurface,
                   fontWeight: FontWeight.bold,
@@ -158,7 +219,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
         ),
         const SizedBox(height: 16),
         Text(
-          "Emaar Oceanfront - Sea View Villa",
+          property['title'] ?? "",
           style: TextStyle(
             fontSize: 22,
             fontWeight: FontWeight.bold,
@@ -174,7 +235,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
               color: cs.onSurface.withOpacity(0.5),
             ),
             Text(
-              " DHA Phase 8, Karachi",
+              " ${property['location'] ?? ""}",
               style: TextStyle(
                 color: cs.onSurface.withOpacity(0.5),
                 fontSize: 14,
@@ -184,7 +245,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
         ),
         const SizedBox(height: 16),
         Text(
-          "PKR 8.5 Crore",
+          "PKR ${property['price'] ?? "-"}",
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
@@ -195,7 +256,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
     );
   }
 
-  Widget _buildQuickSpecsBox(ThemeData theme) {
+  Widget _buildQuickSpecsBox(ThemeData theme, Map<String, dynamic> property) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 20),
       decoration: BoxDecoration(
@@ -206,11 +267,40 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _specItem(theme, Icons.square_foot, "500", "Sq. Yd"),
+          _specItem(
+            theme,
+            Icons.king_bed_outlined,
+            "${property['bedrooms'] ?? '-'}",
+            "Beds",
+          ),
           _divider(theme),
-          _specItem(theme, Icons.king_bed_outlined, "4", "Beds"),
+          _specItem(
+            theme,
+            Icons.bathtub_outlined,
+            "${property['bathrooms'] ?? '-'}",
+            "Baths",
+          ),
           _divider(theme),
-          _specItem(theme, Icons.bathtub_outlined, "5", "Baths"),
+          _specItem(
+            theme,
+            Icons.square_foot,
+            "${property['area'] ?? '-'}",
+            "Sq. Ft",
+          ),
+          _divider(theme),
+          _specItem(
+            theme,
+            Icons.local_parking,
+            "${property['parking_size'] ?? '-'}",
+            "Parking",
+          ),
+          _divider(theme),
+          _specItem(
+            theme,
+            Icons.calendar_today,
+            "${property['year_built'] ?? '-'}",
+            "Year",
+          ),
         ],
       ),
     );
@@ -225,7 +315,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
           value,
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            fontSize: 16,
+            fontSize: 14,
             color: theme.colorScheme.onSurface,
           ),
         ),
@@ -248,111 +338,13 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
 
   Widget _buildSectionTitle(ThemeData theme, String title) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.only(bottom: 8),
       child: Text(
         title,
         style: TextStyle(
-          fontSize: 18,
+          fontSize: 16,
           fontWeight: FontWeight.bold,
           color: theme.colorScheme.onSurface,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFeatureGrid(
-    ThemeData theme,
-    List<Map<String, dynamic>> features,
-  ) {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      padding: EdgeInsets.zero,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 4.5,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 8,
-      ),
-      itemCount: features.length,
-      itemBuilder: (context, index) {
-        return Row(
-          children: [
-            Icon(
-              features[index]['icon'],
-              size: 18,
-              color: theme.colorScheme.secondary,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                features[index]['label'],
-                style: TextStyle(
-                  fontSize: 13,
-                  color: theme.colorScheme.onSurface.withOpacity(0.8),
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildBottomActionBar(ThemeData theme) {
-    final cs = theme.colorScheme;
-    return Align(
-      alignment: Alignment.bottomCenter,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(20, 15, 20, 30),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surface,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(
-                theme.brightness == Brightness.dark ? 0.3 : 0.05,
-              ),
-              blurRadius: 10,
-              offset: const Offset(0, -4),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.message_outlined, color: Colors.green),
-                label: const Text("WhatsApp"),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  foregroundColor: cs.onSurface,
-                  side: BorderSide(color: theme.dividerColor.withOpacity(0.5)),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.call),
-                label: const Text("Call Agent"),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: cs.primary,
-                  foregroundColor: cs.onPrimary,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 0,
-                ),
-              ),
-            ),
-          ],
         ),
       ),
     );

@@ -119,6 +119,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   _nameController,
                   'Full Name',
                   Icons.person_outline,
+
                 ),
                 const SizedBox(height: 16),
                 _buildTextField(
