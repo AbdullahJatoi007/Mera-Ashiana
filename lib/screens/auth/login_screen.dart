@@ -1,6 +1,6 @@
-import 'package:mera_ashiana/screens/auth/login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:mera_ashiana/screens/auth/signup_screen.dart';
+import 'package:mera_ashiana/services/login_service.dart'; // Ensure this points to your real service
 import '../base/main_scaffold.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -25,11 +25,49 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _handleLogin() {
-    if (_formKey.currentState!.validate()) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Logging in...')));
+  void _handleLogin() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      // Calling the real LoginService logic
+      final result = await LoginService.login(email: email, password: password);
+
+      // Close loading dialog
+      if (!mounted) return;
+      Navigator.pop(context);
+
+      // Check if user object exists in the response
+      if (result['user'] != null || result['data'] != null) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const MainScaffold()),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(result['message'] ?? 'Login failed')),
+        );
+      }
+    } catch (e) {
+      // Close loading if error
+      if (!mounted) return;
+      Navigator.pop(context);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
     }
   }
 
@@ -65,7 +103,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 40),
-
                 _buildTextField(
                   theme,
                   controller: _emailController,
@@ -73,13 +110,13 @@ class _LoginScreenState extends State<LoginScreen> {
                   icon: Icons.email_outlined,
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
-                    if (value == null || !value.contains('@'))
+                    if (value == null || !value.contains('@')) {
                       return 'Please enter a valid email';
+                    }
                     return null;
                   },
                 ),
                 const SizedBox(height: 20),
-
                 _buildTextField(
                   theme,
                   controller: _passwordController,
@@ -87,12 +124,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   icon: Icons.lock_outline,
                   isPassword: true,
                   validator: (value) {
-                    if (value == null || value.length < 6)
+                    if (value == null || value.length < 6) {
                       return 'Password must be at least 6 characters';
+                    }
                     return null;
                   },
                 ),
-
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -104,7 +141,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           child: Checkbox(
                             value: _rememberMe,
                             activeColor: colorScheme.primary,
-                            checkColor: colorScheme.secondary,
+                            checkColor: Colors.white,
                             onChanged: (val) =>
                                 setState(() => _rememberMe = val!),
                           ),
@@ -129,7 +166,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
                 ),
                 const SizedBox(height: 10),
-
                 ElevatedButton(
                   onPressed: _handleLogin,
                   style: ElevatedButton.styleFrom(
@@ -146,9 +182,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                 ),
-
                 const SizedBox(height: 30),
-
                 Row(
                   children: [
                     Expanded(
@@ -173,7 +207,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
                 ),
                 const SizedBox(height: 20),
-
                 OutlinedButton.icon(
                   onPressed: () {},
                   icon: Icon(
@@ -198,25 +231,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 30),
-
-                TextButton(
-                  onPressed: () => Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const MainScaffold(),
-                    ),
-                  ),
-                  child: Text(
-                    'Go to home',
-                    style: TextStyle(
-                      color: colorScheme.primary,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [

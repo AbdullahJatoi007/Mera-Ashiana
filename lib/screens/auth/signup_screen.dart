@@ -45,14 +45,14 @@ class _SignupScreenState extends State<SignupScreen> {
       return;
     }
 
-    LoaderHelper.instance.showLoader(context, message: "Registering...");
+    LoaderHelper.instance.showLoader(context, message: "Creating Account...");
 
     try {
       final result = await AuthService.register(
         username: _nameController.text.trim(),
         email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-        repassword: _confirmPasswordController.text.trim(),
+        password: _passwordController.text,
+        repassword: _confirmPasswordController.text,
         type: _selectedRoleIndex == 0 ? "user" : "agent",
       );
 
@@ -61,28 +61,33 @@ class _SignupScreenState extends State<SignupScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(result['message'] ?? 'Registered successfully!'),
+          content: Text(result['message'] ?? 'Welcome to Mera Ashiana!'),
+          backgroundColor: Colors.green,
         ),
       );
 
-      Navigator.pushReplacement(
+      Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => const HomeScreen()),
+        (route) => false,
       );
     } catch (e) {
       if (!mounted) return;
       LoaderHelper.instance.hideLoader(context);
-      final errorMessage = e.toString().replaceAll('Exception:', '').trim();
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error: $errorMessage')));
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final cs = theme.colorScheme;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -100,14 +105,14 @@ class _SignupScreenState extends State<SignupScreen> {
                   style: TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
-                    color: colorScheme.onSurface,
+                    color: cs.onSurface,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Join Ashiana to find your perfect home',
                   style: TextStyle(
-                    color: colorScheme.onSurface.withOpacity(0.6),
+                    color: cs.onSurface.withOpacity(0.6),
                     fontSize: 16,
                   ),
                 ),
@@ -119,7 +124,6 @@ class _SignupScreenState extends State<SignupScreen> {
                   _nameController,
                   'Full Name',
                   Icons.person_outline,
-
                 ),
                 const SizedBox(height: 16),
                 _buildTextField(
@@ -127,8 +131,8 @@ class _SignupScreenState extends State<SignupScreen> {
                   _emailController,
                   'Email Address',
                   Icons.email_outlined,
-                  keyboardType: TextInputType.emailAddress,
                   isEmail: true,
+                  keyboardType: TextInputType.emailAddress,
                 ),
                 const SizedBox(height: 16),
                 _buildTextField(
@@ -153,13 +157,13 @@ class _SignupScreenState extends State<SignupScreen> {
                     Checkbox(
                       value: _acceptedTerms,
                       onChanged: (val) => setState(() => _acceptedTerms = val!),
-                      activeColor: colorScheme.primary,
-                      checkColor: colorScheme.secondary,
+                      activeColor: cs.primary,
+                      checkColor: cs.secondary,
                     ),
                     Expanded(
                       child: Text(
                         'I accept terms & privacy policy',
-                        style: TextStyle(color: colorScheme.onSurface),
+                        style: TextStyle(color: cs.onSurface),
                       ),
                     ),
                   ],
@@ -169,8 +173,8 @@ class _SignupScreenState extends State<SignupScreen> {
                   onPressed: _registerUser,
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: colorScheme.secondary,
-                    foregroundColor: colorScheme.onSecondary,
+                    backgroundColor: cs.secondary,
+                    foregroundColor: cs.onSecondary,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -190,9 +194,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   children: [
                     Text(
                       'Already have an account?',
-                      style: TextStyle(
-                        color: colorScheme.onSurface.withOpacity(0.6),
-                      ),
+                      style: TextStyle(color: cs.onSurface.withOpacity(0.6)),
                     ),
                     TextButton(
                       onPressed: () => Navigator.pushReplacement(
@@ -202,7 +204,7 @@ class _SignupScreenState extends State<SignupScreen> {
                       child: Text(
                         'Login',
                         style: TextStyle(
-                          color: colorScheme.primary,
+                          color: cs.primary,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -302,19 +304,15 @@ class _SignupScreenState extends State<SignupScreen> {
         ),
       ),
       validator: (val) {
-        // --- CALLING HELPER CLASS ---
         if (isEmail) return ValidationHelper.validateEmail(val);
-
         if (isPassword) {
-          if (isConfirmField) {
+          if (isConfirmField)
             return ValidationHelper.validateConfirmPassword(
               val,
               _passwordController.text,
             );
-          }
           return ValidationHelper.validatePassword(val);
         }
-
         if (val == null || val.isEmpty) return '$label is required';
         return null;
       },

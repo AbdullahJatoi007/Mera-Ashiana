@@ -2,39 +2,37 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-class AuthService {
+class LoginService {
   static const String baseUrl = "http://api.staging.mera-ashiana.com/api";
   static const FlutterSecureStorage _storage = FlutterSecureStorage();
 
-  /// Register a new user or agent
-  static Future<Map<String, dynamic>> register({
-    required String username,
+  static Future<String?> getAuthCookie() async =>
+      await _storage.read(key: 'auth_cookie');
+
+  static Future<void> logout() async =>
+      await _storage.delete(key: 'auth_cookie');
+
+  // New: Use this when the API returns 401
+  static Future<void> handleUnauthorized() async {
+    await logout();
+    // You can add a global key navigation here to redirect to Login
+  }
+
+  static Future<Map<String, dynamic>> login({
     required String email,
     required String password,
-    required String repassword,
-    required String type, // "user" or "agent"
   }) async {
-    final url = Uri.parse('$baseUrl/register');
-
     final response = await http.post(
-      url,
+      Uri.parse('$baseUrl/login'),
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
       },
-      body: jsonEncode({
-        'username': username.trim(),
-        'email': email.trim().toLowerCase(),
-        'password': password,
-        'repassword': repassword,
-        'type': type,
-      }),
+      body: jsonEncode({'email': email.trim(), 'password': password}),
     );
 
     final data = jsonDecode(response.body);
-
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      // Store JWT cookie securely
+    if (response.statusCode == 200) {
       final rawCookie = response.headers['set-cookie'];
       if (rawCookie != null) {
         await _storage.write(
@@ -43,9 +41,8 @@ class AuthService {
         );
       }
       return data;
+    } else {
+      throw data['message'] ?? 'Login failed';
     }
-
-    // Throw backend error
-    throw data['message'] ?? data['error'] ?? 'Registration failed';
   }
 }

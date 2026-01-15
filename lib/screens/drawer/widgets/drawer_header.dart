@@ -1,6 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:mera_ashiana/base_screens/profile_screen.dart';
+import 'package:mera_ashiana/models/user_model.dart';
+import 'package:mera_ashiana/services/profile_service.dart';
 
 class CustomDrawerHeader extends StatelessWidget {
   const CustomDrawerHeader({super.key});
@@ -16,44 +18,83 @@ class CustomDrawerHeader extends StatelessWidget {
         color: primaryNavy,
         borderRadius: BorderRadius.only(bottomRight: Radius.circular(30)),
       ),
-      child: InkWell(
-        onTap: () {
-          Navigator.pop(context);
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const ProfileScreen()),
-          );
-        },
-        child: Row(
-          children: <Widget>[
-            const CircleAvatar(
-              radius: 28,
-              backgroundColor: accentYellow,
-              child: Icon(Icons.person, size: 30, color: primaryNavy),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text(
-                    'Zubair Ali',
-                    style: TextStyle(
-                      fontSize: 18,
+      child: FutureBuilder<User>(
+        // This will now return the cached user instantly after the first fetch
+        future: ProfileService.fetchProfile(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting &&
+              snapshot.data == null) {
+            return const Center(
+              child: CircularProgressIndicator(color: accentYellow),
+            );
+          }
+
+          final user = snapshot.data;
+          final displayName = user?.username ?? 'Guest User';
+          final displayEmail = user?.email ?? 'Please login';
+          final initial = displayName.isNotEmpty
+              ? displayName[0].toUpperCase()
+              : '?';
+
+          return InkWell(
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ProfileScreen()),
+              );
+            },
+            child: Row(
+              children: <Widget>[
+                CircleAvatar(
+                  radius: 28,
+                  backgroundColor: accentYellow,
+                  child: Text(
+                    initial,
+                    style: const TextStyle(
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: primaryNavy,
+                      fontSize: 20,
                     ),
                   ),
-                  Text(
-                    'mrzubair@gmail.com',
-                    style: TextStyle(fontSize: 12, color: Colors.white70),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        displayName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      Text(
+                        displayEmail,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.white70,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+                const Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: accentYellow,
+                ),
+              ],
             ),
-            const Icon(Icons.arrow_forward_ios, size: 16, color: accentYellow),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

@@ -17,9 +17,6 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context)!;
-
-    // ✅ FIX #5: Cache theme and colorScheme ONCE at the top
-    // This prevents multiple Theme.of(context) calls throughout the widget tree
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
@@ -40,16 +37,11 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
         iconTheme: IconThemeData(color: colorScheme.primary),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. User Profile Header
-            _UserHeader(colorScheme: colorScheme),
-
-            const SizedBox(height: 25),
-
-            // 2. Preferences Group
+            // 1. Preferences Group
             _buildSectionLabel(loc.general),
             _SettingsGroup(
               theme: theme,
@@ -70,9 +62,9 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
               ],
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 25),
 
-            // 3. Notification Group
+            // 2. Notification Group
             _buildSectionLabel(loc.notifications),
             _SettingsGroup(
               theme: theme,
@@ -86,9 +78,9 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
               ],
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 25),
 
-            // 4. Security/Actions
+            // 3. Security/Actions
             _buildSectionLabel(loc.accountActions),
             _SettingsGroup(
               theme: theme,
@@ -132,13 +124,10 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
   );
 }
 
-// ✅ FIX #6: Extract into separate StatelessWidgets to minimize rebuilds
-// Each widget only rebuilds when its specific dependencies change
+// --- Internal Helper Widgets (Keep these as they were) ---
+
 class _SettingsGroup extends StatelessWidget {
-  const _SettingsGroup({
-    required this.theme,
-    required this.children,
-  });
+  const _SettingsGroup({required this.theme, required this.children});
 
   final ThemeData theme;
   final List<Widget> children;
@@ -158,55 +147,6 @@ class _SettingsGroup extends StatelessWidget {
         ],
       ),
       child: Column(children: children),
-    );
-  }
-}
-
-class _UserHeader extends StatelessWidget {
-  const _UserHeader({required this.colorScheme});
-
-  final ColorScheme colorScheme;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: colorScheme.primary,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 28,
-            backgroundColor: colorScheme.secondary,
-            child: Icon(Icons.person, color: colorScheme.primary),
-          ),
-          const SizedBox(width: 16),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Zubair Ali',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                Text(
-                  'mrzubair@gmail.com',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.white70,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -251,10 +191,7 @@ class _SettingsTile extends StatelessWidget {
 }
 
 class _LanguageTile extends StatelessWidget {
-  const _LanguageTile({
-    required this.loc,
-    required this.colorScheme,
-  });
+  const _LanguageTile({required this.loc, required this.colorScheme});
 
   final AppLocalizations loc;
   final ColorScheme colorScheme;
@@ -284,23 +221,10 @@ class _LanguageTile extends StatelessWidget {
               value: locale.languageCode,
               underline: const SizedBox(),
               dropdownColor: colorScheme.surface,
-              icon: Icon(
-                Icons.keyboard_arrow_down,
-                size: 18,
-                color: colorScheme.onSurface,
-              ),
+              icon: Icon(Icons.keyboard_arrow_down, size: 18),
               items: [
-                DropdownMenuItem(
-                  value: 'en',
-                  child: Text(
-                    loc.english,
-                    style: const TextStyle(fontSize: 13),
-                  ),
-                ),
-                DropdownMenuItem(
-                  value: 'ur',
-                  child: Text(loc.urdu, style: const TextStyle(fontSize: 13)),
-                ),
+                DropdownMenuItem(value: 'en', child: Text(loc.english)),
+                DropdownMenuItem(value: 'ur', child: Text(loc.urdu)),
               ],
               onChanged: (value) {
                 if (value != null) appLocale.value = Locale(value);
@@ -313,12 +237,8 @@ class _LanguageTile extends StatelessWidget {
   }
 }
 
-// ✅ FIX #7: Optimized Theme Toggle - Isolated rebuild scope
 class _ThemeTile extends StatelessWidget {
-  const _ThemeTile({
-    required this.loc,
-    required this.colorScheme,
-  });
+  const _ThemeTile({required this.loc, required this.colorScheme});
 
   final AppLocalizations loc;
   final ColorScheme colorScheme;
@@ -328,28 +248,21 @@ class _ThemeTile extends StatelessWidget {
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: appThemeMode,
       builder: (context, currentMode, _) {
-        final isDarkValue = currentMode == ThemeMode.dark;
-
+        final isDark = currentMode == ThemeMode.dark;
         return ListTile(
           leading: Icon(
-            isDarkValue ? Icons.dark_mode : Icons.light_mode,
+            isDark ? Icons.dark_mode : Icons.light_mode,
             color: colorScheme.secondary,
-            size: 22,
           ),
           title: Text(
             loc.darkMode,
-            style: TextStyle(
-              color: colorScheme.onSurface,
-              fontWeight: FontWeight.w600,
-              fontSize: 14,
-            ),
+            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
           ),
           trailing: Switch.adaptive(
-            value: isDarkValue,
+            value: isDark,
             activeColor: colorScheme.secondary,
-            onChanged: (value) {
-              appThemeMode.value = value ? ThemeMode.dark : ThemeMode.light;
-            },
+            onChanged: (v) =>
+                appThemeMode.value = v ? ThemeMode.dark : ThemeMode.light,
           ),
         );
       },
@@ -379,11 +292,7 @@ class _NotificationTile extends StatelessWidget {
       ),
       title: Text(
         loc.notifications,
-        style: TextStyle(
-          color: colorScheme.onSurface,
-          fontWeight: FontWeight.w600,
-          fontSize: 14,
-        ),
+        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
       ),
       trailing: Switch.adaptive(
         value: value,

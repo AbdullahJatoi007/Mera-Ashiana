@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:mera_ashiana/services/FavoriteService.dart';
+import 'package:mera_ashiana/services/login_service.dart';
 
 class ProjectDetailsScreen extends StatefulWidget {
   final int? propertyId;
@@ -14,6 +16,7 @@ class ProjectDetailsScreen extends StatefulWidget {
 class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
   bool isLoading = true;
   bool hasError = false;
+  bool isToggling = false;
   Map<String, dynamic>? property;
 
   @override
@@ -24,17 +27,39 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
 
   Future<void> fetchPropertyDetails() async {
     try {
+      final cookie = await LoginService.getAuthCookie();
       final url = widget.propertyId != null
           ? "http://api.staging.mera-ashiana.com/api/properties/${widget.propertyId}"
           : "http://api.staging.mera-ashiana.com/api/properties?recent=true";
 
-      final response = await http.get(Uri.parse(url));
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {'Cookie': cookie ?? '', 'Accept': 'application/json'},
+      );
+
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
         setState(() {
           property = widget.propertyId != null
               ? decoded['data']
               : (decoded['data'] as List).first;
+
+          if (property != null) {
+            final id = property!['id'];
+            final isLikedByApi = property!['is_liked'] == true;
+
+            // SYNC GLOBAL STATE
+            final currentSet = Set<int>.from(FavoriteService.favoriteIds.value);
+            if (isLikedByApi) {
+              currentSet.add(id);
+              FavoriteService.favoritesMap[id] = property!;
+            } else {
+              currentSet.remove(id);
+            }
+            // Assigning a NEW Set instance triggers the ValueListenableBuilder
+            FavoriteService.favoriteIds.value = currentSet;
+          }
+
           isLoading = false;
         });
       } else {
@@ -51,6 +76,52 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
     }
   }
 
+  Future<void> _handleFavoriteToggle() async {
+    if (isToggling || property == null) return;
+
+    final propertyId = property!['id'];
+    // Check current local state
+    final wasLiked = FavoriteService.favoriteIds.value.contains(propertyId);
+
+    setState(() => isToggling = true);
+
+    try {
+      // 1. If we are liking, cache the data for the Favorites screen immediately
+      if (!wasLiked) {
+        FavoriteService.favoritesMap[propertyId] = property!;
+      }
+
+      // 2. Call the API
+      final success = await FavoriteService.toggleFavorite(
+        propertyId,
+        wasLiked,
+      );
+
+      if (success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              !wasLiked ? "Added to Favorites" : "Removed from Favorites",
+            ),
+            duration: const Duration(seconds: 1),
+          ),
+        );
+      } else if (!success) {
+        // Rollback map if API failed
+        if (!wasLiked) FavoriteService.favoritesMap.remove(propertyId);
+        throw Exception("Failed to update favorite status");
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => isToggling = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -60,7 +131,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
     }
 
     if (hasError || property == null) {
-      return Scaffold(
+      return const Scaffold(
         body: Center(child: Text("Failed to load property details")),
       );
     }
@@ -71,128 +142,53 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
         .toList();
 
     return Scaffold(
-      backgroundColor: cs.background,
-      body: Stack(
-        children: [
-          CustomScrollView(
-            slivers: [
-              _buildSliverAppBar(theme, images),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildHeaderSection(theme, property!),
-                      const SizedBox(height: 20),
-                      _buildQuickSpecsBox(theme, property!),
-                      const SizedBox(height: 20),
-                      _buildSectionTitle(theme, "Description"),
-                      Text(
-                        property!['description'] ?? "",
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: cs.onSurface.withOpacity(0.8),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      if ((property!['amenities'] as List?)?.isNotEmpty ??
-                          false)
-                        _buildSectionTitle(theme, "Amenities"),
-                      if ((property!['amenities'] as List?)?.isNotEmpty ??
-                          false)
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 6,
-                          children: (property!['amenities'] as List)
-                              .map((e) => Chip(label: Text(e.toString())))
-                              .toList(),
-                        ),
-                      const SizedBox(height: 30),
-                      _buildSectionTitle(theme, "Contact Agent"),
-                      Row(
-                        children: [
-                          if (property!['contact_phone'] != null)
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: () {
-                                  // launch phone call
-                                },
-                                icon: const Icon(Icons.call),
-                                label: Text(property!['contact_phone']),
-                                style: OutlinedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 14,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          const SizedBox(width: 12),
-                          if (property!['contact_whatsapp'] != null)
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: () {
-                                  // launch WhatsApp
-                                },
-                                icon: const Icon(Icons.message_outlined),
-                                label: Text(property!['contact_whatsapp']),
-                                style: OutlinedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 14,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 120),
-                    ],
+      backgroundColor: cs.surface,
+      body: CustomScrollView(
+        slivers: [
+          _buildSliverAppBar(theme, images),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildHeaderSection(theme, property!),
+                  const SizedBox(height: 20),
+                  _buildQuickSpecsBox(theme, property!),
+                  const SizedBox(height: 20),
+                  _buildSectionTitle(theme, "Description"),
+                  Text(
+                    property!['description'] ?? "",
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: cs.onSurface.withOpacity(0.8),
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 20),
+                  if ((property!['amenities'] as List?)?.isNotEmpty ?? false)
+                    _buildSectionTitle(theme, "Amenities"),
+                  if ((property!['amenities'] as List?)?.isNotEmpty ?? false)
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      children: (property!['amenities'] as List)
+                          .map((e) => Chip(label: Text(e.toString())))
+                          .toList(),
+                    ),
+                  const SizedBox(height: 120),
+                ],
               ),
-            ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSliverAppBar(ThemeData theme, List<String> images) {
-    return SliverAppBar(
-      expandedHeight: 280,
-      pinned: true,
-      backgroundColor: theme.colorScheme.primary,
-      iconTheme: const IconThemeData(color: Colors.white),
-      leading: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: CircleAvatar(
-          backgroundColor: Colors.black.withOpacity(0.3),
-          child: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ),
-      ),
-      flexibleSpace: FlexibleSpaceBar(
-        background: images.isNotEmpty
-            ? PageView.builder(
-                itemCount: images.length,
-                itemBuilder: (context, index) =>
-                    Image.network(images[index], fit: BoxFit.cover),
-              )
-            : const SizedBox(),
-      ),
-    );
-  }
-
   Widget _buildHeaderSection(ThemeData theme, Map<String, dynamic> property) {
     final cs = theme.colorScheme;
+    final propertyId = property['id'];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -214,17 +210,29 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                 ),
               ),
             ),
-            Icon(Icons.favorite_border, color: cs.primary),
+            // REFRESHES AUTOMATICALLY ON CHANGE
+            ValueListenableBuilder<Set<int>>(
+              valueListenable: FavoriteService.favoriteIds,
+              builder: (context, favSet, _) {
+                final liked = favSet.contains(propertyId);
+                return IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  onPressed: isToggling ? null : _handleFavoriteToggle,
+                  icon: Icon(
+                    liked ? Icons.favorite : Icons.favorite_border,
+                    color: liked ? Colors.red : cs.primary,
+                    size: 32,
+                  ),
+                );
+              },
+            ),
           ],
         ),
         const SizedBox(height: 16),
         Text(
           property['title'] ?? "",
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-            color: cs.onSurface,
-          ),
+          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 6),
         Row(
@@ -253,6 +261,37 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  // ... (Other helper methods remain the same)
+  Widget _buildSliverAppBar(ThemeData theme, List<String> images) {
+    return SliverAppBar(
+      expandedHeight: 280,
+      pinned: true,
+      backgroundColor: theme.colorScheme.primary,
+      iconTheme: const IconThemeData(color: Colors.white),
+      leading: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: CircleAvatar(
+          backgroundColor: Colors.black.withOpacity(0.3),
+          child: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+      ),
+      flexibleSpace: FlexibleSpaceBar(
+        background: images.isNotEmpty
+            ? PageView.builder(
+                itemCount: images.length,
+                itemBuilder: (context, index) =>
+                    Image.network(images[index], fit: BoxFit.cover),
+              )
+            : const Center(
+                child: Icon(Icons.image, size: 50, color: Colors.white54),
+              ),
+      ),
     );
   }
 
@@ -287,20 +326,6 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
             "${property['area'] ?? '-'}",
             "Sq. Ft",
           ),
-          _divider(theme),
-          _specItem(
-            theme,
-            Icons.local_parking,
-            "${property['parking_size'] ?? '-'}",
-            "Parking",
-          ),
-          _divider(theme),
-          _specItem(
-            theme,
-            Icons.calendar_today,
-            "${property['year_built'] ?? '-'}",
-            "Year",
-          ),
         ],
       ),
     );
@@ -313,11 +338,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
         const SizedBox(height: 6),
         Text(
           value,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
-            color: theme.colorScheme.onSurface,
-          ),
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
         ),
         Text(
           unit,
@@ -336,17 +357,11 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
     color: theme.dividerColor.withOpacity(0.2),
   );
 
-  Widget _buildSectionTitle(ThemeData theme, String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Text(
-        title,
-        style: TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-          color: theme.colorScheme.onSurface,
-        ),
-      ),
-    );
-  }
+  Widget _buildSectionTitle(ThemeData theme, String title) => Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Text(
+      title,
+      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+    ),
+  );
 }

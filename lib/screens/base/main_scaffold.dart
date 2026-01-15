@@ -7,6 +7,7 @@ import 'package:mera_ashiana/base_screens/projects_screen.dart';
 import 'package:mera_ashiana/base_screens/search_screen.dart';
 import 'package:mera_ashiana/screens/drawer/custom_drawer.dart';
 import 'package:mera_ashiana/favourite_bottom_sheet.dart';
+import 'package:mera_ashiana/services/login_service.dart'; // IMPORT THIS
 
 class MainScaffold extends StatefulWidget {
   const MainScaffold({super.key});
@@ -17,9 +18,9 @@ class MainScaffold extends StatefulWidget {
 
 class _MainScaffoldState extends State<MainScaffold> {
   int _selectedIndex = 0;
-  final bool _isUserLoggedIn = false;
+  bool _isUserLoggedIn = false;
 
-  static const List<Widget> _screens = <Widget>[
+  final List<Widget> _screens = const <Widget>[
     HomeScreen(),
     ProjectsScreen(),
     SearchScreen(),
@@ -27,11 +28,30 @@ class _MainScaffoldState extends State<MainScaffold> {
     ProfileScreen(),
   ];
 
-  void _onItemTapped(int index) {
-    if (index == 3 && !_isUserLoggedIn) {
+  @override
+  void initState() {
+    super.initState();
+    _checkLoginStatus();
+  }
+
+  // Check if a cookie exists in storage
+  Future<void> _checkLoginStatus() async {
+    final cookie = await LoginService.getAuthCookie();
+    setState(() {
+      _isUserLoggedIn = (cookie != null);
+    });
+  }
+
+  void _onItemTapped(int index) async {
+    // Re-check status whenever a tab is tapped to stay in sync
+    await _checkLoginStatus();
+
+    // If tapping Favorites (3) or Profile (4) and not logged in, show sheet
+    if ((index == 3 || index == 4) && !_isUserLoggedIn) {
       _showLoginSheet();
       return;
     }
+
     setState(() {
       _selectedIndex = index;
     });
@@ -42,7 +62,12 @@ class _MainScaffoldState extends State<MainScaffold> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => const FavouriteBottomSheet(),
+      builder: (context) => FavouriteBottomSheet(
+        onLoginSuccess: () {
+          _checkLoginStatus(); // Update state after login
+          setState(() => _selectedIndex = 3); // Move to Favorites
+        },
+      ),
     );
   }
 
@@ -75,9 +100,7 @@ class _MainScaffoldState extends State<MainScaffold> {
       canPop: _selectedIndex == 0,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
-        if (_selectedIndex != 0) {
-          setState(() => _selectedIndex = 0);
-        }
+        if (_selectedIndex != 0) setState(() => _selectedIndex = 0);
       },
       child: Scaffold(
         extendBodyBehindAppBar: isHome,
@@ -89,17 +112,14 @@ class _MainScaffoldState extends State<MainScaffold> {
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 18,
-              // Fixed: Use White for transparent Home, otherwise use theme text color
               color: isHome ? Colors.white : colorScheme.onSurface,
             ),
           ),
           iconTheme: IconThemeData(
             color: isHome ? Colors.white : colorScheme.primary,
           ),
-          // Fixed: Use transparent for Home, otherwise use theme surface color
           backgroundColor: isHome ? Colors.transparent : colorScheme.surface,
           elevation: 0,
-          surfaceTintColor: Colors.transparent,
         ),
         body: IndexedStack(index: _selectedIndex, children: _screens),
         bottomNavigationBar: _buildBottomNav(loc, theme),
@@ -112,7 +132,6 @@ class _MainScaffoldState extends State<MainScaffold> {
       decoration: BoxDecoration(
         border: Border(
           top: BorderSide(
-            // Fixed: Use theme divider color or a subtle version of onSurface
             color: theme.dividerColor.withOpacity(0.1),
             width: 0.5,
           ),
@@ -122,15 +141,11 @@ class _MainScaffoldState extends State<MainScaffold> {
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
         type: BottomNavigationBarType.fixed,
-        // Fixed: Use theme surface color instead of hardcoded white
         backgroundColor: theme.colorScheme.surface,
         selectedItemColor: theme.colorScheme.secondary,
-        // Fixed: Use theme text color with opacity for unselected
         unselectedItemColor: theme.colorScheme.onSurface.withOpacity(0.4),
         selectedFontSize: 11,
         unselectedFontSize: 11,
-        iconSize: 22,
-        elevation: 0,
         items: [
           BottomNavigationBarItem(
             icon: const Icon(Icons.home_outlined),
