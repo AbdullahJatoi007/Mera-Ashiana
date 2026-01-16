@@ -1,19 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // Haptics
 import 'package:mera_ashiana/l10n/app_localizations.dart';
 import 'package:mera_ashiana/services/login_service.dart';
+import 'package:mera_ashiana/services/google_login_service.dart';
 
-class FavouriteBottomSheet extends StatefulWidget {
-  final VoidCallback onLoginSuccess; // Callback to refresh UI
-  const FavouriteBottomSheet({super.key, required this.onLoginSuccess});
+class AuthenticationBottomSheet extends StatefulWidget {
+  final VoidCallback onLoginSuccess;
+  final String title;
+
+  const AuthenticationBottomSheet({
+    super.key,
+    required this.onLoginSuccess,
+    this.title = "Sign In",
+  });
 
   @override
-  State<FavouriteBottomSheet> createState() => _FavouriteBottomSheetState();
+  State<AuthenticationBottomSheet> createState() =>
+      _AuthenticationBottomSheetState();
 }
 
-class _FavouriteBottomSheetState extends State<FavouriteBottomSheet> {
+class _AuthenticationBottomSheetState extends State<AuthenticationBottomSheet> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _isGoogleLoading = false;
 
   Future<void> _handleLogin() async {
     setState(() => _isLoading = true);
@@ -37,9 +47,27 @@ class _FavouriteBottomSheetState extends State<FavouriteBottomSheet> {
     }
   }
 
+  Future<void> _handleGoogleLogin() async {
+    setState(() => _isGoogleLoading = true);
+    try {
+      await GoogleLoginService.signInWithGoogle(captchaToken: '');
+      if (mounted) {
+        widget.onLoginSuccess();
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    } finally {
+      if (mounted) setState(() => _isGoogleLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    var loc = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
@@ -74,16 +102,16 @@ class _FavouriteBottomSheetState extends State<FavouriteBottomSheet> {
             CircleAvatar(
               radius: 35,
               backgroundColor: colorScheme.secondary,
-              child: Icon(Icons.favorite, color: colorScheme.primary, size: 35),
+              child: Icon(Icons.person, color: colorScheme.primary, size: 35),
             ),
             const SizedBox(height: 20),
-            const Text(
-              "Sign In",
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            Text(
+              widget.title,
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             const Text(
-              "Sign in to save properties and sync your favorites.",
+              "Sign in to access full features.",
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 30),
@@ -100,11 +128,11 @@ class _FavouriteBottomSheetState extends State<FavouriteBottomSheet> {
               controller: _passwordController,
               isPassword: true,
             ),
-
             const SizedBox(height: 25),
+
             SizedBox(
               width: double.infinity,
-              height: 55,
+              height: 50,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: colorScheme.primary,
@@ -117,15 +145,34 @@ class _FavouriteBottomSheetState extends State<FavouriteBottomSheet> {
                     ? const CircularProgressIndicator(color: Colors.white)
                     : const Text(
                         "Login",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
+                        style: TextStyle(fontWeight: FontWeight.bold),
                       ),
               ),
             ),
-            const SizedBox(height: 30),
+            const SizedBox(height: 15),
+
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: OutlinedButton.icon(
+                onPressed: _isGoogleLoading ? null : _handleGoogleLogin,
+                icon: _isGoogleLoading
+                    ? const CircularProgressIndicator()
+                    : const Icon(Icons.g_mobiledata, size: 28),
+                label: const Text(
+                  "Continue with Google",
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  side: BorderSide(color: theme.dividerColor.withOpacity(0.2)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 25),
           ],
         ),
       ),

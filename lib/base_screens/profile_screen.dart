@@ -4,7 +4,8 @@ import 'package:mera_ashiana/screens/real_estate_registration_screen.dart';
 import 'package:mera_ashiana/screens/account_settings_screen.dart';
 import 'package:mera_ashiana/helpers/logout_helper.dart';
 import 'package:mera_ashiana/services/profile_service.dart';
-import 'package:mera_ashiana/models/user_model.dart'; // Ensure this is imported
+import 'package:mera_ashiana/models/user_model.dart';
+import 'package:mera_ashiana/authentication_bottom_sheet.dart'; // Ensure this is imported
 import 'package:url_launcher/url_launcher.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -38,18 +39,26 @@ class _ProfileContentState extends State<_ProfileContent> {
   }
 
   Future<void> _loadUser() async {
+    if (!mounted) return;
+    setState(() => isLoading = true);
     try {
-      final profile = await ProfileService.fetchProfile();
-      setState(() {
-        user = profile;
-        error = null;
-        isLoading = false;
-      });
+      final profile = await ProfileService.fetchProfile(forceRefresh: true);
+      if (mounted) {
+        setState(() {
+          user = profile;
+          error = null;
+          isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() {
-        error = e.toString();
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          // If the error is an auth error, we treat them as a guest instead of showing an error screen
+          user = null;
+          error = e.toString().contains('401') ? null : e.toString();
+          isLoading = false;
+        });
+      }
     }
   }
 
@@ -60,98 +69,205 @@ class _ProfileContentState extends State<_ProfileContent> {
     }
   }
 
+  void _showLoginSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => AuthenticationBottomSheet(
+        onLoginSuccess: () {
+          _loadUser(); // Refresh UI to show the real profile
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context)!;
 
-    if (isLoading) {
-      return const Center(child: CircularProgressIndicator());
+    if (isLoading) return const Center(child: CircularProgressIndicator());
+
+    // 1. Guest View: If not logged in
+    if (user == null && error == null) {
+      return _buildGuestView(loc);
     }
 
-    if (error != null && user == null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, size: 48, color: Colors.red),
-            const SizedBox(height: 16),
-            Text("Error: $error"),
-            const SizedBox(height: 10),
-            ElevatedButton(onPressed: _loadUser, child: const Text("Retry")),
-          ],
-        ),
-      );
+    // 2. Error View: If network/server fails
+    if (error != null) {
+      return _buildErrorView();
     }
 
+    // 3. Authenticated Profile View
     return RefreshIndicator(
       onRefresh: _loadUser,
       child: ListView(
         padding: EdgeInsets.zero,
         physics: const AlwaysScrollableScrollPhysics(),
         children: <Widget>[
-          if (user != null) _buildHeader(user!),
+          _buildHeader(user!),
           const SizedBox(height: 20),
           _buildMetricsRow(loc),
           const SizedBox(height: 25),
-          _buildActionSection(loc),
+          _buildActionSection(loc, user?.type ?? 'user'),
+          const SizedBox(height: 40),
         ],
       ),
     );
   }
 
+  // --- GUEST VIEW COMPONENT ---
+  Widget _buildGuestView(AppLocalizations loc) {
+    final theme = Theme.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 40),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.account_circle_outlined,
+              size: 100,
+              color: theme.colorScheme.primary.withOpacity(0.2),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              "Profile & Settings",
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              "Login to view your listings, manage your account, and see your saved properties.",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: theme.colorScheme.onSurface.withOpacity(0.6),
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              height: 55,
+              child: ElevatedButton(
+                onPressed: _showLoginSheet,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.colorScheme.secondary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  elevation: 0,
+                ),
+                child: const Text(
+                  "LOGIN / REGISTER",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // --- COMPACT HEADER COMPONENT ---
   Widget _buildHeader(User user) {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(24, 60, 24, 40),
+      padding: const EdgeInsets.fromLTRB(20, 50, 20, 24),
       decoration: BoxDecoration(
-        color: colorScheme.primary,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [colorScheme.primary, colorScheme.primary.withOpacity(0.85)],
+        ),
         borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(40),
-          bottomRight: Radius.circular(40),
+          bottomLeft: Radius.circular(30),
+          bottomRight: Radius.circular(30),
         ),
       ),
       child: Row(
         children: [
           CircleAvatar(
-            radius: 42,
+            radius: 35,
             backgroundColor: colorScheme.secondary,
             child: Text(
-              user.username.isNotEmpty ? user.username[0].toUpperCase() : '?',
+              user.username.isNotEmpty ? user.username[0].toUpperCase() : 'U',
               style: const TextStyle(
-                fontSize: 28,
+                fontSize: 24,
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
               ),
             ),
           ),
-          const SizedBox(width: 20),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  user.username,
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    letterSpacing: 0.5,
-                  ),
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        user.username,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    _buildTypeBadge(user.type),
+                  ],
                 ),
-                const SizedBox(height: 4),
                 Text(
                   user.email,
                   style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.white.withOpacity(0.7),
+                    fontSize: 13,
+                    color: Colors.white.withOpacity(0.9),
                   ),
                 ),
+                if (user.phone != null && user.phone!.isNotEmpty)
+                  Text(
+                    user.phone!,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.white.withOpacity(0.7),
+                    ),
+                  ),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildTypeBadge(String type) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: Colors.white.withOpacity(0.2)),
+      ),
+      child: Text(
+        type.toUpperCase(),
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 9,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }
@@ -175,9 +291,8 @@ class _ProfileContentState extends State<_ProfileContent> {
     );
   }
 
-  Widget _buildActionSection(AppLocalizations loc) {
+  Widget _buildActionSection(AppLocalizations loc, String userType) {
     final theme = Theme.of(context);
-
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
       decoration: BoxDecoration(
@@ -203,16 +318,17 @@ class _ProfileContentState extends State<_ProfileContent> {
               MaterialPageRoute(builder: (_) => const AccountSettingsScreen()),
             ),
           ),
-          _buildSettingsTile(
-            title: 'Agency Settings',
-            icon: Icons.real_estate_agent_sharp,
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const RealEstateRegistrationScreen(),
+          if (userType == 'agent')
+            _buildSettingsTile(
+              title: 'Agency Management',
+              icon: Icons.business_outlined,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const RealEstateRegistrationScreen(),
+                ),
               ),
             ),
-          ),
           _buildSettingsTile(
             title: loc.paymentMethods,
             icon: Icons.payment_outlined,
@@ -226,7 +342,7 @@ class _ProfileContentState extends State<_ProfileContent> {
           _buildSettingsTile(
             title: loc.privacyPolicy,
             icon: Icons.verified_user_outlined,
-            onTap: () => _launchURL('https://www.zameen.com/terms.html'),
+            onTap: () => _launchURL('https://mera-ashiana.com/privacy-policy'),
           ),
           _buildSettingsTile(
             title: loc.logout,
@@ -274,6 +390,26 @@ class _ProfileContentState extends State<_ProfileContent> {
         color: theme.colorScheme.onSurface.withOpacity(0.3),
       ),
       onTap: onTap,
+    );
+  }
+
+  Widget _buildErrorView() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.wifi_off_rounded, size: 60, color: Colors.grey),
+          const SizedBox(height: 16),
+          Text(
+            "Something went wrong",
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          ),
+          const SizedBox(height: 8),
+          Text(error ?? "Unknown Error"),
+          const SizedBox(height: 24),
+          ElevatedButton(onPressed: _loadUser, child: const Text("Retry")),
+        ],
+      ),
     );
   }
 }

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:mera_ashiana/base_screens/home_screen.dart';
 import 'package:mera_ashiana/l10n/app_localizations.dart';
 import 'package:mera_ashiana/screens/auth/login_screen.dart';
+import 'package:mera_ashiana/screens/base/main_scaffold.dart';
 import 'package:mera_ashiana/services/logout_service.dart'; // Import your service file
 
 class AuthHelper {
@@ -48,7 +50,7 @@ class AuthHelper {
               if (context.mounted) {
                 Navigator.pushAndRemoveUntil(
                   context,
-                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                  MaterialPageRoute(builder: (context) => const MainScaffold()),
                   (route) => false,
                 );
               }
