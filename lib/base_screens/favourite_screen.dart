@@ -20,7 +20,6 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("My Favorites")),
       body: ValueListenableBuilder<Set<int>>(
         valueListenable: FavoriteService.favoriteIds,
         builder: (context, favSet, _) {

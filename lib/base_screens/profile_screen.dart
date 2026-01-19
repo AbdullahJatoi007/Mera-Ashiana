@@ -4,8 +4,9 @@ import 'package:mera_ashiana/screens/real_estate_registration_screen.dart';
 import 'package:mera_ashiana/screens/account_settings_screen.dart';
 import 'package:mera_ashiana/helpers/logout_helper.dart';
 import 'package:mera_ashiana/services/profile_service.dart';
+import 'package:mera_ashiana/services/auth_state.dart'; // Crucial for global sync
 import 'package:mera_ashiana/models/user_model.dart';
-import 'package:mera_ashiana/authentication_bottom_sheet.dart'; // Ensure this is imported
+import 'package:mera_ashiana/authentication_bottom_sheet.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -36,11 +37,39 @@ class _ProfileContentState extends State<_ProfileContent> {
   void initState() {
     super.initState();
     _loadUser();
+    // LISTEN: This is the "Magic Fix". Whenever AuthState changes anywhere
+    // in the app, this screen will catch it and refresh.
+    AuthState.isLoggedIn.addListener(_handleAuthChange);
+  }
+
+  @override
+  void dispose() {
+    // Best practice: Clean up listeners when the widget is destroyed
+    AuthState.isLoggedIn.removeListener(_handleAuthChange);
+    super.dispose();
+  }
+
+  void _handleAuthChange() {
+    if (mounted) {
+      _loadUser(); // Re-run logic to either fetch profile or show guest view
+    }
   }
 
   Future<void> _loadUser() async {
-    if (!mounted) return;
-    setState(() => isLoading = true);
+    // 1. If global state says logged out, reset UI immediately
+    if (!AuthState.isLoggedIn.value) {
+      if (mounted) {
+        setState(() {
+          user = null;
+          isLoading = false;
+          error = null;
+        });
+      }
+      return;
+    }
+
+    // 2. Otherwise, fetch the data
+    if (mounted) setState(() => isLoading = true);
     try {
       final profile = await ProfileService.fetchProfile(forceRefresh: true);
       if (mounted) {
@@ -53,7 +82,7 @@ class _ProfileContentState extends State<_ProfileContent> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          // If the error is an auth error, we treat them as a guest instead of showing an error screen
+          // If the error is a 401 (Unauthorized), treat as guest
           user = null;
           error = e.toString().contains('401') ? null : e.toString();
           isLoading = false;
@@ -76,7 +105,9 @@ class _ProfileContentState extends State<_ProfileContent> {
       backgroundColor: Colors.transparent,
       builder: (context) => AuthenticationBottomSheet(
         onLoginSuccess: () {
-          _loadUser(); // Refresh UI to show the real profile
+          // Note: AuthState listener will also catch this,
+          // but calling it here ensures instant feedback.
+          _loadUser();
         },
       ),
     );
@@ -116,7 +147,7 @@ class _ProfileContentState extends State<_ProfileContent> {
     );
   }
 
-  // --- GUEST VIEW COMPONENT ---
+  // --- UI COMPONENTS (GUEST VIEW) ---
   Widget _buildGuestView(AppLocalizations loc) {
     final theme = Theme.of(context);
     return Center(
@@ -175,10 +206,9 @@ class _ProfileContentState extends State<_ProfileContent> {
     );
   }
 
-  // --- COMPACT HEADER COMPONENT ---
+  // --- UI COMPONENTS (HEADER) ---
   Widget _buildHeader(User user) {
     final colorScheme = Theme.of(context).colorScheme;
-
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(20, 50, 20, 24),
@@ -365,7 +395,6 @@ class _ProfileContentState extends State<_ProfileContent> {
     final Color color = isDestructive
         ? Colors.redAccent
         : theme.colorScheme.primary;
-
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
       leading: Container(
@@ -400,7 +429,7 @@ class _ProfileContentState extends State<_ProfileContent> {
         children: [
           const Icon(Icons.wifi_off_rounded, size: 60, color: Colors.grey),
           const SizedBox(height: 16),
-          Text(
+          const Text(
             "Something went wrong",
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
           ),
@@ -414,6 +443,7 @@ class _ProfileContentState extends State<_ProfileContent> {
   }
 }
 
+// Re-usable helper widget for user metrics
 class _MetricCard extends StatelessWidget {
   final String count;
   final String label;

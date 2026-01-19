@@ -8,7 +8,7 @@ import 'package:mera_ashiana/base_screens/favourite_screen.dart';
 import 'package:mera_ashiana/base_screens/profile_screen.dart';
 import 'package:mera_ashiana/screens/drawer/custom_drawer.dart';
 import 'package:mera_ashiana/authentication_bottom_sheet.dart';
-import 'package:mera_ashiana/services/login_service.dart';
+import 'package:mera_ashiana/services/auth_state.dart'; // Import global state
 
 class MainScaffold extends StatefulWidget {
   const MainScaffold({super.key});
@@ -19,8 +19,8 @@ class MainScaffold extends StatefulWidget {
 
 class _MainScaffoldState extends State<MainScaffold> {
   int _selectedIndex = 0;
-  bool _isUserLoggedIn = false;
 
+  // These are constant so they don't rebuild unnecessarily
   final List<Widget> _screens = const [
     HomeScreen(),
     ProjectsScreen(),
@@ -29,24 +29,13 @@ class _MainScaffoldState extends State<MainScaffold> {
     ProfileScreen(),
   ];
 
-  @override
-  void initState() {
-    super.initState();
-    _checkLoginStatus();
-  }
-
-  Future<void> _checkLoginStatus() async {
-    final cookie = await LoginService.getAuthCookie();
-    if (mounted) {
-      setState(() => _isUserLoggedIn = cookie != null);
-    }
-  }
-
-  void _onItemTapped(int index) async {
+  void _onItemTapped(int index) {
     HapticFeedback.selectionClick();
 
-    // Protected tabs: Favorites(3), Profile(4)
-    if ((index == 3 || index == 4) && !_isUserLoggedIn) {
+    // BEST PRACTICE:
+    // Only block Favorites(3) if not logged in.
+    // Let the user click Profile(4) so they see the Guest View/Register option.
+    if (index == 3 && !AuthState.isLoggedIn.value) {
       _showLoginSheet(targetIndex: index);
       return;
     }
@@ -61,9 +50,10 @@ class _MainScaffoldState extends State<MainScaffold> {
       backgroundColor: Colors.transparent,
       barrierColor: Colors.black54,
       builder: (_) => AuthenticationBottomSheet(
-        title: targetIndex == 4 ? "Login to Account" : "Sign In",
+        title: "Sign In",
         onLoginSuccess: () {
-          _checkLoginStatus();
+          // No need for checkLoginStatus() here, the BottomSheet
+          // already updates AuthState.isLoggedIn.value
           setState(() => _selectedIndex = targetIndex);
         },
       ),
@@ -76,12 +66,20 @@ class _MainScaffoldState extends State<MainScaffold> {
     final loc = AppLocalizations.of(context)!;
     final isHome = _selectedIndex == 0;
 
-    return Scaffold(
-      extendBodyBehindAppBar: isHome,
-      drawer: const CustomDrawer(),
-      appBar: _buildAppBar(context, theme, isHome, loc),
-      body: IndexedStack(index: _selectedIndex, children: _screens),
-      bottomNavigationBar: _buildBottomNav(loc, theme),
+    // Wrap with ValueListenableBuilder so the UI (like App Bar titles)
+    // updates immediately when the user logs in/out.
+    return ValueListenableBuilder<bool>(
+      valueListenable: AuthState.isLoggedIn,
+      builder: (context, isLoggedIn, _) {
+        return Scaffold(
+          extendBodyBehindAppBar: isHome,
+          drawer: const CustomDrawer(),
+          appBar: _buildAppBar(context, theme, isHome, loc),
+          // IndexedStack keeps the state of all screens alive
+          body: IndexedStack(index: _selectedIndex, children: _screens),
+          bottomNavigationBar: _buildBottomNav(loc, theme),
+        );
+      },
     );
   }
 
@@ -122,7 +120,7 @@ class _MainScaffoldState extends State<MainScaffold> {
       case 3:
         return loc.favorites;
       case 4:
-        return loc.editProfile.split(' ').last;
+        return "Account"; // Simplified
       default:
         return 'MERA ASHIANA';
     }

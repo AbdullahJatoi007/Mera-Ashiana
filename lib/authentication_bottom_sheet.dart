@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // Haptics
-import 'package:mera_ashiana/l10n/app_localizations.dart';
+import 'package:flutter/services.dart';
 import 'package:mera_ashiana/services/login_service.dart';
 import 'package:mera_ashiana/services/google_login_service.dart';
+import 'package:mera_ashiana/services/auth_state.dart'; // Ensure AuthState is imported
 
 class AuthenticationBottomSheet extends StatefulWidget {
   final VoidCallback onLoginSuccess;
@@ -22,25 +22,42 @@ class AuthenticationBottomSheet extends StatefulWidget {
 class _AuthenticationBottomSheetState extends State<AuthenticationBottomSheet> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+
   bool _isLoading = false;
   bool _isGoogleLoading = false;
+  bool _isRegisterMode = false; // Toggles between Login and Register UI
 
-  Future<void> _handleLogin() async {
+  /// Combined handler for Login and Registration
+  Future<void> _handleAuth() async {
+    HapticFeedback.mediumImpact();
     setState(() => _isLoading = true);
+
     try {
-      await LoginService.login(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-      );
+      if (_isRegisterMode) {
+        // TODO: Call your Registration Service here
+        // await RegisterService.register(email: ..., password: ...);
+      } else {
+        await LoginService.login(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+        );
+      }
+
+      // SUCCESS: Update global state and notify listeners (like ProfileScreen)
+      AuthState.isLoggedIn.value = true;
+
       if (mounted) {
         widget.onLoginSuccess();
         Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.toString())));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -51,6 +68,10 @@ class _AuthenticationBottomSheetState extends State<AuthenticationBottomSheet> {
     setState(() => _isGoogleLoading = true);
     try {
       await GoogleLoginService.signInWithGoogle(captchaToken: '');
+
+      // SUCCESS: Update global state
+      AuthState.isLoggedIn.value = true;
+
       if (mounted) {
         widget.onLoginSuccess();
         Navigator.pop(context);
@@ -90,32 +111,47 @@ class _AuthenticationBottomSheetState extends State<AuthenticationBottomSheet> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Handle bar
             Container(
               width: 50,
               height: 5,
               decoration: BoxDecoration(
-                color: theme.dividerColor,
+                color: theme.dividerColor.withOpacity(0.4),
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
             const SizedBox(height: 25),
+
+            // Icon
             CircleAvatar(
               radius: 35,
-              backgroundColor: colorScheme.secondary,
-              child: Icon(Icons.person, color: colorScheme.primary, size: 35),
+              backgroundColor: colorScheme.primary.withOpacity(0.1),
+              child: Icon(
+                _isRegisterMode
+                    ? Icons.person_add_rounded
+                    : Icons.person_rounded,
+                color: colorScheme.primary,
+                size: 35,
+              ),
             ),
             const SizedBox(height: 20),
+
+            // Dynamic Title
             Text(
-              widget.title,
+              _isRegisterMode ? "Create Account" : widget.title,
               style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            const Text(
-              "Sign in to access full features.",
+            Text(
+              _isRegisterMode
+                  ? "Join us to find your perfect home."
+                  : "Sign in to access full features.",
               textAlign: TextAlign.center,
+              style: TextStyle(color: theme.hintColor),
             ),
             const SizedBox(height: 30),
 
+            // Fields
             _buildField(
               label: "Email",
               icon: Icons.email_outlined,
@@ -130,49 +166,91 @@ class _AuthenticationBottomSheetState extends State<AuthenticationBottomSheet> {
             ),
             const SizedBox(height: 25),
 
+            // Primary Action Button
             SizedBox(
               width: double.infinity,
-              height: 50,
+              height: 55,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: colorScheme.primary,
+                  foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(15),
                   ),
+                  elevation: 0,
                 ),
-                onPressed: _isLoading ? null : _handleLogin,
+                onPressed: _isLoading ? null : _handleAuth,
                 child: _isLoading
                     ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text(
-                        "Login",
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                    : Text(
+                        _isRegisterMode ? "REGISTER" : "LOGIN",
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
                       ),
               ),
             ),
-            const SizedBox(height: 15),
 
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: OutlinedButton.icon(
-                onPressed: _isGoogleLoading ? null : _handleGoogleLogin,
-                icon: _isGoogleLoading
-                    ? const CircularProgressIndicator()
-                    : const Icon(Icons.g_mobiledata, size: 28),
-                label: const Text(
-                  "Continue with Google",
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  side: BorderSide(color: theme.dividerColor.withOpacity(0.2)),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+            if (!_isRegisterMode) ...[
+              const SizedBox(height: 15),
+              // Google Login (Only show in Login Mode)
+              SizedBox(
+                width: double.infinity,
+                height: 55,
+                child: OutlinedButton.icon(
+                  onPressed: _isGoogleLoading ? null : _handleGoogleLogin,
+                  icon: _isGoogleLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.g_mobiledata, size: 32),
+                  label: const Text(
+                    "Continue with Google",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(
+                      color: theme.dividerColor.withOpacity(0.2),
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15),
+                    ),
                   ),
                 ),
               ),
+            ],
+
+            const SizedBox(height: 20),
+
+            // Toggle Login/Register
+            TextButton(
+              onPressed: () {
+                HapticFeedback.lightImpact();
+                setState(() => _isRegisterMode = !_isRegisterMode);
+              },
+              child: RichText(
+                text: TextSpan(
+                  style: TextStyle(color: theme.colorScheme.onSurface),
+                  children: [
+                    TextSpan(
+                      text: _isRegisterMode
+                          ? "Already have an account? "
+                          : "Don't have an account? ",
+                    ),
+                    TextSpan(
+                      text: _isRegisterMode ? "Sign In" : "Register Now",
+                      style: TextStyle(
+                        color: colorScheme.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-            const SizedBox(height: 25),
           ],
         ),
       ),
@@ -194,7 +272,18 @@ class _AuthenticationBottomSheetState extends State<AuthenticationBottomSheet> {
         prefixIcon: Icon(icon, color: theme.colorScheme.primary),
         filled: true,
         fillColor: theme.colorScheme.surface,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15),
+          borderSide: BorderSide(color: theme.dividerColor.withOpacity(0.1)),
+        ),
       ),
     );
   }
