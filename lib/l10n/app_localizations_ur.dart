@@ -179,4 +179,7 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get forRent => 'برائے کرایہ';
+
+  @override
+  String get blogs => 'Blogs';
 }

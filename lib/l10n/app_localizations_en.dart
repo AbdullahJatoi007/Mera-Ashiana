@@ -179,4 +179,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get forRent => 'For Rent';
+
+  @override
+  String get blogs => 'Blogs';
 }

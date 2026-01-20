@@ -12,9 +12,12 @@ class AuthService {
     required String email,
     required String password,
     required String repassword,
-    required String type, // "user" or "agent"
+    required String type, // Will be "user" or "agent" from UI
   }) async {
     final url = Uri.parse('$baseUrl/register');
+
+    // Sync with Backend: If type is 'user', map to 'single_user' for MySQL enum
+    final String backendType = type == "user" ? "single_user" : "agent";
 
     final response = await http.post(
       url,
@@ -27,7 +30,7 @@ class AuthService {
         'email': email.trim().toLowerCase(),
         'password': password,
         'repassword': repassword,
-        'type': type,
+        'type': backendType, // Use corrected type
       }),
     );
 

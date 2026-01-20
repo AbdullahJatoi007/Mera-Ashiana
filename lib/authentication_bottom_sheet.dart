@@ -69,7 +69,7 @@ class _AuthenticationBottomSheetState extends State<AuthenticationBottomSheet> {
           email: _emailController.text.trim(),
           password: _passwordController.text,
           repassword: _confirmPasswordController.text,
-          type: _isAgent ? "agent" : "user",
+          type: _isAgent ? "agent" : "single_user",
         );
       } else {
         await LoginService.login(

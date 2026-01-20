@@ -3,6 +3,7 @@ import 'package:mera_ashiana/helpers/logout_helper.dart';
 import 'package:mera_ashiana/l10n/app_localizations.dart';
 import 'package:mera_ashiana/screens/account_settings_screen.dart';
 import 'package:mera_ashiana/screens/drawer/widgets/drawer_header.dart';
+import 'package:mera_ashiana/screens/blogs_screen.dart';
 import 'package:mera_ashiana/main.dart';
 
 class CustomDrawer extends StatelessWidget {
@@ -45,7 +46,21 @@ class CustomDrawer extends StatelessWidget {
                   Icons.favorite_border,
                   () {},
                 ),
-
+                _buildMenuItem(
+                  context,
+                  theme,
+                  loc.blogs,
+                  Icons.newspaper_outlined,
+                      () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const BlogsScreen(),
+                          ),
+                        );
+                      },
+                ),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Divider(

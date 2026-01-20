@@ -55,6 +55,8 @@
   "maxPrice": "Max Price",
   "purpose": "Purpose",
   "forSale": "For Sale",
-  "forRent": "For Rent"
+  "forRent": "For Rent",
+  "blogs": "Blogs"
+
 
 }

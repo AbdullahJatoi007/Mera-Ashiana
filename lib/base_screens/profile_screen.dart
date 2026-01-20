@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:mera_ashiana/base_screens/favourite_screen.dart';
 import 'package:mera_ashiana/l10n/app_localizations.dart';
 import 'package:mera_ashiana/screens/real_estate_registration_screen.dart';
 import 'package:mera_ashiana/screens/account_settings_screen.dart';
+import 'package:mera_ashiana/screens/listing_screen.dart'; // Added this import
 import 'package:mera_ashiana/helpers/logout_helper.dart';
 import 'package:mera_ashiana/services/profile_service.dart';
-import 'package:mera_ashiana/services/auth_state.dart'; // Crucial for global sync
+import 'package:mera_ashiana/services/auth_state.dart';
 import 'package:mera_ashiana/models/user_model.dart';
 import 'package:mera_ashiana/authentication_bottom_sheet.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -37,26 +39,22 @@ class _ProfileContentState extends State<_ProfileContent> {
   void initState() {
     super.initState();
     _loadUser();
-    // LISTEN: This is the "Magic Fix". Whenever AuthState changes anywhere
-    // in the app, this screen will catch it and refresh.
     AuthState.isLoggedIn.addListener(_handleAuthChange);
   }
 
   @override
   void dispose() {
-    // Best practice: Clean up listeners when the widget is destroyed
     AuthState.isLoggedIn.removeListener(_handleAuthChange);
     super.dispose();
   }
 
   void _handleAuthChange() {
     if (mounted) {
-      _loadUser(); // Re-run logic to either fetch profile or show guest view
+      _loadUser();
     }
   }
 
   Future<void> _loadUser() async {
-    // 1. If global state says logged out, reset UI immediately
     if (!AuthState.isLoggedIn.value) {
       if (mounted) {
         setState(() {
@@ -68,7 +66,6 @@ class _ProfileContentState extends State<_ProfileContent> {
       return;
     }
 
-    // 2. Otherwise, fetch the data
     if (mounted) setState(() => isLoading = true);
     try {
       final profile = await ProfileService.fetchProfile(forceRefresh: true);
@@ -82,7 +79,6 @@ class _ProfileContentState extends State<_ProfileContent> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          // If the error is a 401 (Unauthorized), treat as guest
           user = null;
           error = e.toString().contains('401') ? null : e.toString();
           isLoading = false;
@@ -105,8 +101,6 @@ class _ProfileContentState extends State<_ProfileContent> {
       backgroundColor: Colors.transparent,
       builder: (context) => AuthenticationBottomSheet(
         onLoginSuccess: () {
-          // Note: AuthState listener will also catch this,
-          // but calling it here ensures instant feedback.
           _loadUser();
         },
       ),
@@ -119,17 +113,14 @@ class _ProfileContentState extends State<_ProfileContent> {
 
     if (isLoading) return const Center(child: CircularProgressIndicator());
 
-    // 1. Guest View: If not logged in
     if (user == null && error == null) {
       return _buildGuestView(loc);
     }
 
-    // 2. Error View: If network/server fails
     if (error != null) {
       return _buildErrorView();
     }
 
-    // 3. Authenticated Profile View
     return RefreshIndicator(
       onRefresh: _loadUser,
       child: ListView(
@@ -147,7 +138,6 @@ class _ProfileContentState extends State<_ProfileContent> {
     );
   }
 
-  // --- UI COMPONENTS (GUEST VIEW) ---
   Widget _buildGuestView(AppLocalizations loc) {
     final theme = Theme.of(context);
     return Center(
@@ -206,7 +196,6 @@ class _ProfileContentState extends State<_ProfileContent> {
     );
   }
 
-  // --- UI COMPONENTS (HEADER) ---
   Widget _buildHeader(User user) {
     final colorScheme = Theme.of(context).colorScheme;
     return Container(
@@ -303,15 +292,32 @@ class _ProfileContentState extends State<_ProfileContent> {
   }
 
   Widget _buildMetricsRow(AppLocalizations loc) {
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 20.0),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20.0),
       child: Row(
         children: [
-          _MetricCard(count: '12', label: 'Listings', icon: Icons.apartment),
-          SizedBox(width: 12),
-          _MetricCard(count: '45', label: 'Favorites', icon: Icons.favorite),
-          SizedBox(width: 12),
+          // Navigates to Listing Screen on Tap
           _MetricCard(
+            count: '12',
+            label: 'Listings',
+            icon: Icons.apartment,
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ListingsScreen()),
+            ),
+          ),
+          const SizedBox(width: 12),
+          _MetricCard(
+            count: '45',
+            label: 'Favorites',
+            icon: Icons.favorite,
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const FavouritesScreen()),
+            ),
+          ),
+          const SizedBox(width: 12),
+          const _MetricCard(
             count: '3.2K',
             label: 'Views',
             icon: Icons.remove_red_eye,
@@ -346,6 +352,15 @@ class _ProfileContentState extends State<_ProfileContent> {
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const AccountSettingsScreen()),
+            ),
+          ),
+          // Added My Listings Tile
+          _buildSettingsTile(
+            title: 'My Listings',
+            icon: Icons.list_alt_outlined,
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ListingsScreen()),
             ),
           ),
           if (userType == 'agent')
@@ -444,50 +459,54 @@ class _ProfileContentState extends State<_ProfileContent> {
   }
 }
 
-// Re-usable helper widget for user metrics
 class _MetricCard extends StatelessWidget {
   final String count;
   final String label;
   final IconData icon;
+  final VoidCallback? onTap; // Added onTap
 
   const _MetricCard({
     required this.count,
     required this.label,
     required this.icon,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: theme.dividerColor.withOpacity(0.1)),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: theme.colorScheme.primary, size: 22),
-            const SizedBox(height: 8),
-            Text(
-              count,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-                color: theme.colorScheme.secondary,
+      child: GestureDetector(
+        onTap: onTap, // Wrap in GestureDetector
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: theme.dividerColor.withOpacity(0.1)),
+          ),
+          child: Column(
+            children: [
+              Icon(icon, color: theme.colorScheme.primary, size: 22),
+              const SizedBox(height: 8),
+              Text(
+                count,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  color: theme.colorScheme.secondary,
+                ),
               ),
-            ),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                color: theme.colorScheme.onSurface.withOpacity(0.6),
-                fontWeight: FontWeight.w500,
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: theme.colorScheme.onSurface.withOpacity(0.6),
+                  fontWeight: FontWeight.w500,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

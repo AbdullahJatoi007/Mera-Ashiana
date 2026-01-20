@@ -439,6 +439,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'For Rent'**
   String get forRent;
+
+  /// No description provided for @blogs.
+  ///
+  /// In en, this message translates to:
+  /// **'Blogs'**
+  String get blogs;
 }
 
 class _AppLocalizationsDelegate
