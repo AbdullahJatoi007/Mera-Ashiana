@@ -73,7 +73,7 @@ class AppLocalizationsUr extends AppLocalizations {
   String get helpSupport => 'مدد اور تعاون';
 
   @override
-  String get privacyPolicy => 'رازداری کی پالیسی';
+  String get aboutUs => 'رازداری کی پالیسی';
 
   @override
   String get termsConditions => 'شرائط و ضوابط';

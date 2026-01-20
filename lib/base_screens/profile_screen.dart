@@ -367,12 +367,13 @@ class _ProfileContentState extends State<_ProfileContent> {
           _buildSettingsTile(
             title: loc.helpSupport,
             icon: Icons.headset_mic_outlined,
-            onTap: () {},
+            onTap: () => _launchURL('http://staging.mera-ashiana.com/contact'),
           ),
+
           _buildSettingsTile(
-            title: loc.privacyPolicy,
-            icon: Icons.verified_user_outlined,
-            onTap: () => _launchURL('https://mera-ashiana.com/privacy-policy'),
+            title: 'About Us',
+            icon: Icons.info_outline,
+            onTap: () => _launchURL('http://staging.mera-ashiana.com/contact'),
           ),
           _buildSettingsTile(
             title: loc.logout,

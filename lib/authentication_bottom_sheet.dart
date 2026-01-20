@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mera_ashiana/services/login_service.dart';
 import 'package:mera_ashiana/services/google_login_service.dart';
-import 'package:mera_ashiana/services/auth_state.dart'; // Ensure AuthState is imported
+import 'package:mera_ashiana/services/auth_state.dart';
+import 'package:mera_ashiana/services/auth_service.dart'; // Ensure this matches your file name
 
 class AuthenticationBottomSheet extends StatefulWidget {
   final VoidCallback onLoginSuccess;
@@ -20,22 +21,56 @@ class AuthenticationBottomSheet extends StatefulWidget {
 }
 
 class _AuthenticationBottomSheetState extends State<AuthenticationBottomSheet> {
+  // Existing Controllers
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
+  // New Controllers for Registration
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
+
   bool _isLoading = false;
   bool _isGoogleLoading = false;
-  bool _isRegisterMode = false; // Toggles between Login and Register UI
+  bool _isRegisterMode = false;
+
+  // Checkbox States
+  bool _isAgent = false;
+  bool _termsAccepted = false;
 
   /// Combined handler for Login and Registration
   Future<void> _handleAuth() async {
+    // 1. Validation for Registration
+    if (_isRegisterMode) {
+      if (_nameController.text.isEmpty ||
+          _emailController.text.isEmpty ||
+          _passwordController.text.isEmpty) {
+        _showError("Please fill in all fields");
+        return;
+      }
+      if (_passwordController.text != _confirmPasswordController.text) {
+        _showError("Passwords do not match");
+        return;
+      }
+      if (!_termsAccepted) {
+        _showError("Please accept the Terms and Privacy Policy");
+        return;
+      }
+    }
+
     HapticFeedback.mediumImpact();
     setState(() => _isLoading = true);
 
     try {
       if (_isRegisterMode) {
-        // TODO: Call your Registration Service here
-        // await RegisterService.register(email: ..., password: ...);
+        // CALLING BACKEND: username, email, password, repassword, type
+        await AuthService.register(
+          username: _nameController.text.trim(),
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+          repassword: _confirmPasswordController.text,
+          type: _isAgent ? "agent" : "user",
+        );
       } else {
         await LoginService.login(
           email: _emailController.text.trim(),
@@ -43,45 +78,45 @@ class _AuthenticationBottomSheetState extends State<AuthenticationBottomSheet> {
         );
       }
 
-      // SUCCESS: Update global state and notify listeners (like ProfileScreen)
+      // SUCCESS
       AuthState.isLoggedIn.value = true;
 
       if (mounted) {
         widget.onLoginSuccess();
         Navigator.pop(context);
-      }
-    } catch (e) {
-      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e.toString()),
-            backgroundColor: Colors.redAccent,
+            content: Text(
+              _isRegisterMode ? "Registration Successful!" : "Welcome Back!",
+            ),
+            backgroundColor: Colors.green,
           ),
         );
       }
+    } catch (e) {
+      if (mounted) _showError(e.toString());
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.redAccent),
+    );
   }
 
   Future<void> _handleGoogleLogin() async {
     setState(() => _isGoogleLoading = true);
     try {
       await GoogleLoginService.signInWithGoogle(captchaToken: '');
-
-      // SUCCESS: Update global state
       AuthState.isLoggedIn.value = true;
-
       if (mounted) {
         widget.onLoginSuccess();
         Navigator.pop(context);
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.toString())));
-      }
+      if (mounted) _showError(e.toString());
     } finally {
       if (mounted) setState(() => _isGoogleLoading = false);
     }
@@ -122,7 +157,6 @@ class _AuthenticationBottomSheetState extends State<AuthenticationBottomSheet> {
             ),
             const SizedBox(height: 25),
 
-            // Icon
             CircleAvatar(
               radius: 35,
               backgroundColor: colorScheme.primary.withOpacity(0.1),
@@ -136,37 +170,76 @@ class _AuthenticationBottomSheetState extends State<AuthenticationBottomSheet> {
             ),
             const SizedBox(height: 20),
 
-            // Dynamic Title
             Text(
               _isRegisterMode ? "Create Account" : widget.title,
               style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 8),
-            Text(
-              _isRegisterMode
-                  ? "Join us to find your perfect home."
-                  : "Sign in to access full features.",
-              textAlign: TextAlign.center,
-              style: TextStyle(color: theme.hintColor),
-            ),
             const SizedBox(height: 30),
 
             // Fields
+            if (_isRegisterMode) ...[
+              _buildField(
+                label: "Full Name",
+                icon: Icons.person_outline,
+                controller: _nameController,
+              ),
+              const SizedBox(height: 16),
+            ],
+
             _buildField(
               label: "Email",
               icon: Icons.email_outlined,
               controller: _emailController,
             ),
             const SizedBox(height: 16),
+
             _buildField(
               label: "Password",
               icon: Icons.lock_outline,
               controller: _passwordController,
               isPassword: true,
             ),
+
+            if (_isRegisterMode) ...[
+              const SizedBox(height: 16),
+              _buildField(
+                label: "Confirm Password",
+                icon: Icons.lock_reset_outlined,
+                controller: _confirmPasswordController,
+                isPassword: true,
+              ),
+              const SizedBox(height: 10),
+
+              // Agent Checkbox
+              CheckboxListTile(
+                value: _isAgent,
+                onChanged: (val) => setState(() => _isAgent = val!),
+                title: const Text(
+                  "I'm an agent",
+                  style: TextStyle(fontSize: 14),
+                ),
+                contentPadding: EdgeInsets.zero,
+                controlAffinity: ListTileControlAffinity.leading,
+                activeColor: colorScheme.primary,
+              ),
+
+              // Terms Checkbox
+              CheckboxListTile(
+                value: _termsAccepted,
+                onChanged: (val) => setState(() => _termsAccepted = val!),
+                title: const Text(
+                  "I have read and accept the Terms and Privacy Policy",
+                  style: TextStyle(fontSize: 14),
+                ),
+                contentPadding: EdgeInsets.zero,
+                controlAffinity: ListTileControlAffinity.leading,
+                activeColor: colorScheme.primary,
+              ),
+            ],
+
             const SizedBox(height: 25),
 
-            // Primary Action Button
+            // Action Button
             SizedBox(
               width: double.infinity,
               height: 55,
@@ -194,7 +267,6 @@ class _AuthenticationBottomSheetState extends State<AuthenticationBottomSheet> {
 
             if (!_isRegisterMode) ...[
               const SizedBox(height: 15),
-              // Google Login (Only show in Login Mode)
               SizedBox(
                 width: double.infinity,
                 height: 55,
@@ -225,29 +297,18 @@ class _AuthenticationBottomSheetState extends State<AuthenticationBottomSheet> {
 
             const SizedBox(height: 20),
 
-            // Toggle Login/Register
             TextButton(
               onPressed: () {
                 HapticFeedback.lightImpact();
                 setState(() => _isRegisterMode = !_isRegisterMode);
               },
-              child: RichText(
-                text: TextSpan(
-                  style: TextStyle(color: theme.colorScheme.onSurface),
-                  children: [
-                    TextSpan(
-                      text: _isRegisterMode
-                          ? "Already have an account? "
-                          : "Don't have an account? ",
-                    ),
-                    TextSpan(
-                      text: _isRegisterMode ? "Sign In" : "Register Now",
-                      style: TextStyle(
-                        color: colorScheme.primary,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
+              child: Text(
+                _isRegisterMode
+                    ? "Already have an account? Sign In"
+                    : "Don't have an account? Register Now",
+                style: TextStyle(
+                  color: colorScheme.primary,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ),

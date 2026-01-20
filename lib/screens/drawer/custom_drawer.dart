@@ -125,7 +125,7 @@ class CustomDrawer extends StatelessWidget {
                 _buildMenuItem(
                   context,
                   theme,
-                  loc.privacyPolicy,
+                  loc.aboutUs,
                   Icons.security_outlined,
                   () {},
                 ),

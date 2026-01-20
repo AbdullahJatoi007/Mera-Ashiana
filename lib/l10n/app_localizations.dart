@@ -224,11 +224,11 @@ abstract class AppLocalizations {
   /// **'Help & Support'**
   String get helpSupport;
 
-  /// No description provided for @privacyPolicy.
+  /// No description provided for @aboutUs.
   ///
   /// In en, this message translates to:
-  /// **'Privacy Policy'**
-  String get privacyPolicy;
+  /// **'About Us'**
+  String get aboutUs;
 
   /// No description provided for @termsConditions.
   ///

@@ -73,7 +73,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get helpSupport => 'Help & Support';
 
   @override
-  String get privacyPolicy => 'Privacy Policy';
+  String get aboutUs => 'About Us';
 
   @override
   String get termsConditions => 'Terms & Conditions';
