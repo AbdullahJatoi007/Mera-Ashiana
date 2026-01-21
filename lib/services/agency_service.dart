@@ -7,10 +7,11 @@ import 'package:mera_ashiana/services/profile_service.dart';
 import 'package:mera_ashiana/models/user_model.dart';
 
 class AgencyService {
-  // CORRECTED: Changed from /api/agencies to /api/agency to match your backend app.js
+  // Base URL for the agency API
   static const String baseUrl =
       "http://api.staging.mera-ashiana.com/api/agency";
 
+  /// Registers a new agency with high safety measures for fields and unique slugs.
   static Future<Map<String, dynamic>> registerAgency({
     required String agencyName,
     required String email,
@@ -26,10 +27,8 @@ class AgencyService {
         throw "Authentication session expired. Please login again.";
       }
 
-      // 2. Fetch Profile & Verification
+      // 2. Fetch User Profile to verify role
       final User user = await ProfileService.fetchProfile();
-
-      // Ensure only agents can proceed
       if (user.type != 'agent') {
         return {
           "success": false,
@@ -38,64 +37,77 @@ class AgencyService {
       }
 
       // 3. Prepare Multipart Request
-      var request = http.MultipartRequest(
-        'POST',
-        Uri.parse('$baseUrl/register'),
-      );
+      final Uri uri = Uri.parse('$baseUrl/register');
+      var request = http.MultipartRequest('POST', uri);
 
-      // Add Headers - Cookie is vital for authMiddleware
+      // 4. Headers
       request.headers.addAll({'Accept': 'application/json', 'Cookie': cookie});
 
-      // 4. Map fields to match your Controller's req.body exactly
-      request.fields['agency_name'] = agencyName;
-      request.fields['email'] = email;
-      request.fields['description'] = description;
-      request.fields['phone'] = phone;
-      request.fields['address'] = address;
+      // 5. SLUG GENERATION (Safety Feature)
+      // Adding a timestamp ensures that even if you use the same name twice,
+      // the database won't crash due to a "Duplicate Slug" error.
+      String uniqueSlug =
+          "${agencyName.toLowerCase().trim().replaceAll(RegExp(r'[^a-z0-9]'), '-')}-${DateTime.now().millisecondsSinceEpoch}";
+
+      // 6. FIELD MAPPING (Sanitized)
+      request.fields['agency_name'] = agencyName.trim();
+      request.fields['slug'] = uniqueSlug;
+      request.fields['email'] = email.trim().toLowerCase();
+      request.fields['description'] = description.isEmpty
+          ? "No description provided"
+          : description.trim();
+      request.fields['phone'] = phone.trim();
+      request.fields['address'] = address.isEmpty
+          ? "Not provided"
+          : address.trim();
       request.fields['user_id'] = user.id.toString();
 
-      // 5. Attach Logo if selected
+      // 7. LOGO HANDLING
+      // Key "logo" must match the backend's uploadLogo.single("logo")
       if (logoFile != null && await logoFile.exists()) {
         request.files.add(
           await http.MultipartFile.fromPath('logo', logoFile.path),
         );
       }
 
-      // 6. Send Request and Handle Response
+      // 8. Send Request
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
 
-      debugPrint("--- AGENCY API DEBUG ---");
-      debugPrint("URL: $baseUrl/register");
-      debugPrint("Status: ${response.statusCode}");
+      // --- DEBUGGING LOGS ---
+      debugPrint("--- AGENCY REGISTRATION DEBUG ---");
+      debugPrint("Status Code: ${response.statusCode}");
+      debugPrint("Full Response Body: ${response.body}");
 
-      // 7. Prevent "Unexpected character <" crash
-      // If server returns HTML, it's a 404/500 route error
+      // 9. Handle Responses
       if (response.body.contains('<!DOCTYPE html>')) {
         return {
           "success": false,
           "message":
-              "Server Error: Route not found or Server crashed. Check URL and logs.",
+              "Server Error: Endpoint not found or server crashed (404/500).",
         };
       }
 
-      final decoded = jsonDecode(response.body);
+      final Map<String, dynamic> decoded = jsonDecode(response.body);
 
       if (response.statusCode == 201 || response.statusCode == 200) {
         return {
           "success": true,
           "message": decoded['message'] ?? "Agency registered successfully!",
+          "data": decoded['agency'],
         };
       } else {
-        return {
-          "success": false,
-          "message":
-              decoded['message'] ?? "Registration failed. Please check inputs.",
-        };
+        // Detailed error for 500 status codes
+        String errorMsg = decoded['message'] ?? "Registration failed.";
+        if (response.statusCode == 500) {
+          errorMsg =
+              "Server Error (500): Try submitting without a logo to check if it's a folder issue.";
+        }
+        return {"success": false, "message": errorMsg};
       }
     } catch (e) {
-      debugPrint("AgencyService Error: $e");
-      return {"success": false, "message": "Service Error: $e"};
+      debugPrint("❌ AgencyService Error: $e");
+      return {"success": false, "message": "Service encountered an error: $e"};
     }
   }
 }

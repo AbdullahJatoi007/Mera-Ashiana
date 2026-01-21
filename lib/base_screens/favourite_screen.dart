@@ -1,5 +1,5 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:mera_ashiana/models/property_model.dart';
 import 'package:mera_ashiana/services/FavoriteService.dart';
 
 class FavouritesScreen extends StatefulWidget {
@@ -13,18 +13,18 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
   @override
   void initState() {
     super.initState();
-    // Trigger the API call when the screen opens
     FavoriteService.fetchMyFavorites();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(title: const Text("My Favorites")),
       body: ValueListenableBuilder<Set<int>>(
         valueListenable: FavoriteService.favoriteIds,
         builder: (context, favSet, _) {
           if (favSet.isEmpty) {
-            return const Center(child: Text("No favorites yet."));
+            return const Center(child: Text("No favorites found."));
           }
 
           final favList = FavoriteService.favoritesMap.values.toList();
@@ -33,28 +33,37 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
             padding: const EdgeInsets.all(16),
             itemCount: favList.length,
             itemBuilder: (context, index) {
-              final item = favList[index];
-              final imageUrl = (item['images'] as List?)?.isNotEmpty == true
-                  ? "http://api.staging.mera-ashiana.com${item['images'][0]}"
-                  : null;
+              final PropertyModel item = favList[index];
 
               return Card(
+                clipBehavior: Clip.antiAlias,
                 margin: const EdgeInsets.only(bottom: 16),
-                child: ListTile(
-                  leading: imageUrl != null
-                      ? Image.network(
-                          imageUrl,
-                          width: 60,
-                          height: 60,
+                child: InkWell(
+                  onTap: () {
+                    // Navigate to details if needed
+                  },
+                  child: Column(
+                    children: [
+                      if (item.images.isNotEmpty)
+                        Image.network(
+                          item.images[0],
+                          height: 150,
+                          width: double.infinity,
                           fit: BoxFit.cover,
-                        )
-                      : const Icon(Icons.image, size: 40),
-                  title: Text(item['title'] ?? "Property"),
-                  subtitle: Text("PKR ${item['price'] ?? "N/A"}"),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.favorite, color: Colors.red),
-                    onPressed: () =>
-                        FavoriteService.toggleFavorite(item['id'], true),
+                        ),
+                      ListTile(
+                        title: Text(
+                          item.title,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text("PKR ${item.price}"),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.favorite, color: Colors.red),
+                          onPressed: () =>
+                              FavoriteService.toggleFavorite(item.id, true),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               );

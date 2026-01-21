@@ -1,24 +1,27 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:mera_ashiana/models/property_model.dart';
 import 'package:mera_ashiana/services/login_service.dart';
 
 class FavoriteService {
   static const String baseUrl = "http://api.staging.mera-ashiana.com/api";
+
+  // Using Set for O(1) lookups. ValueNotifier triggers UI on value change.
   static ValueNotifier<Set<int>> favoriteIds = ValueNotifier<Set<int>>({});
-  static Map<int, Map<String, dynamic>> favoritesMap = {};
+  static Map<int, PropertyModel> favoritesMap = {};
 
   static Future<bool> toggleFavorite(
     int propertyId,
-    bool currentlyLiked,
-  ) async {
+    bool currentlyLiked, {
+    PropertyModel? propertyData,
+  }) async {
     final cookie = await LoginService.getAuthCookie();
-
-    // 1. Check if user is logged in
     if (cookie == null || cookie.isEmpty) {
-      throw 'Please login to favorite properties';
+      throw 'Authentication required. Please log in.';
     }
 
+    // Match your backend routes: /properties/:id/like or /properties/:id/unlike
     final action = currentlyLiked ? 'unlike' : 'like';
     final url = Uri.parse('$baseUrl/properties/$propertyId/$action');
 
@@ -33,11 +36,10 @@ class FavoriteService {
               headers: {'Cookie': cookie, 'Accept': 'application/json'},
             );
 
-      // Log for debugging
-      debugPrint("Fav Action: $action | Status: ${response.statusCode}");
-      debugPrint("Response Body: ${response.body}");
+      debugPrint("FAV API [${response.statusCode}]: ${response.body}");
 
       if (response.statusCode == 200 || response.statusCode == 201) {
+        // We create a NEW Set instance to ensure ValueNotifier triggers the UI
         final updatedSet = Set<int>.from(favoriteIds.value);
 
         if (currentlyLiked) {
@@ -45,22 +47,19 @@ class FavoriteService {
           favoritesMap.remove(propertyId);
         } else {
           updatedSet.add(propertyId);
+          if (propertyData != null) favoritesMap[propertyId] = propertyData;
         }
 
         favoriteIds.value = updatedSet;
         return true;
-      } else if (response.statusCode == 401) {
-        throw 'Your session has expired. Please log in again.';
-      } else {
-        return false;
       }
+      return false;
     } catch (e) {
-      debugPrint("Favorite Error: $e");
-      rethrow; // Pass the specific error message to the UI
+      debugPrint("Favorite Service Error: $e");
+      rethrow;
     }
   }
 
-  // Helper to refresh the whole list (call this on app start)
   static Future<void> fetchMyFavorites() async {
     final cookie = await LoginService.getAuthCookie();
     if (cookie == null) return;
@@ -68,22 +67,27 @@ class FavoriteService {
     try {
       final response = await http.get(
         Uri.parse('$baseUrl/my-likes'),
-        headers: {'Accept': 'application/json', 'Cookie': cookie},
+        headers: {'Cookie': cookie, 'Accept': 'application/json'},
       );
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final List<dynamic> favList = data['data'] ?? [];
+        final decoded = jsonDecode(response.body);
+        final List<dynamic> favList = decoded['data'] ?? [];
+
         final Set<int> ids = {};
-        for (var prop in favList) {
-          final id = prop['id'];
-          ids.add(id);
-          favoritesMap[id] = prop;
+        final Map<int, PropertyModel> newMap = {};
+
+        for (var json in favList) {
+          final prop = PropertyModel.fromJson(json);
+          ids.add(prop.id);
+          newMap[prop.id] = prop;
         }
-        favoriteIds.value = ids;
+
+        favoritesMap = newMap;
+        favoriteIds.value = ids; // Triggers UI in all listeners
       }
     } catch (e) {
-      debugPrint("Fetch Favs Error: $e");
+      debugPrint("Fetch Favorites Error: $e");
     }
   }
 }

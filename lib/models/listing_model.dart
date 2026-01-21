@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 class Listing {
   final int? id;
   final String title;
@@ -8,7 +6,13 @@ class Listing {
   final String location;
   final String type;
   final String? city;
-  final List<String>? images;
+  final String? status;
+  final List<String> images;
+  final String? area;
+  final int bedrooms;
+  final int bathrooms;
+  final String? contactEmail;
+  final String? contactPhone;
 
   Listing({
     this.id,
@@ -18,7 +22,13 @@ class Listing {
     required this.location,
     required this.type,
     this.city,
-    this.images,
+    this.status,
+    this.images = const [],
+    this.area,
+    this.bedrooms = 0,
+    this.bathrooms = 0,
+    this.contactEmail,
+    this.contactPhone,
   });
 
   factory Listing.fromJson(Map<String, dynamic> json) {
@@ -30,6 +40,13 @@ class Listing {
       location: json['location'] ?? '',
       type: json['type'] ?? '',
       city: json['city'],
+      // Note: Backend uses 'approval_status' in the DB/JSON response
+      status: json['approval_status'] ?? 'pending',
+      area: json['area']?.toString(),
+      bedrooms: int.tryParse(json['bedrooms'].toString()) ?? 0,
+      bathrooms: int.tryParse(json['bathrooms'].toString()) ?? 0,
+      contactEmail: json['contact_email'],
+      contactPhone: json['contact_phone'],
       images: json['images'] != null ? List<String>.from(json['images']) : [],
     );
   }

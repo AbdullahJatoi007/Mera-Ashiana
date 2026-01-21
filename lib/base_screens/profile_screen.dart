@@ -3,7 +3,8 @@ import 'package:mera_ashiana/base_screens/favourite_screen.dart';
 import 'package:mera_ashiana/l10n/app_localizations.dart';
 import 'package:mera_ashiana/screens/real_estate_registration_screen.dart';
 import 'package:mera_ashiana/screens/account_settings_screen.dart';
-import 'package:mera_ashiana/screens/listing_screen.dart'; // Added this import
+import 'package:mera_ashiana/screens/my_listings_screen.dart';
+import 'package:mera_ashiana/screens/add_listing_screen.dart'; // Added Import
 import 'package:mera_ashiana/helpers/logout_helper.dart';
 import 'package:mera_ashiana/services/profile_service.dart';
 import 'package:mera_ashiana/services/auth_state.dart';
@@ -296,14 +297,13 @@ class _ProfileContentState extends State<_ProfileContent> {
       padding: const EdgeInsets.symmetric(horizontal: 20.0),
       child: Row(
         children: [
-          // Navigates to Listing Screen on Tap
           _MetricCard(
             count: '12',
             label: 'Listings',
             icon: Icons.apartment,
             onTap: () => Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const ListingsScreen()),
+              MaterialPageRoute(builder: (_) => const MyListingsScreen()),
             ),
           ),
           const SizedBox(width: 12),
@@ -347,6 +347,15 @@ class _ProfileContentState extends State<_ProfileContent> {
       child: Column(
         children: [
           _buildSettingsTile(
+            title: 'Post Property Ad',
+            icon: Icons.add_business_outlined,
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AddListingScreen()),
+            ),
+          ),
+          const Divider(height: 1, indent: 60),
+          _buildSettingsTile(
             title: loc.accountSettings,
             icon: Icons.person_outline,
             onTap: () => Navigator.push(
@@ -354,13 +363,12 @@ class _ProfileContentState extends State<_ProfileContent> {
               MaterialPageRoute(builder: (_) => const AccountSettingsScreen()),
             ),
           ),
-          // Added My Listings Tile
           _buildSettingsTile(
             title: 'My Listings',
             icon: Icons.list_alt_outlined,
             onTap: () => Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const ListingsScreen()),
+              MaterialPageRoute(builder: (_) => const MyListingsScreen()),
             ),
           ),
           if (userType == 'agent')
@@ -384,7 +392,6 @@ class _ProfileContentState extends State<_ProfileContent> {
             icon: Icons.headset_mic_outlined,
             onTap: () => _launchURL('http://staging.mera-ashiana.com/contact'),
           ),
-
           _buildSettingsTile(
             title: 'About Us',
             icon: Icons.info_outline,
@@ -463,7 +470,7 @@ class _MetricCard extends StatelessWidget {
   final String count;
   final String label;
   final IconData icon;
-  final VoidCallback? onTap; // Added onTap
+  final VoidCallback? onTap;
 
   const _MetricCard({
     required this.count,
@@ -477,7 +484,7 @@ class _MetricCard extends StatelessWidget {
     final theme = Theme.of(context);
     return Expanded(
       child: GestureDetector(
-        onTap: onTap, // Wrap in GestureDetector
+        onTap: onTap,
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 16),
           decoration: BoxDecoration(

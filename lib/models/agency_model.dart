@@ -7,6 +7,7 @@ class Agency {
   final String? phone;
   final String email;
   final String? address;
+  final String status; // <--- ADDED THIS
   final int userId;
   final DateTime? createdAt;
 
@@ -19,14 +20,14 @@ class Agency {
     this.phone,
     required this.email,
     this.address,
+    required this.status, // <--- ADDED THIS
     required this.userId,
     this.createdAt,
   });
 
-  // Convert JSON from Backend to Agency Object
   factory Agency.fromJson(Map<String, dynamic> json) {
     return Agency(
-      id: json['id'],
+      id: json['id'] ?? 0,
       agencyName: json['agency_name'] ?? '',
       slug: json['slug'] ?? '',
       logo: json['logo'],
@@ -34,24 +35,12 @@ class Agency {
       phone: json['phone'],
       email: json['email'] ?? '',
       address: json['address'],
-      userId: json['user_id'],
+      status: json['status'] ?? 'pending',
+      // <--- ADDED THIS
+      userId: json['user_id'] ?? 0,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
           : null,
     );
-  }
-
-  // Convert Agency Object to JSON (for API updates)
-  Map<String, dynamic> toJson() {
-    return {
-      'agency_name': agencyName,
-      'slug': slug,
-      'logo': logo,
-      'description': description,
-      'phone': phone,
-      'email': email,
-      'address': address,
-      'user_id': userId,
-    };
   }
 }
