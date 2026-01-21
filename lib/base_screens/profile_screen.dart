@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:mera_ashiana/base_screens/favourite_screen.dart';
 import 'package:mera_ashiana/l10n/app_localizations.dart';
 import 'package:mera_ashiana/screens/real_estate_registration_screen.dart';
+import 'package:mera_ashiana/screens/AgencyStatuSscreen.dart';
 import 'package:mera_ashiana/screens/account_settings_screen.dart';
 import 'package:mera_ashiana/screens/my_listings_screen.dart';
-import 'package:mera_ashiana/screens/add_listing_screen.dart'; // Added Import
+import 'package:mera_ashiana/screens/add_listing_screen.dart';
 import 'package:mera_ashiana/helpers/logout_helper.dart';
 import 'package:mera_ashiana/services/profile_service.dart';
+import 'package:mera_ashiana/services/agency_service.dart';
 import 'package:mera_ashiana/services/auth_state.dart';
 import 'package:mera_ashiana/models/user_model.dart';
+import 'package:mera_ashiana/models/agency_model.dart'; // Ensure this model is imported
 import 'package:mera_ashiana/authentication_bottom_sheet.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -33,6 +36,7 @@ class _ProfileContent extends StatefulWidget {
 
 class _ProfileContentState extends State<_ProfileContent> {
   User? user;
+  Agency? userAgency; // Track agency status globally in this screen
   bool isLoading = true;
   String? error;
 
@@ -60,6 +64,7 @@ class _ProfileContentState extends State<_ProfileContent> {
       if (mounted) {
         setState(() {
           user = null;
+          userAgency = null;
           isLoading = false;
           error = null;
         });
@@ -69,10 +74,14 @@ class _ProfileContentState extends State<_ProfileContent> {
 
     if (mounted) setState(() => isLoading = true);
     try {
+      // Fetch both profile and agency status
       final profile = await ProfileService.fetchProfile(forceRefresh: true);
+      final agency = await AgencyService.fetchMyAgency();
+
       if (mounted) {
         setState(() {
           user = profile;
+          userAgency = agency;
           error = null;
           isLoading = false;
         });
@@ -85,6 +94,32 @@ class _ProfileContentState extends State<_ProfileContent> {
           isLoading = false;
         });
       }
+    }
+  }
+
+  // --- Smart Agency Navigation Logic ---
+  void _handleAgencyNavigation() async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    final agency = await AgencyService.fetchMyAgency();
+
+    if (!mounted) return;
+    Navigator.pop(context);
+
+    if (agency == null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const RealEstateRegistrationScreen()),
+      ).then((_) => _loadUser()); // Refresh when coming back
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const AgencyStatusScreen()),
+      ).then((_) => _loadUser()); // Refresh when coming back
     }
   }
 
@@ -113,14 +148,8 @@ class _ProfileContentState extends State<_ProfileContent> {
     final loc = AppLocalizations.of(context)!;
 
     if (isLoading) return const Center(child: CircularProgressIndicator());
-
-    if (user == null && error == null) {
-      return _buildGuestView(loc);
-    }
-
-    if (error != null) {
-      return _buildErrorView();
-    }
+    if (user == null && error == null) return _buildGuestView(loc);
+    if (error != null) return _buildErrorView();
 
     return RefreshIndicator(
       onRefresh: _loadUser,
@@ -129,12 +158,74 @@ class _ProfileContentState extends State<_ProfileContent> {
         physics: const AlwaysScrollableScrollPhysics(),
         children: <Widget>[
           _buildHeader(user!),
+
+          // --- Agency Status Banner ---
+          if (userAgency != null) _buildAgencyStatusBanner(),
+
           const SizedBox(height: 20),
           _buildMetricsRow(loc),
           const SizedBox(height: 25),
           _buildActionSection(loc, user?.type ?? 'user'),
           const SizedBox(height: 40),
         ],
+      ),
+    );
+  }
+
+  Widget _buildAgencyStatusBanner() {
+    final status = userAgency!.status.toLowerCase();
+    Color statusColor = Colors.orange;
+    IconData statusIcon = Icons.pending_actions_rounded;
+
+    if (status == 'approved') {
+      statusColor = Colors.green;
+      statusIcon = Icons.verified_rounded;
+    } else if (status == 'rejected') {
+      statusColor = Colors.red;
+      statusIcon = Icons.error_outline_rounded;
+    }
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: statusColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: statusColor.withOpacity(0.3)),
+      ),
+      child: InkWell(
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const AgencyStatusScreen()),
+        ).then((_) => _loadUser()),
+        child: Row(
+          children: [
+            Icon(statusIcon, color: statusColor),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Agency Status: ${status.toUpperCase()}",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: statusColor,
+                    ),
+                  ),
+                  Text(
+                    "Tap to view agency dashboard",
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: statusColor.withOpacity(0.8),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios, size: 14, color: statusColor),
+          ],
+        ),
       ),
     );
   }
@@ -153,11 +244,9 @@ class _ProfileContentState extends State<_ProfileContent> {
               color: theme.colorScheme.primary.withOpacity(0.2),
             ),
             const SizedBox(height: 24),
-            Text(
+            const Text(
               "Profile & Settings",
-              style: theme.textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
             ),
             const SizedBox(height: 12),
             Text(
@@ -179,14 +268,12 @@ class _ProfileContentState extends State<_ProfileContent> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(15),
                   ),
-                  elevation: 0,
                 ),
                 child: const Text(
                   "LOGIN / REGISTER",
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
-                    fontSize: 16,
                   ),
                 ),
               ),
@@ -375,12 +462,7 @@ class _ProfileContentState extends State<_ProfileContent> {
             _buildSettingsTile(
               title: 'Agency Management',
               icon: Icons.business_outlined,
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const RealEstateRegistrationScreen(),
-                ),
-              ),
+              onTap: _handleAgencyNavigation,
             ),
           _buildSettingsTile(
             title: loc.paymentMethods,
