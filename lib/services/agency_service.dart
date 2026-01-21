@@ -19,7 +19,6 @@ class AgencyService {
 
       final response = await http.get(
         Uri.parse('$baseUrl/my-agency'),
-        // Ensure this matches your API endpoint
         headers: {'Accept': 'application/json', 'Cookie': cookie},
       );
 
@@ -48,12 +47,15 @@ class AgencyService {
       final cookie = await LoginService.getAuthCookie();
       if (cookie == null) throw "Authentication session expired.";
 
+      // Get the current profile to link the user ID
       final User user = await ProfileService.fetchProfile();
 
       final Uri uri = Uri.parse('$baseUrl/register');
       var request = http.MultipartRequest('POST', uri);
+
       request.headers.addAll({'Accept': 'application/json', 'Cookie': cookie});
 
+      // Prepare fields
       request.fields['agency_name'] = agencyName.trim();
       request.fields['email'] = email.trim().toLowerCase();
       request.fields['description'] = description.trim().isEmpty
@@ -65,6 +67,7 @@ class AgencyService {
           : address.trim();
       request.fields['user_id'] = user.id.toString();
 
+      // Attach file if it exists
       if (logoFile != null && await logoFile.exists()) {
         request.files.add(
           await http.MultipartFile.fromPath('logo', logoFile.path),
@@ -73,14 +76,25 @@ class AgencyService {
 
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
-
       final Map<String, dynamic> decoded = jsonDecode(response.body);
-      return {
-        "success": response.statusCode == 201 || response.statusCode == 200,
-        "message": decoded['message'] ?? "Operation completed.",
-        "data": decoded['agency'],
-      };
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        return {
+          "success": true,
+          "message": decoded['message'] ?? "Registered successfully",
+          // Maps the response data into the Agency model
+          "agency": decoded['agency'] != null
+              ? Agency.fromJson(decoded['agency'])
+              : null,
+        };
+      } else {
+        return {
+          "success": false,
+          "message": decoded['message'] ?? "Registration failed",
+        };
+      }
     } catch (e) {
+      debugPrint("❌ Register Agency Error: $e");
       return {"success": false, "message": "Service error: $e"};
     }
   }

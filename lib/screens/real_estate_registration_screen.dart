@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mera_ashiana/services/agency_service.dart';
-import 'package:mera_ashiana/screens/AgencyStatusScreen.dart'; // Ensure correct case
+import 'package:mera_ashiana/screens/AgencyStatusScreen.dart';
 
 class RealEstateRegistrationScreen extends StatefulWidget {
   const RealEstateRegistrationScreen({super.key});
@@ -43,11 +43,13 @@ class _RealEstateRegistrationScreenState
     }
   }
 
+  /// Merged Submission Logic
   void _handleSubmission() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isSubmitting = true);
 
+    // Call service with all form data
     final result = await AgencyService.registerAgency(
       agencyName: _nameController.text,
       description: _descController.text,
@@ -60,18 +62,32 @@ class _RealEstateRegistrationScreenState
     setState(() => _isSubmitting = false);
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result['message']),
-          backgroundColor: result['success'] ? Colors.green : Colors.red,
-        ),
-      );
-
       if (result['success']) {
-        // Replace current screen so user cannot 'back' into the form
+        // 1. Show Success Message
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Agency registered successfully!"),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        // 2. Navigate to Status Screen
+        // We use pushReplacement so they can't go back to the registration form
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const AgencyStatusScreen()),
+          MaterialPageRoute(
+            builder: (context) => const AgencyStatusScreen(),
+            // If your AgencyStatusScreen takes an agency object, pass it like this:
+            // settings: RouteSettings(arguments: result['agency']),
+          ),
+        );
+      } else {
+        // 3. Show Error Message from API
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? "Registration failed"),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -117,6 +133,7 @@ class _RealEstateRegistrationScreenState
                 label: "Phone",
                 icon: Icons.phone,
                 keyboardType: TextInputType.phone,
+                validator: (v) => v!.isEmpty ? "Required" : null,
               ),
               const SizedBox(height: 15),
               _buildTextField(
@@ -124,7 +141,9 @@ class _RealEstateRegistrationScreenState
                 controller: _emailController,
                 label: "Email",
                 icon: Icons.email,
-                validator: (v) => v!.contains('@') ? null : "Invalid Email",
+                keyboardType: TextInputType.emailAddress,
+                validator: (v) =>
+                    (v != null && v.contains('@')) ? null : "Invalid Email",
               ),
               const SizedBox(height: 15),
               _buildTextField(
@@ -132,15 +151,28 @@ class _RealEstateRegistrationScreenState
                 controller: _addressController,
                 label: "Address",
                 icon: Icons.location_on,
+                validator: (v) => v!.isEmpty ? "Required" : null,
               ),
               const SizedBox(height: 30),
               SizedBox(
                 width: double.infinity,
                 height: 55,
                 child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
                   onPressed: _isSubmitting ? null : _handleSubmission,
                   child: _isSubmitting
-                      ? const CircularProgressIndicator(color: Colors.white)
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
                       : const Text("REGISTER AGENCY"),
                 ),
               ),
@@ -158,15 +190,20 @@ class _RealEstateRegistrationScreenState
           onTap: _pickLogo,
           child: CircleAvatar(
             radius: 50,
+            backgroundColor: theme.primaryColor.withOpacity(0.1),
             backgroundImage: _selectedLogo != null
                 ? FileImage(_selectedLogo!)
                 : null,
             child: _selectedLogo == null
-                ? const Icon(Icons.camera_alt, size: 35)
+                ? Icon(Icons.camera_alt, size: 35, color: theme.primaryColor)
                 : null,
           ),
         ),
-        const Text("Upload Logo"),
+        const SizedBox(height: 8),
+        const Text(
+          "Upload Agency Logo",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
       ],
     );
   }
@@ -188,7 +225,13 @@ class _RealEstateRegistrationScreenState
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon),
+        filled: true,
+        fillColor: theme.cardColor,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: theme.dividerColor),
+        ),
       ),
     );
   }

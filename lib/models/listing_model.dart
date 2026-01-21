@@ -32,22 +32,31 @@ class Listing {
   });
 
   factory Listing.fromJson(Map<String, dynamic> json) {
+    // Helper to extract images safely
+    List<String> parsedImages = [];
+    if (json['images'] != null) {
+      if (json['images'] is List) {
+        parsedImages = List<String>.from(
+          json['images'].map((x) => x.toString()),
+        );
+      }
+    }
+
     return Listing(
       id: json['id'],
-      title: json['title'] ?? '',
-      description: json['description'] ?? '',
+      title: json['title']?.toString() ?? '',
+      description: json['description']?.toString() ?? '',
       price: double.tryParse(json['price'].toString()) ?? 0.0,
-      location: json['location'] ?? '',
-      type: json['type'] ?? '',
-      city: json['city'],
-      // Note: Backend uses 'approval_status' in the DB/JSON response
-      status: json['approval_status'] ?? 'pending',
+      location: json['location']?.toString() ?? '',
+      type: json['type']?.toString() ?? '',
+      city: json['city']?.toString(),
+      status: json['approval_status']?.toString() ?? 'pending',
       area: json['area']?.toString(),
       bedrooms: int.tryParse(json['bedrooms'].toString()) ?? 0,
       bathrooms: int.tryParse(json['bathrooms'].toString()) ?? 0,
-      contactEmail: json['contact_email'],
-      contactPhone: json['contact_phone'],
-      images: json['images'] != null ? List<String>.from(json['images']) : [],
+      contactEmail: json['contact_email']?.toString(),
+      contactPhone: json['contact_phone']?.toString(),
+      images: parsedImages,
     );
   }
 }

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mera_ashiana/base_screens/favourite_screen.dart';
 import 'package:mera_ashiana/l10n/app_localizations.dart';
 import 'package:mera_ashiana/screens/real_estate_registration_screen.dart';
-import 'package:mera_ashiana/screens/AgencyStatuSscreen.dart';
+import 'package:mera_ashiana/screens/AgencyStatusScreen.dart';
 import 'package:mera_ashiana/screens/account_settings_screen.dart';
 import 'package:mera_ashiana/screens/my_listings_screen.dart';
 import 'package:mera_ashiana/screens/add_listing_screen.dart';
@@ -11,7 +11,7 @@ import 'package:mera_ashiana/services/profile_service.dart';
 import 'package:mera_ashiana/services/agency_service.dart';
 import 'package:mera_ashiana/services/auth_state.dart';
 import 'package:mera_ashiana/models/user_model.dart';
-import 'package:mera_ashiana/models/agency_model.dart'; // Ensure this model is imported
+import 'package:mera_ashiana/models/agency_model.dart';
 import 'package:mera_ashiana/authentication_bottom_sheet.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -36,7 +36,7 @@ class _ProfileContent extends StatefulWidget {
 
 class _ProfileContentState extends State<_ProfileContent> {
   User? user;
-  Agency? userAgency; // Track agency status globally in this screen
+  Agency? userAgency;
   bool isLoading = true;
   String? error;
 
@@ -74,7 +74,6 @@ class _ProfileContentState extends State<_ProfileContent> {
 
     if (mounted) setState(() => isLoading = true);
     try {
-      // Fetch both profile and agency status
       final profile = await ProfileService.fetchProfile(forceRefresh: true);
       final agency = await AgencyService.fetchMyAgency();
 
@@ -99,6 +98,16 @@ class _ProfileContentState extends State<_ProfileContent> {
 
   // --- Smart Agency Navigation Logic ---
   void _handleAgencyNavigation() async {
+    // 1. If we already have it in memory, go straight to Status
+    if (userAgency != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const AgencyStatusScreen()),
+      ).then((_) => _loadUser());
+      return;
+    }
+
+    // 2. Otherwise, check API once to be sure
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -108,18 +117,34 @@ class _ProfileContentState extends State<_ProfileContent> {
     final agency = await AgencyService.fetchMyAgency();
 
     if (!mounted) return;
-    Navigator.pop(context);
+    Navigator.pop(context); // Close loading dialog
 
-    if (agency == null) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const RealEstateRegistrationScreen()),
-      ).then((_) => _loadUser()); // Refresh when coming back
-    } else {
+    if (agency != null) {
+      setState(() => userAgency = agency);
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const AgencyStatusScreen()),
-      ).then((_) => _loadUser()); // Refresh when coming back
+      ).then((_) => _loadUser());
+    } else {
+      // 3. Go to registration and WAIT for a result
+      final newAgency = await Navigator.push<Agency>(
+        context,
+        MaterialPageRoute(builder: (_) => const RealEstateRegistrationScreen()),
+      );
+
+      // If registration was successful and returned an Agency object
+      if (newAgency != null) {
+        setState(() {
+          userAgency = newAgency;
+        });
+        // Immediately move to Status screen after registration
+        if (mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const AgencyStatusScreen()),
+          ).then((_) => _loadUser());
+        }
+      }
     }
   }
 
@@ -194,10 +219,7 @@ class _ProfileContentState extends State<_ProfileContent> {
         border: Border.all(color: statusColor.withOpacity(0.3)),
       ),
       child: InkWell(
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const AgencyStatusScreen()),
-        ).then((_) => _loadUser()),
+        onTap: _handleAgencyNavigation,
         child: Row(
           children: [
             Icon(statusIcon, color: statusColor),
@@ -344,14 +366,6 @@ class _ProfileContentState extends State<_ProfileContent> {
                     color: Colors.white.withOpacity(0.9),
                   ),
                 ),
-                if (user.phone != null && user.phone!.isNotEmpty)
-                  Text(
-                    user.phone!,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.white.withOpacity(0.7),
-                    ),
-                  ),
               ],
             ),
           ),

@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mera_ashiana/services/listing_service.dart';
@@ -30,21 +29,23 @@ class _AddListingScreenState extends State<AddListingScreen> {
   final _bathsController = TextEditingController();
 
   String _selectedType = 'house';
+
+  // Note: We'll send empty or default amenities if not implemented in UI yet
   List<String> _selectedAmenities = [];
 
   void _submitData() async {
-    if (!_formKey.currentState!.validate() || _selectedImages.isEmpty) {
+    if (!_formKey.currentState!.validate()) return;
+
+    if (_selectedImages.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Please fill all required fields and add photos"),
-        ),
+        const SnackBar(content: Text("Please add at least one photo")),
       );
       return;
     }
 
     setState(() => _isSubmitting = true);
 
-    // Matches Backend/controllers/listing-controllers/listing.controller.js requiredFields
+    // Prepare the data map
     final Map<String, dynamic> body = {
       "title": _titleController.text.trim(),
       "description": _descController.text.trim(),
@@ -58,27 +59,28 @@ class _AddListingScreenState extends State<AddListingScreen> {
       "province": "Sindh",
       "city": "Karachi",
       "zipCode": "75600",
-      "amenities": _selectedAmenities,
-      // Raw List as controller handles JSON.stringify
       "contactPhone": _phoneController.text.trim(),
       "contactEmail": _emailController.text.trim(),
       "preferredContact": "phone",
     };
 
-    final result = await ListingService.createListing(data: body);
+    // FIXED CALL: Now passing both data and images in one call
+    final result = await ListingService.createListing(
+      data: body,
+      imageFiles: _selectedImages,
+    );
 
-    if (result['success']) {
-      await ListingService.uploadImages(result['id'], _selectedImages);
-      if (mounted) {
-        setState(() => _isSubmitting = false);
+    if (mounted) {
+      setState(() => _isSubmitting = false);
+      if (result['success']) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Property posted successfully!")),
+        );
         Navigator.pop(context);
-      }
-    } else {
-      if (mounted) {
-        setState(() => _isSubmitting = false);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(result['message'])));
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(result['message'] ?? "Upload failed")),
+        );
       }
     }
   }
@@ -95,7 +97,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                 padding: const EdgeInsets.all(16),
                 children: [
                   _buildImagePicker(),
-                  const SizedBox(height: 15),
+                  const SizedBox(height: 20),
                   TextFormField(
                     controller: _titleController,
                     decoration: const InputDecoration(
@@ -179,6 +181,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                   const SizedBox(height: 15),
                   TextFormField(
                     controller: _phoneController,
+                    keyboardType: TextInputType.phone,
                     decoration: const InputDecoration(
                       labelText: "Phone*",
                       border: OutlineInputBorder(),
@@ -187,6 +190,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                   const SizedBox(height: 15),
                   TextFormField(
                     controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
                     decoration: const InputDecoration(
                       labelText: "Email*",
                       border: OutlineInputBorder(),
@@ -196,12 +200,19 @@ class _AddListingScreenState extends State<AddListingScreen> {
                   ElevatedButton(
                     onPressed: _submitData,
                     style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 50),
+                      minimumSize: const Size(double.infinity, 55),
                       backgroundColor: Colors.blue[900],
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
                     child: const Text(
                       "SUBMIT AD",
-                      style: TextStyle(color: Colors.white),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ],
@@ -211,37 +222,74 @@ class _AddListingScreenState extends State<AddListingScreen> {
   }
 
   Widget _buildImagePicker() {
-    return SizedBox(
-      height: 100,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: _selectedImages.length + 1,
-        itemBuilder: (context, i) {
-          if (i == _selectedImages.length) {
-            return GestureDetector(
-              onTap: () async {
-                final pics = await _picker.pickMultiImage();
-                setState(
-                  () => _selectedImages.addAll(pics.map((e) => File(e.path))),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          "Property Photos",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 100,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: _selectedImages.length + 1,
+            itemBuilder: (context, i) {
+              if (i == _selectedImages.length) {
+                return GestureDetector(
+                  onTap: () async {
+                    final pics = await _picker.pickMultiImage();
+                    if (pics.isNotEmpty) {
+                      setState(() {
+                        _selectedImages.addAll(pics.map((e) => File(e.path)));
+                      });
+                    }
+                  },
+                  child: Container(
+                    width: 100,
+                    margin: const EdgeInsets.only(right: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[200],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey[400]!),
+                    ),
+                    child: const Icon(Icons.add_a_photo, color: Colors.grey),
+                  ),
                 );
-              },
-              child: Container(
-                width: 100,
-                color: Colors.grey[200],
-                child: const Icon(Icons.add_a_photo),
-              ),
-            );
-          }
-          return Padding(
-            padding: const EdgeInsets.only(right: 8.0),
-            child: Image.file(
-              _selectedImages[i],
-              width: 100,
-              fit: BoxFit.cover,
-            ),
-          );
-        },
-      ),
+              }
+              return Stack(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8.0),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.file(
+                        _selectedImages[i],
+                        width: 100,
+                        height: 100,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    right: 12,
+                    top: 4,
+                    child: GestureDetector(
+                      onTap: () => setState(() => _selectedImages.removeAt(i)),
+                      child: const CircleAvatar(
+                        radius: 12,
+                        backgroundColor: Colors.red,
+                        child: Icon(Icons.close, size: 16, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }

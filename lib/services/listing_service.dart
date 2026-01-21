@@ -8,31 +8,64 @@ import 'package:mera_ashiana/services/login_service.dart';
 class ListingService {
   static const String _baseUrl = "http://api.staging.mera-ashiana.com/api";
 
+  /// Sends both property details and images in a single Multipart request.
   static Future<Map<String, dynamic>> createListing({
     required Map<String, dynamic> data,
+    required List<File> imageFiles,
   }) async {
     try {
       final cookie = await LoginService.getAuthCookie();
-      final response = await http.post(
-        Uri.parse("$_baseUrl/listings"),
-        headers: {
-          'Cookie': cookie ?? '',
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: jsonEncode(data),
-      );
+      var uri = Uri.parse("$_baseUrl/listings");
+
+      // MultipartRequest is required for 'multipart/form-data' (Files + Fields)
+      var request = http.MultipartRequest('POST', uri);
+
+      // 1. Add Headers
+      request.headers.addAll({
+        'Cookie': cookie ?? '',
+        'Accept': 'application/json',
+      });
+
+      // 2. Add Text Fields
+      // Multer expects all non-file fields as Strings
+      data.forEach((key, value) {
+        if (value != null) {
+          request.fields[key] = value.toString();
+        }
+      });
+
+      // 3. Add Images
+      // Changed from 'images[]' to 'images' to fix MulterError: Unexpected field
+      for (var file in imageFiles) {
+        request.files.add(
+          await http.MultipartFile.fromPath('images', file.path),
+        );
+      }
+
+      // 4. Execute the request
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
 
       final result = jsonDecode(response.body);
+
       if (response.statusCode == 201 || response.statusCode == 200) {
-        return {"success": true, "id": result['data']['id']};
+        // Safe navigation to handle different backend response structures
+        var responseData = result['data'];
+        var id = responseData != null ? responseData['id'] : result['id'];
+
+        return {"success": true, "id": id};
       }
-      return {"success": false, "message": result['message'] ?? "Server Error"};
+
+      return {
+        "success": false,
+        "message": result['message'] ?? "Server Error: ${response.statusCode}",
+      };
     } catch (e) {
       return {"success": false, "message": "Connection Error: $e"};
     }
   }
 
+  /// Fetches listings belonging to the logged-in user
   static Future<List<Listing>> getMyListings() async {
     try {
       final cookie = await LoginService.getAuthCookie();
@@ -48,33 +81,8 @@ class ListingService {
       }
       return [];
     } catch (e) {
-      debugPrint("Error: $e");
+      debugPrint("Fetch Error: $e");
       return [];
-    }
-  }
-
-  static Future<bool> uploadImages(int listingId, List<File> imageFiles) async {
-    try {
-      final cookie = await LoginService.getAuthCookie();
-      var request = http.MultipartRequest(
-        'POST',
-        Uri.parse("$_baseUrl/listings/$listingId/images"),
-      );
-      request.headers.addAll({
-        'Cookie': cookie ?? '',
-        'Accept': 'application/json',
-      });
-
-      for (var file in imageFiles) {
-        request.files.add(
-          await http.MultipartFile.fromPath('images', file.path),
-        );
-      }
-
-      final res = await request.send();
-      return res.statusCode == 200 || res.statusCode == 201;
-    } catch (e) {
-      return false;
     }
   }
 }
