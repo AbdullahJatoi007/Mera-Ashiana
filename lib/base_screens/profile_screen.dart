@@ -96,9 +96,9 @@ class _ProfileContentState extends State<_ProfileContent> {
     }
   }
 
-  // --- Smart Agency Navigation Logic ---
+  // ================= UPDATED AGENCY NAVIGATION (ONLY CHANGE) =================
   void _handleAgencyNavigation() async {
-    // 1. If we already have it in memory, go straight to Status
+    // If agency already loaded → go directly
     if (userAgency != null) {
       Navigator.push(
         context,
@@ -107,46 +107,44 @@ class _ProfileContentState extends State<_ProfileContent> {
       return;
     }
 
-    // 2. Otherwise, check API once to be sure
+    // Show loader
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator()),
+      builder: (_) => const Center(child: CircularProgressIndicator()),
     );
 
     final agency = await AgencyService.fetchMyAgency();
 
     if (!mounted) return;
-    Navigator.pop(context); // Close loading dialog
+    Navigator.pop(context);
 
     if (agency != null) {
       setState(() => userAgency = agency);
+
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const AgencyStatusScreen()),
       ).then((_) => _loadUser());
     } else {
-      // 3. Go to registration and WAIT for a result
+      // 👉 Register agency and WAIT for result
       final newAgency = await Navigator.push<Agency>(
         context,
         MaterialPageRoute(builder: (_) => const RealEstateRegistrationScreen()),
       );
 
-      // If registration was successful and returned an Agency object
       if (newAgency != null) {
-        setState(() {
-          userAgency = newAgency;
-        });
-        // Immediately move to Status screen after registration
-        if (mounted) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const AgencyStatusScreen()),
-          ).then((_) => _loadUser());
-        }
+        setState(() => userAgency = newAgency);
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const AgencyStatusScreen()),
+        ).then((_) => _loadUser());
       }
     }
   }
+
+  // ===========================================================================
 
   void _launchURL(String url) async {
     final Uri uri = Uri.parse(url);
@@ -183,10 +181,7 @@ class _ProfileContentState extends State<_ProfileContent> {
         physics: const AlwaysScrollableScrollPhysics(),
         children: <Widget>[
           _buildHeader(user!),
-
-          // --- Agency Status Banner ---
           if (userAgency != null) _buildAgencyStatusBanner(),
-
           const SizedBox(height: 20),
           _buildMetricsRow(loc),
           const SizedBox(height: 25),
@@ -514,6 +509,7 @@ class _ProfileContentState extends State<_ProfileContent> {
     final Color color = isDestructive
         ? Colors.redAccent
         : theme.colorScheme.primary;
+
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
       leading: Container(

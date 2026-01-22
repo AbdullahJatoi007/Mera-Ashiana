@@ -4,10 +4,21 @@ import 'package:mera_ashiana/l10n/app_localizations.dart';
 import 'package:mera_ashiana/screens/account_settings_screen.dart';
 import 'package:mera_ashiana/screens/drawer/widgets/drawer_header.dart';
 import 'package:mera_ashiana/screens/blogs_screen.dart';
+import 'package:mera_ashiana/screens/my_listings_screen.dart'; // Added
+import 'package:mera_ashiana/base_screens/favourite_screen.dart'; // Added
 import 'package:mera_ashiana/main.dart';
+import 'package:url_launcher/url_launcher.dart'; // Added for Help/About
 
 class CustomDrawer extends StatelessWidget {
   const CustomDrawer({super.key});
+
+  // Helper to launch external URLs
+  void _launchURL(String url) async {
+    final Uri uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -17,7 +28,6 @@ class CustomDrawer extends StatelessWidget {
 
     return Drawer(
       backgroundColor: theme.scaffoldBackgroundColor,
-      // Sync with app background
       child: Column(
         children: <Widget>[
           const CustomDrawerHeader(),
@@ -37,29 +47,43 @@ class CustomDrawer extends StatelessWidget {
                   theme,
                   loc.myListings,
                   Icons.apartment_outlined,
-                  () {},
+                  () {
+                    Navigator.pop(context); // Close drawer
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const MyListingsScreen(),
+                      ),
+                    );
+                  },
                 ),
                 _buildMenuItem(
                   context,
                   theme,
                   loc.favorites,
                   Icons.favorite_border,
-                  () {},
+                  () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const FavouritesScreen(),
+                      ),
+                    );
+                  },
                 ),
                 _buildMenuItem(
                   context,
                   theme,
                   loc.blogs,
                   Icons.newspaper_outlined,
-                      () {
-                        Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const BlogsScreen(),
-                          ),
-                        );
-                      },
+                  () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const BlogsScreen()),
+                    );
+                  },
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -68,7 +92,6 @@ class CustomDrawer extends StatelessWidget {
                     color: theme.dividerColor.withOpacity(0.1),
                   ),
                 ),
-
                 _buildMenuItem(
                   context,
                   theme,
@@ -79,7 +102,7 @@ class CustomDrawer extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const AccountSettingsScreen(),
+                        builder: (_) => const AccountSettingsScreen(),
                       ),
                     );
                   },
@@ -97,7 +120,6 @@ class CustomDrawer extends StatelessWidget {
                   ),
                   trailing: DropdownButton<String>(
                     dropdownColor: theme.cardColor,
-                    // Dark background for dropdown menu
                     value: appLocale.value.languageCode,
                     underline: const SizedBox(),
                     items: [
@@ -135,14 +157,14 @@ class CustomDrawer extends StatelessWidget {
                   theme,
                   loc.helpSupport,
                   Icons.help_outline,
-                  () {},
+                  () => _launchURL('http://staging.mera-ashiana.com/contact'),
                 ),
                 _buildMenuItem(
                   context,
                   theme,
                   loc.aboutUs,
-                  Icons.security_outlined,
-                  () {},
+                  Icons.info_outline, // Changed icon for About
+                  () => _launchURL('http://staging.mera-ashiana.com/about'),
                 ),
               ],
             ),
