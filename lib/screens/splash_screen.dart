@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'package:mera_ashiana/screens/base/main_scaffold.dart';
 import 'package:mera_ashiana/services/auth_state.dart';
 
@@ -18,15 +19,14 @@ class _SplashScreenState extends State<SplashScreen>
   void initState() {
     super.initState();
 
-    // 1. Initialize Fade Animation
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     );
-    _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
-    _controller.forward();
 
-    // 2. Start the combined App Initialization and Navigation flow
+    _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
+
+    _controller.forward();
     _initializeApp();
   }
 
@@ -36,22 +36,20 @@ class _SplashScreenState extends State<SplashScreen>
     super.dispose();
   }
 
-  /// Initializes essential services before moving to the Dashboard
   Future<void> _initializeApp() async {
-    // RUN SIMULTANEOUSLY: Start checking session while the splash is visible
-    // This reduces the perceived waiting time for the user.
+    // Check session and wait for branding (3 seconds total)
     await Future.wait([
-      AuthState.checkLoginStatus(), // Check cookies/tokens
-      Future.delayed(const Duration(seconds: 3)), // Minimum branding time
+      AuthState.checkLoginStatus(),
+      Future.delayed(const Duration(seconds: 3)),
     ]);
 
     if (!mounted) return;
 
-    // Smooth transition to MainScaffold
+    // Smooth Fade transition to the Main Dashboard
     Navigator.pushReplacement(
       context,
       PageRouteBuilder(
-        transitionDuration: const Duration(milliseconds: 800),
+        transitionDuration: const Duration(milliseconds: 1000),
         pageBuilder: (context, animation, secondaryAnimation) =>
             const MainScaffold(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
@@ -66,77 +64,81 @@ class _SplashScreenState extends State<SplashScreen>
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
+    // Brand Colors
+    const Color primaryNavy = Color(0xFF0A1D37);
+    const Color accentYellow = Color(0xFFFFC400);
+
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
+      // Use Navy background in dark mode for a more "Elite" feel
+      backgroundColor: isDark ? primaryNavy : Colors.white,
       body: Center(
         child: FadeTransition(
           opacity: _fadeAnimation,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Logo with the Shadow Styling from your original code
+              // Logo Container
               Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(25),
-                  boxShadow: isDark
-                      ? [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.3),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
-                          ),
-                        ]
-                      : [
-                          BoxShadow(
-                            color: Colors.grey.withOpacity(0.1),
-                            blurRadius: 15,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
+                  boxShadow: [
+                    BoxShadow(
+                      color: isDark
+                          ? Colors.black45
+                          : Colors.black.withOpacity(0.05),
+                      blurRadius: 25,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(25),
                   child: Image.asset(
                     'assets/images/mera_ashiana_logo.jpeg',
-                    width: 180,
-                    height: 180,
+                    width: 160, // Slightly smaller for better proportions
+                    height: 160,
                     fit: BoxFit.cover,
                   ),
                 ),
               ),
-              const SizedBox(height: 35),
+              const SizedBox(height: 40),
 
               // App Name
-              Text(
+              const Text(
                 "MERA ASHIANA",
                 style: TextStyle(
-                  color: theme.colorScheme.primary,
-                  fontSize: 24,
+                  color: accentYellow, // Brand Yellow
+                  fontSize: 26,
                   fontWeight: FontWeight.w900,
-                  letterSpacing: 4.0,
+                  letterSpacing: 5.0,
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
 
               // Tagline
               Text(
                 "Find Your Dream Home",
                 style: TextStyle(
-                  color: theme.colorScheme.onSurface.withOpacity(0.5),
-                  fontSize: 13,
+                  color: isDark ? Colors.white60 : Colors.black45,
+                  fontSize: 14,
                   letterSpacing: 1.5,
                   fontWeight: FontWeight.w500,
                 ),
               ),
 
-              // Loading indicator (Optional: shows user something is happening)
-              const SizedBox(height: 50),
+              const SizedBox(height: 60),
+
+              // Animated Loading Indicator
               SizedBox(
-                width: 20,
-                height: 20,
+                width: 25,
+                height: 25,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: theme.colorScheme.primary.withOpacity(0.5),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    isDark
+                        ? accentYellow.withOpacity(0.4)
+                        : primaryNavy.withOpacity(0.2),
+                  ),
                 ),
               ),
             ],

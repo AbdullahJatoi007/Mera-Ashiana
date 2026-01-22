@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:mera_ashiana/base_screens/favourite_screen.dart';
 import 'package:mera_ashiana/l10n/app_localizations.dart';
 import 'package:mera_ashiana/screens/real_estate_registration_screen.dart';
@@ -15,15 +16,22 @@ import 'package:mera_ashiana/models/agency_model.dart';
 import 'package:mera_ashiana/authentication_bottom_sheet.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+// Brand Palette
+class AppColors {
+  static const Color primaryNavy = Color(0xFF0A1D37);
+  static const Color accentYellow = Color(0xFFFFC400);
+  static const Color white = Colors.white;
+  static const Color background = Color(0xFFF5F5F5);
+  static const Color textGrey = Color(0xFF757575);
+  static const Color errorRed = Color(0xFFD32F2F);
+}
+
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: const _ProfileContent(),
-    );
+    return const Scaffold(body: _ProfileContent());
   }
 }
 
@@ -54,9 +62,7 @@ class _ProfileContentState extends State<_ProfileContent> {
   }
 
   void _handleAuthChange() {
-    if (mounted) {
-      _loadUser();
-    }
+    if (mounted) _loadUser();
   }
 
   Future<void> _loadUser() async {
@@ -96,43 +102,33 @@ class _ProfileContentState extends State<_ProfileContent> {
     }
   }
 
-  // ================= MERGED NAVIGATION LOGIC =================
   void _handleAgencyNavigation() async {
-    // 1. Show a loading indicator while we check the latest status
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator()),
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(color: AppColors.accentYellow),
+      ),
     );
 
-    // 2. Always fetch latest from server to be 100% sure
     final agency = await AgencyService.fetchMyAgency();
-
     if (!mounted) return;
-    Navigator.pop(context); // Remove loading indicator
+    Navigator.pop(context);
 
-    if (mounted) {
-      setState(() => userAgency = agency);
-    }
+    setState(() => userAgency = agency);
 
     if (agency != null) {
-      // If agency exists, go to Status Screen
-      if (!mounted) return;
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const AgencyStatusScreen()),
-      ).then((_) => _loadUser()); // Refresh profile when coming back
+      ).then((_) => _loadUser());
     } else {
-      // If NO agency, go to Registration
-      if (!mounted) return;
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const RealEstateRegistrationScreen()),
-      ).then((_) => _loadUser()); // This re-runs _loadUser() to update UI
+      ).then((_) => _loadUser());
     }
   }
-
-  // ===========================================================
 
   void _launchURL(String url) async {
     final Uri uri = Uri.parse(url);
@@ -146,97 +142,43 @@ class _ProfileContentState extends State<_ProfileContent> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => AuthenticationBottomSheet(
-        onLoginSuccess: () {
-          _loadUser();
-        },
-      ),
+      builder: (context) =>
+          AuthenticationBottomSheet(onLoginSuccess: _loadUser),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context)!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    if (isLoading) return const Center(child: CircularProgressIndicator());
-    if (user == null && error == null) return _buildGuestView(loc);
+    if (isLoading)
+      return const Center(
+        child: CircularProgressIndicator(color: AppColors.primaryNavy),
+      );
+    if (user == null && error == null) return _buildGuestView(loc, isDark);
     if (error != null) return _buildErrorView();
 
     return RefreshIndicator(
+      color: AppColors.accentYellow,
       onRefresh: _loadUser,
       child: ListView(
         padding: EdgeInsets.zero,
         physics: const AlwaysScrollableScrollPhysics(),
         children: <Widget>[
-          _buildHeader(user!),
-          if (userAgency != null) _buildAgencyStatusBanner(),
-          const SizedBox(height: 20),
-          _buildMetricsRow(loc),
+          _buildHeader(user!, isDark),
+          if (userAgency != null) _buildAgencyStatusBanner(isDark),
           const SizedBox(height: 25),
-          _buildActionSection(loc, user?.type ?? 'user'),
+          _buildMetricsRow(loc, isDark),
+          const SizedBox(height: 25),
+          _buildActionSection(loc, user?.type ?? 'user', isDark),
           const SizedBox(height: 40),
         ],
       ),
     );
   }
 
-  Widget _buildAgencyStatusBanner() {
-    final status = userAgency!.status.toLowerCase();
-    Color statusColor = Colors.orange;
-    IconData statusIcon = Icons.pending_actions_rounded;
-
-    if (status == 'approved') {
-      statusColor = Colors.green;
-      statusIcon = Icons.verified_rounded;
-    } else if (status == 'rejected') {
-      statusColor = Colors.red;
-      statusIcon = Icons.error_outline_rounded;
-    }
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: statusColor.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: statusColor.withOpacity(0.3)),
-      ),
-      child: InkWell(
-        onTap: _handleAgencyNavigation,
-        child: Row(
-          children: [
-            Icon(statusIcon, color: statusColor),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Agency Status: ${status.toUpperCase()}",
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: statusColor,
-                    ),
-                  ),
-                  Text(
-                    "Tap to view agency dashboard",
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: statusColor.withOpacity(0.8),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(Icons.arrow_forward_ios, size: 14, color: statusColor),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildGuestView(AppLocalizations loc) {
-    final theme = Theme.of(context);
+  Widget _buildGuestView(AppLocalizations loc, bool isDark) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 40),
@@ -244,21 +186,27 @@ class _ProfileContentState extends State<_ProfileContent> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.account_circle_outlined,
+              Icons.account_circle_rounded,
               size: 100,
-              color: theme.colorScheme.primary.withOpacity(0.2),
+              color: isDark
+                  ? AppColors.accentYellow.withOpacity(0.2)
+                  : AppColors.primaryNavy.withOpacity(0.1),
             ),
             const SizedBox(height: 24),
-            const Text(
+            Text(
               "Profile & Settings",
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 22,
+                color: isDark ? Colors.white : AppColors.primaryNavy,
+              ),
             ),
             const SizedBox(height: 12),
             Text(
-              "Login to view your listings, manage your account, and see your saved properties.",
+              "Login to view your listings and manage your account.",
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: theme.colorScheme.onSurface.withOpacity(0.6),
+                color: isDark ? Colors.white70 : AppColors.textGrey,
                 height: 1.5,
               ),
             ),
@@ -269,17 +217,16 @@ class _ProfileContentState extends State<_ProfileContent> {
               child: ElevatedButton(
                 onPressed: _showLoginSheet,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: theme.colorScheme.secondary,
+                  backgroundColor: AppColors.accentYellow,
+                  foregroundColor: AppColors.primaryNavy,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(15),
                   ),
+                  elevation: 0,
                 ),
                 child: const Text(
                   "LOGIN / REGISTER",
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
             ),
@@ -289,41 +236,35 @@ class _ProfileContentState extends State<_ProfileContent> {
     );
   }
 
-  Widget _buildHeader(User user) {
-    final colorScheme = Theme.of(context).colorScheme;
+  Widget _buildHeader(User user, bool isDark) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 50, 20, 24),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [colorScheme.primary, colorScheme.primary.withOpacity(0.85)],
-        ),
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(30),
-          bottomRight: Radius.circular(30),
+      padding: const EdgeInsets.fromLTRB(24, 60, 24, 30),
+      decoration: const BoxDecoration(
+        color: AppColors.primaryNavy,
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(35),
+          bottomRight: Radius.circular(35),
         ),
       ),
       child: Row(
         children: [
           CircleAvatar(
-            radius: 35,
-            backgroundColor: colorScheme.secondary,
+            radius: 38,
+            backgroundColor: AppColors.accentYellow,
             child: Text(
               user.username.isNotEmpty ? user.username[0].toUpperCase() : 'U',
               style: const TextStyle(
-                fontSize: 24,
-                color: Colors.white,
+                fontSize: 28,
+                color: AppColors.primaryNavy,
                 fontWeight: FontWeight.bold,
               ),
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 20),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
               children: [
                 Row(
                   children: [
@@ -332,7 +273,7 @@ class _ProfileContentState extends State<_ProfileContent> {
                         user.username,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          fontSize: 20,
+                          fontSize: 22,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
@@ -345,8 +286,8 @@ class _ProfileContentState extends State<_ProfileContent> {
                 Text(
                   user.email,
                   style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.white.withOpacity(0.9),
+                    fontSize: 14,
+                    color: Colors.white.withOpacity(0.7),
                   ),
                 ),
               ],
@@ -361,30 +302,67 @@ class _ProfileContentState extends State<_ProfileContent> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.15),
+        color: AppColors.accentYellow.withOpacity(0.2),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: Colors.white.withOpacity(0.2)),
+        border: Border.all(color: AppColors.accentYellow.withOpacity(0.5)),
       ),
       child: Text(
         type.toUpperCase(),
         style: const TextStyle(
-          color: Colors.white,
-          fontSize: 9,
+          color: AppColors.accentYellow,
+          fontSize: 10,
           fontWeight: FontWeight.bold,
         ),
       ),
     );
   }
 
-  Widget _buildMetricsRow(AppLocalizations loc) {
+  Widget _buildAgencyStatusBanner(bool isDark) {
+    final status = userAgency!.status.toLowerCase();
+    Color statusColor = status == 'approved'
+        ? Colors.green
+        : (status == 'rejected' ? AppColors.errorRed : Colors.orange);
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+      decoration: BoxDecoration(
+        color: statusColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: statusColor.withOpacity(0.2)),
+      ),
+      child: ListTile(
+        onTap: _handleAgencyNavigation,
+        leading: Icon(
+          status == 'approved' ? Icons.verified : Icons.pending,
+          color: statusColor,
+        ),
+        title: Text(
+          "Agency: ${status.toUpperCase()}",
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: statusColor,
+            fontSize: 14,
+          ),
+        ),
+        subtitle: Text(
+          "View dashboard",
+          style: TextStyle(fontSize: 12, color: statusColor.withOpacity(0.8)),
+        ),
+        trailing: Icon(Icons.arrow_forward_ios, size: 14, color: statusColor),
+      ),
+    );
+  }
+
+  Widget _buildMetricsRow(AppLocalizations loc, bool isDark) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
         children: [
           _MetricCard(
             count: '12',
             label: 'Listings',
-            icon: Icons.apartment,
+            icon: Icons.apartment_rounded,
+            isDark: isDark,
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const MyListingsScreen()),
@@ -394,35 +372,38 @@ class _ProfileContentState extends State<_ProfileContent> {
           _MetricCard(
             count: '45',
             label: 'Favorites',
-            icon: Icons.favorite,
+            icon: Icons.favorite_rounded,
+            isDark: isDark,
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const FavouritesScreen()),
             ),
           ),
           const SizedBox(width: 12),
-          const _MetricCard(
+          _MetricCard(
             count: '3.2K',
             label: 'Views',
-            icon: Icons.remove_red_eye,
+            icon: Icons.visibility_rounded,
+            isDark: isDark,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildActionSection(AppLocalizations loc, String userType) {
-    final theme = Theme.of(context);
+  Widget _buildActionSection(
+    AppLocalizations loc,
+    String userType,
+    bool isDark,
+  ) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(24),
+        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(
-              theme.brightness == Brightness.dark ? 0.2 : 0.03,
-            ),
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -432,54 +413,49 @@ class _ProfileContentState extends State<_ProfileContent> {
         children: [
           _buildSettingsTile(
             title: 'Post Property Ad',
-            icon: Icons.add_business_outlined,
+            icon: Icons.add_circle_outline_rounded,
+            isDark: isDark,
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const AddListingScreen()),
             ),
           ),
-          const Divider(height: 1, indent: 60),
           _buildSettingsTile(
             title: loc.accountSettings,
-            icon: Icons.person_outline,
+            icon: Icons.manage_accounts_outlined,
+            isDark: isDark,
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const AccountSettingsScreen()),
             ),
           ),
+          if (userType == 'agent')
+            _buildSettingsTile(
+              title: 'Agency Management',
+              icon: Icons.business_center_outlined,
+              isDark: isDark,
+              onTap: _handleAgencyNavigation,
+            ),
           _buildSettingsTile(
             title: 'My Listings',
-            icon: Icons.list_alt_outlined,
+            icon: Icons.format_list_bulleted_rounded,
+            isDark: isDark,
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const MyListingsScreen()),
             ),
           ),
-          if (userType == 'agent')
-            _buildSettingsTile(
-              title: 'Agency Management',
-              icon: Icons.business_outlined,
-              onTap: _handleAgencyNavigation,
-            ),
-          _buildSettingsTile(
-            title: loc.paymentMethods,
-            icon: Icons.payment_outlined,
-            onTap: () {},
-          ),
-          _buildSettingsTile(
-            title: loc.helpSupport,
-            icon: Icons.headset_mic_outlined,
-            onTap: () => _launchURL('http://staging.mera-ashiana.com/contact'),
-          ),
           _buildSettingsTile(
             title: 'About Us',
-            icon: Icons.info_outline,
-            onTap: () => _launchURL('http://staging.mera-ashiana.com/contact'),
+            icon: Icons.info_outline_rounded,
+            isDark: isDark,
+            onTap: () => _launchURL('http://staging.mera-ashiana.com/about'),
           ),
           _buildSettingsTile(
             title: loc.logout,
             icon: Icons.logout_rounded,
             isDestructive: true,
+            isDark: isDark,
             onTap: () => AuthHelper.showLogoutDialog(context),
           ),
         ],
@@ -492,34 +468,34 @@ class _ProfileContentState extends State<_ProfileContent> {
     required IconData icon,
     required VoidCallback onTap,
     bool isDestructive = false,
+    required bool isDark,
   }) {
-    final theme = Theme.of(context);
-    final Color color = isDestructive
-        ? Colors.redAccent
-        : theme.colorScheme.primary;
-
+    final Color iconColor = isDestructive
+        ? AppColors.errorRed
+        : (isDark ? AppColors.accentYellow : AppColors.primaryNavy);
     return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: iconColor.withOpacity(0.1),
           borderRadius: BorderRadius.circular(10),
         ),
-        child: Icon(icon, color: color, size: 20),
+        child: Icon(icon, color: iconColor, size: 20),
       ),
       title: Text(
         title,
         style: TextStyle(
-          color: isDestructive ? Colors.redAccent : theme.colorScheme.onSurface,
+          color: isDestructive
+              ? AppColors.errorRed
+              : (isDark ? Colors.white : AppColors.primaryNavy),
           fontWeight: FontWeight.w600,
-          fontSize: 15,
+          fontSize: 14,
         ),
       ),
-      trailing: Icon(
-        Icons.arrow_forward_ios,
-        size: 14,
-        color: theme.colorScheme.onSurface.withOpacity(0.3),
+      trailing: const Icon(
+        Icons.chevron_right_rounded,
+        size: 20,
+        color: AppColors.textGrey,
       ),
       onTap: onTap,
     );
@@ -530,16 +506,29 @@ class _ProfileContentState extends State<_ProfileContent> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.wifi_off_rounded, size: 60, color: Colors.grey),
+          const Icon(
+            Icons.error_outline_rounded,
+            size: 60,
+            color: AppColors.errorRed,
+          ),
           const SizedBox(height: 16),
           const Text(
             "Something went wrong",
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
           ),
           const SizedBox(height: 8),
-          Text(error ?? "Unknown Error"),
+          Text(
+            error ?? "Unknown Error",
+            style: const TextStyle(color: AppColors.textGrey),
+          ),
           const SizedBox(height: 24),
-          ElevatedButton(onPressed: _loadUser, child: const Text("Retry")),
+          ElevatedButton(
+            onPressed: _loadUser,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryNavy,
+            ),
+            child: const Text("Retry", style: TextStyle(color: Colors.white)),
+          ),
         ],
       ),
     );
@@ -551,45 +540,55 @@ class _MetricCard extends StatelessWidget {
   final String label;
   final IconData icon;
   final VoidCallback? onTap;
+  final bool isDark;
 
   const _MetricCard({
     required this.count,
     required this.label,
     required this.icon,
     this.onTap,
+    required this.isDark,
   });
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Expanded(
-      child: GestureDetector(
+      child: InkWell(
         onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 16),
+          padding: const EdgeInsets.symmetric(vertical: 18),
           decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
+            color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: theme.dividerColor.withOpacity(0.1)),
+            border: Border.all(
+              color: isDark
+                  ? Colors.white10
+                  : AppColors.textGrey.withOpacity(0.5),
+            ),
           ),
           child: Column(
             children: [
-              Icon(icon, color: theme.colorScheme.primary, size: 22),
-              const SizedBox(height: 8),
+              Icon(
+                icon,
+                color: isDark ? AppColors.accentYellow : AppColors.primaryNavy,
+                size: 24,
+              ),
+              const SizedBox(height: 10),
               Text(
                 count,
                 style: TextStyle(
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w900,
                   fontSize: 18,
-                  color: theme.colorScheme.secondary,
+                  color: isDark ? Colors.white : AppColors.primaryNavy,
                 ),
               ),
               Text(
                 label,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: theme.colorScheme.onSurface.withOpacity(0.6),
-                  fontWeight: FontWeight.w500,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textGrey,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ],

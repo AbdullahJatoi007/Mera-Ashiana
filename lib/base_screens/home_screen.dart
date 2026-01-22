@@ -1,4 +1,4 @@
-import 'dart:async'; // Required for Timer
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:mera_ashiana/base_screens/properties_screen.dart';
@@ -44,6 +44,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
+  // FIXED: RESTORED FILTER LOGIC
   List<PropertyModel> get _filteredProperties {
     if (_selectedCategoryIndex == 0) return _properties;
     String categoryName = _categories[_selectedCategoryIndex]['name'] as String;
@@ -62,15 +63,15 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       }
     } catch (e) {
-      if (mounted) {
+      if (mounted)
         setState(() {
           _hasError = true;
           _isLoading = false;
         });
-      }
     }
   }
 
+  // FIXED: RESTORED SNAP LOGIC
   void _handleSnap(double maxSnapOffset) {
     if (!_scrollController.hasClients) return;
     double currentOffset = _scrollController.offset;
@@ -122,10 +123,14 @@ class _HomeScreenState extends State<HomeScreen> {
               onOptionSelected: (value) =>
                   setState(() => _selectedOption = value),
             ),
+
+            // Category Selector
             SliverPadding(
               padding: const EdgeInsets.only(top: 15, bottom: 5),
               sliver: SliverToBoxAdapter(child: _buildCategoryList(theme)),
             ),
+
+            // 1. FEATURED SECTION (HORIZONTAL)
             SliverToBoxAdapter(
               child: _buildSectionTitle(theme, loc.exploreProjects, () {
                 Navigator.push(
@@ -141,8 +146,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
               }),
             ),
-            // Featured Projects Row
             SliverToBoxAdapter(child: _buildFeaturedProjects(theme)),
+
+            // 2. RECENTLY ADDED SECTION (HORIZONTAL)
             SliverToBoxAdapter(
               child: _buildSectionTitle(theme, "Recently Added", () {
                 Navigator.push(
@@ -155,6 +161,21 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 );
               }),
+            ),
+            SliverToBoxAdapter(child: _buildRecentlyAddedHorizontal(theme)),
+
+            // 3. FILTERED LIST SECTION (VERTICAL)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 25, 12, 10),
+                child: Text(
+                  "All ${_categories[_selectedCategoryIndex]['name']} Listings",
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
             ),
             SliverPadding(
               padding: const EdgeInsets.only(bottom: 20),
@@ -172,7 +193,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // --- Category Chips ---
   Widget _buildCategoryList(ThemeData theme) {
     return SizedBox(
       height: 45,
@@ -199,6 +219,7 @@ class _HomeScreenState extends State<HomeScreen> {
               selectedColor: theme.colorScheme.primary,
               labelStyle: TextStyle(
                 color: isSelected ? Colors.white : theme.colorScheme.onSurface,
+                fontWeight: FontWeight.bold,
               ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
@@ -210,30 +231,98 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // --- Horizontal Featured List ---
   Widget _buildFeaturedProjects(ThemeData theme) {
-    final featuredProperties = _properties
-        .where((p) => p.isFeatured == 1)
-        .toList();
-    if (featuredProperties.isEmpty) return const SizedBox.shrink();
-
+    final featured = _properties.where((p) => p.isFeatured == 1).toList();
+    if (featured.isEmpty) return const SizedBox.shrink();
     return SizedBox(
-      height: 200,
+      height: 220,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: featuredProperties.length,
+        itemCount: featured.length,
+        itemBuilder: (context, index) =>
+            AutoSlidingFeaturedCard(property: featured[index], theme: theme),
+      ),
+    );
+  }
+
+  // NEW: RECENTLY ADDED HORIZONTAL LIST
+  Widget _buildRecentlyAddedHorizontal(ThemeData theme) {
+    // Show last 6 added properties
+    final recent = _properties.reversed.take(6).toList();
+    return SizedBox(
+      height: 160,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: recent.length,
         itemBuilder: (context, index) {
-          return AutoSlidingFeaturedCard(
-            property: featuredProperties[index],
-            theme: theme,
+          final property = recent[index];
+          return GestureDetector(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ProjectDetailsScreen(propertyId: property.id),
+              ),
+            ),
+            child: Container(
+              width: 140,
+              margin: const EdgeInsets.only(right: 12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: theme.dividerColor.withOpacity(0.05)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(16),
+                    ),
+                    child: Image.network(
+                      property.images.isNotEmpty ? property.images[0] : '',
+                      height: 90,
+                      width: 140,
+                      fit: BoxFit.cover,
+                      errorBuilder: (c, e, s) =>
+                          Container(height: 90, color: Colors.grey[300]),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          property.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                        Text(
+                          "PKR ${property.price}",
+                          style: TextStyle(
+                            color: theme.colorScheme.secondary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
           );
         },
       ),
     );
   }
 
-  // --- Vertical List Item ---
   Widget _buildPropertyListItem(ThemeData theme, PropertyModel property) {
     return GestureDetector(
       onTap: () => Navigator.push(
@@ -243,27 +332,29 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        padding: const EdgeInsets.all(10),
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: theme.dividerColor.withOpacity(0.1)),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10),
+          ],
         ),
         child: Row(
           children: [
             ClipRRect(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(12),
               child: Image.network(
                 property.images.isNotEmpty ? property.images[0] : '',
-                width: 85,
-                height: 85,
+                width: 90,
+                height: 90,
                 fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) =>
-                    const Icon(Icons.image_not_supported),
+                errorBuilder: (c, e, s) =>
+                    Container(width: 90, height: 90, color: Colors.grey[200]),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -272,23 +363,23 @@ class _HomeScreenState extends State<HomeScreen> {
                     property.title,
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
-                      fontSize: 14,
+                      fontSize: 15,
                     ),
                   ),
                   Text(
                     property.location,
                     style: TextStyle(
                       color: theme.colorScheme.onSurface.withOpacity(0.6),
-                      fontSize: 11,
+                      fontSize: 12,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 10),
                   Text(
                     "PKR ${property.price}",
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      color: theme.colorScheme.secondary,
+                      fontSize: 16,
+                      color: theme.colorScheme.primary,
                     ),
                   ),
                 ],
@@ -306,22 +397,19 @@ class _HomeScreenState extends State<HomeScreen> {
     VoidCallback onSeeAll,
   ) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 15, 12, 5),
+      padding: const EdgeInsets.fromLTRB(20, 20, 12, 10),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
             title,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           TextButton(
             onPressed: onSeeAll,
             child: Text(
               "See All",
-              style: TextStyle(
-                color: theme.colorScheme.secondary,
-                fontSize: 12,
-              ),
+              style: TextStyle(color: theme.colorScheme.secondary),
             ),
           ),
         ],
@@ -331,7 +419,7 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 // =============================================================================
-// NEW: AUTO SLIDING CARD WIDGET
+// AUTO SLIDING CARD (IMAGE SAFETY FIXED)
 // =============================================================================
 
 class AutoSlidingFeaturedCard extends StatefulWidget {
@@ -357,16 +445,11 @@ class _AutoSlidingFeaturedCardState extends State<AutoSlidingFeaturedCard> {
   @override
   void initState() {
     super.initState();
-    _pageController = PageController(initialPage: 0);
-
-    // Setup Auto-play if there are multiple images
+    _pageController = PageController();
     if (widget.property.images.length > 1) {
-      _timer = Timer.periodic(const Duration(seconds: 3), (Timer timer) {
+      _timer = Timer.periodic(const Duration(seconds: 4), (timer) {
         if (_pageController.hasClients) {
-          _currentPage++;
-          if (_currentPage >= widget.property.images.length) {
-            _currentPage = 0;
-          }
+          _currentPage = (_currentPage + 1) % widget.property.images.length;
           _pageController.animateToPage(
             _currentPage,
             duration: const Duration(milliseconds: 800),
@@ -379,13 +462,16 @@ class _AutoSlidingFeaturedCardState extends State<AutoSlidingFeaturedCard> {
 
   @override
   void dispose() {
-    _timer?.cancel(); // Cancel timer to prevent memory leaks
+    _timer?.cancel();
     _pageController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    // Safety check for empty image lists
+    final hasImages = widget.property.images.isNotEmpty;
+
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
@@ -394,43 +480,50 @@ class _AutoSlidingFeaturedCardState extends State<AutoSlidingFeaturedCard> {
         ),
       ),
       child: Container(
-        width: 260,
-        margin: const EdgeInsets.only(right: 12, bottom: 5),
+        width: 280,
+        margin: const EdgeInsets.only(right: 16, bottom: 5),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black12,
               blurRadius: 10,
               offset: const Offset(0, 5),
             ),
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(20),
           child: Stack(
             children: [
-              // PageView for auto-sliding images
               PageView.builder(
                 controller: _pageController,
-                itemCount: widget.property.images.length,
-                onPageChanged: (index) => _currentPage = index,
-                physics: const NeverScrollableScrollPhysics(),
-                // User shouldn't scroll images inside horizontal list
+                itemCount: hasImages ? widget.property.images.length : 1,
                 itemBuilder: (context, i) {
                   return Image.network(
-                    widget.property.images[i],
+                    hasImages ? widget.property.images[i] : '',
                     fit: BoxFit.cover,
+                    errorBuilder: (c, e, s) => Container(
+                      color: Colors.grey[300],
+                      child: const Icon(Icons.home, size: 50),
+                    ),
                   );
                 },
               ),
-              // Info Overlay with Gradient
-              Container(
+              const DecoratedBox(
                 decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.transparent, Colors.black87],
+                  ),
                 ),
-                padding: const EdgeInsets.all(12),
+              ),
+              Positioned(
+                bottom: 15,
+                left: 15,
+                right: 15,
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.end,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
@@ -438,6 +531,7 @@ class _AutoSlidingFeaturedCardState extends State<AutoSlidingFeaturedCard> {
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
+                        fontSize: 16,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -446,7 +540,7 @@ class _AutoSlidingFeaturedCardState extends State<AutoSlidingFeaturedCard> {
                       "PKR ${widget.property.price}",
                       style: TextStyle(
                         color: widget.theme.colorScheme.secondary,
-                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
                       ),
                     ),
                   ],

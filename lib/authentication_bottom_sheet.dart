@@ -5,6 +5,26 @@ import 'package:mera_ashiana/services/google_login_service.dart';
 import 'package:mera_ashiana/services/auth_state.dart';
 import 'package:mera_ashiana/services/auth_service.dart'; // Ensure this matches your file name
 
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:mera_ashiana/services/login_service.dart';
+import 'package:mera_ashiana/services/google_login_service.dart';
+import 'package:mera_ashiana/services/auth_state.dart';
+import 'package:mera_ashiana/services/auth_service.dart';
+
+// Your defined color palette
+class AppColors {
+  static const Color primaryNavy = Color(0xFF0A1D37);
+  static const Color accentYellow = Color(0xFFFFC400);
+  static const Color white = Colors.white;
+  static const Color white70 = Colors.white70;
+  static const Color background = Color(0xFFF5F5F5);
+  static const Color textDark = Color(0xFF0A1D37);
+  static const Color textGrey = Color(0xFF757575);
+  static const Color borderGrey = Color(0xFFE0E0E0);
+  static const Color errorRed = Color(0xFFD32F2F);
+}
+
 class AuthenticationBottomSheet extends StatefulWidget {
   final VoidCallback onLoginSuccess;
   final String title;
@@ -21,11 +41,8 @@ class AuthenticationBottomSheet extends StatefulWidget {
 }
 
 class _AuthenticationBottomSheetState extends State<AuthenticationBottomSheet> {
-  // Existing Controllers
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-
-  // New Controllers for Registration
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _confirmPasswordController =
       TextEditingController();
@@ -33,14 +50,13 @@ class _AuthenticationBottomSheetState extends State<AuthenticationBottomSheet> {
   bool _isLoading = false;
   bool _isGoogleLoading = false;
   bool _isRegisterMode = false;
+  bool _obscurePassword = true; // For eye toggle logic
 
-  // Checkbox States
   bool _isAgent = false;
   bool _termsAccepted = false;
 
-  /// Combined handler for Login and Registration
+  // --- Logic remains unchanged ---
   Future<void> _handleAuth() async {
-    // 1. Validation for Registration
     if (_isRegisterMode) {
       if (_nameController.text.isEmpty ||
           _emailController.text.isEmpty ||
@@ -63,7 +79,6 @@ class _AuthenticationBottomSheetState extends State<AuthenticationBottomSheet> {
 
     try {
       if (_isRegisterMode) {
-        // CALLING BACKEND: username, email, password, repassword, type
         await AuthService.register(
           username: _nameController.text.trim(),
           email: _emailController.text.trim(),
@@ -78,9 +93,7 @@ class _AuthenticationBottomSheetState extends State<AuthenticationBottomSheet> {
         );
       }
 
-      // SUCCESS
       AuthState.isLoggedIn.value = true;
-
       if (mounted) {
         widget.onLoginSuccess();
         Navigator.pop(context);
@@ -102,7 +115,7 @@ class _AuthenticationBottomSheetState extends State<AuthenticationBottomSheet> {
 
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.redAccent),
+      SnackBar(content: Text(message), backgroundColor: AppColors.errorRed),
     );
   }
 
@@ -124,8 +137,6 @@ class _AuthenticationBottomSheetState extends State<AuthenticationBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return Container(
@@ -135,9 +146,9 @@ class _AuthenticationBottomSheetState extends State<AuthenticationBottomSheet> {
         top: 12,
         bottom: bottomInset + 24,
       ),
-      decoration: BoxDecoration(
-        color: theme.cardColor,
-        borderRadius: const BorderRadius.only(
+      decoration: const BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.only(
           topLeft: Radius.circular(30),
           topRight: Radius.circular(30),
         ),
@@ -146,37 +157,37 @@ class _AuthenticationBottomSheetState extends State<AuthenticationBottomSheet> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Handle bar
             Container(
               width: 50,
               height: 5,
               decoration: BoxDecoration(
-                color: theme.dividerColor.withOpacity(0.4),
+                color: AppColors.borderGrey,
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
             const SizedBox(height: 25),
-
             CircleAvatar(
               radius: 35,
-              backgroundColor: colorScheme.primary.withOpacity(0.1),
+              backgroundColor: AppColors.primaryNavy.withOpacity(0.05),
               child: Icon(
                 _isRegisterMode
                     ? Icons.person_add_rounded
                     : Icons.person_rounded,
-                color: colorScheme.primary,
+                color: AppColors.primaryNavy,
                 size: 35,
               ),
             ),
             const SizedBox(height: 20),
-
             Text(
               _isRegisterMode ? "Create Account" : widget.title,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textDark,
+              ),
             ),
             const SizedBox(height: 30),
 
-            // Fields
             if (_isRegisterMode) ...[
               _buildField(
                 label: "Full Name",
@@ -201,60 +212,71 @@ class _AuthenticationBottomSheetState extends State<AuthenticationBottomSheet> {
             ),
 
             if (_isRegisterMode) ...[
-              const SizedBox(height: 16),
-              _buildField(
-                label: "Confirm Password",
-                icon: Icons.lock_reset_outlined,
-                controller: _confirmPasswordController,
-                isPassword: true,
-              ),
               const SizedBox(height: 10),
-
-              // Agent Checkbox
-              CheckboxListTile(
-                value: _isAgent,
-                onChanged: (val) => setState(() => _isAgent = val!),
-                title: const Text(
-                  "I'm an agent",
-                  style: TextStyle(fontSize: 14),
+              Theme(
+                data: ThemeData(unselectedWidgetColor: AppColors.textGrey),
+                child: Column(
+                  children: [
+                    CheckboxListTile(
+                      value: _isAgent,
+                      onChanged: (val) => setState(() => _isAgent = val!),
+                      title: const Text(
+                        "I'm an agent",
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: AppColors.textDark,
+                        ),
+                      ),
+                      contentPadding: EdgeInsets.zero,
+                      controlAffinity: ListTileControlAffinity.leading,
+                      activeColor: AppColors.primaryNavy,
+                      checkColor: AppColors.accentYellow,
+                    ),
+                    CheckboxListTile(
+                      value: _termsAccepted,
+                      onChanged: (val) => setState(() => _termsAccepted = val!),
+                      title: const Text(
+                        "Accept Terms & Privacy Policy",
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: AppColors.textDark,
+                        ),
+                      ),
+                      contentPadding: EdgeInsets.zero,
+                      controlAffinity: ListTileControlAffinity.leading,
+                      activeColor: AppColors.primaryNavy,
+                      checkColor: AppColors.accentYellow,
+                    ),
+                  ],
                 ),
-                contentPadding: EdgeInsets.zero,
-                controlAffinity: ListTileControlAffinity.leading,
-                activeColor: colorScheme.primary,
-              ),
-
-              // Terms Checkbox
-              CheckboxListTile(
-                value: _termsAccepted,
-                onChanged: (val) => setState(() => _termsAccepted = val!),
-                title: const Text(
-                  "I have read and accept the Terms and Privacy Policy",
-                  style: TextStyle(fontSize: 14),
-                ),
-                contentPadding: EdgeInsets.zero,
-                controlAffinity: ListTileControlAffinity.leading,
-                activeColor: colorScheme.primary,
               ),
             ],
 
             const SizedBox(height: 25),
 
-            // Action Button
+            // Main Action Button
             SizedBox(
               width: double.infinity,
               height: 55,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: colorScheme.primary,
-                  foregroundColor: Colors.white,
+                  backgroundColor: AppColors.accentYellow,
+                  foregroundColor: AppColors.primaryNavy, // High contrast
+                  elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(15),
                   ),
-                  elevation: 0,
                 ),
                 onPressed: _isLoading ? null : _handleAuth,
                 child: _isLoading
-                    ? const CircularProgressIndicator(color: Colors.white)
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          color: AppColors.primaryNavy,
+                          strokeWidth: 2,
+                        ),
+                      )
                     : Text(
                         _isRegisterMode ? "REGISTER" : "LOGIN",
                         style: const TextStyle(
@@ -278,15 +300,20 @@ class _AuthenticationBottomSheetState extends State<AuthenticationBottomSheet> {
                           height: 20,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Icon(Icons.g_mobiledata, size: 32),
+                      : const Icon(
+                          Icons.g_mobiledata,
+                          size: 32,
+                          color: AppColors.primaryNavy,
+                        ),
                   label: const Text(
                     "Continue with Google",
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      color: AppColors.textDark,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   style: OutlinedButton.styleFrom(
-                    side: BorderSide(
-                      color: theme.dividerColor.withOpacity(0.2),
-                    ),
+                    side: const BorderSide(color: AppColors.borderGrey),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(15),
                     ),
@@ -296,7 +323,6 @@ class _AuthenticationBottomSheetState extends State<AuthenticationBottomSheet> {
             ],
 
             const SizedBox(height: 20),
-
             TextButton(
               onPressed: () {
                 HapticFeedback.lightImpact();
@@ -306,8 +332,8 @@ class _AuthenticationBottomSheetState extends State<AuthenticationBottomSheet> {
                 _isRegisterMode
                     ? "Already have an account? Sign In"
                     : "Don't have an account? Register Now",
-                style: TextStyle(
-                  color: colorScheme.primary,
+                style: const TextStyle(
+                  color: AppColors.primaryNavy,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -324,26 +350,41 @@ class _AuthenticationBottomSheetState extends State<AuthenticationBottomSheet> {
     required TextEditingController controller,
     bool isPassword = false,
   }) {
-    final theme = Theme.of(context);
     return TextField(
       controller: controller,
-      obscureText: isPassword,
+      obscureText: isPassword ? _obscurePassword : false,
+      cursorColor: AppColors.primaryNavy,
+      style: const TextStyle(color: AppColors.textDark),
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon, color: theme.colorScheme.primary),
+        labelStyle: const TextStyle(color: AppColors.textGrey),
+        prefixIcon: Icon(icon, color: AppColors.primaryNavy),
+        // Eye Toggle Implementation
+        suffixIcon: isPassword
+            ? IconButton(
+                icon: Icon(
+                  _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                  color: AppColors.textGrey,
+                ),
+                onPressed: () =>
+                    setState(() => _obscurePassword = !_obscurePassword),
+              )
+            : null,
         filled: true,
-        fillColor: theme.colorScheme.surface,
+        fillColor: AppColors.background,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 16,
         ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(15),
-          borderSide: BorderSide.none,
-        ),
+        // Normal state border
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(15),
-          borderSide: BorderSide(color: theme.dividerColor.withOpacity(0.1)),
+          borderSide: const BorderSide(color: AppColors.borderGrey),
+        ),
+        // Active/Focused state border
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15),
+          borderSide: const BorderSide(color: AppColors.accentYellow, width: 2),
         ),
       ),
     );

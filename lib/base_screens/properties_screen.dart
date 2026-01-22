@@ -4,9 +4,17 @@ import 'package:mera_ashiana/services/property_service.dart';
 import 'package:mera_ashiana/screens/project_details_screen.dart';
 import 'package:mera_ashiana/l10n/app_localizations.dart';
 
+// Brand Palette
+class AppColors {
+  static const Color primaryNavy = Color(0xFF0A1D37);
+  static const Color accentYellow = Color(0xFFFFC400);
+  static const Color white = Colors.white;
+  static const Color background = Color(0xFFF5F5F5);
+  static const Color textGrey = Color(0xFF757575);
+}
+
 class PropertiesScreen extends StatelessWidget {
-  final List<PropertyModel>?
-  properties; // Nullable for when used in MainScaffold
+  final List<PropertyModel>? properties;
   final String? title;
 
   const PropertiesScreen({super.key, this.properties, this.title});
@@ -14,52 +22,41 @@ class PropertiesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final loc = AppLocalizations.of(context)!;
-
-    // Determine if we are viewing a specific list (from See All) or all properties
     final bool isFilteredView = properties != null;
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      // Only show AppBar if we navigated here via "See All"
+      backgroundColor: isDark ? const Color(0xFF121212) : AppColors.background,
       appBar: isFilteredView
           ? AppBar(
-              title: Text(title ?? 'Properties'),
+              title: Text(
+                title ?? 'Properties',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
               centerTitle: true,
               elevation: 0,
-              backgroundColor: theme.scaffoldBackgroundColor,
-              foregroundColor: theme.colorScheme.onSurface,
+              backgroundColor: AppColors.primaryNavy,
+              iconTheme: const IconThemeData(color: Colors.white),
             )
           : null,
       body: FutureBuilder<List<PropertyModel>>(
-        // If properties were passed, use them. Otherwise, fetch all from service.
         future: isFilteredView
             ? Future.value(properties)
             : _fetchAllProperties(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+              child: CircularProgressIndicator(color: AppColors.primaryNavy),
+            );
           }
           if (snapshot.hasError ||
               !snapshot.hasData ||
               snapshot.data!.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.house_siding_rounded,
-                    size: 64,
-                    color: theme.dividerColor,
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    "No properties found.",
-                    style: TextStyle(fontSize: 16),
-                  ),
-                ],
-              ),
-            );
+            return _buildEmptyState(theme, isDark);
           }
 
           final list = snapshot.data!;
@@ -67,17 +64,15 @@ class PropertiesScreen extends StatelessWidget {
           return ListView.separated(
             padding: const EdgeInsets.all(16),
             itemCount: list.length,
-            separatorBuilder: (context, index) => const SizedBox(height: 16),
-            itemBuilder: (context, index) {
-              return _buildProjectCard(context, list[index]);
-            },
+            separatorBuilder: (context, index) => const SizedBox(height: 20),
+            itemBuilder: (context, index) =>
+                _buildProjectCard(context, list[index], isDark),
           );
         },
       ),
     );
   }
 
-  // Helper to fetch all properties if none were passed (for the Bottom Nav tab)
   Future<List<PropertyModel>> _fetchAllProperties() async {
     try {
       return await PropertyService.fetchProperties();
@@ -86,22 +81,47 @@ class PropertiesScreen extends StatelessWidget {
     }
   }
 
-  Widget _buildProjectCard(BuildContext context, PropertyModel property) {
+  Widget _buildEmptyState(ThemeData theme, bool isDark) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.house_siding_rounded,
+            size: 80,
+            color: isDark
+                ? Colors.white24
+                : AppColors.primaryNavy.withOpacity(0.1),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            "No properties found.",
+            style: TextStyle(
+              fontSize: 16,
+              color: isDark ? Colors.white70 : AppColors.textGrey,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProjectCard(
+    BuildContext context,
+    PropertyModel property,
+    bool isDark,
+  ) {
     final loc = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
 
     return Container(
       decoration: BoxDecoration(
-        color: colorScheme.surface,
+        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(
-              theme.brightness == Brightness.dark ? 0.3 : 0.06,
-            ),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            color: Colors.black.withOpacity(isDark ? 0.4 : 0.08),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -119,46 +139,49 @@ class PropertiesScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Image Section with Status Badge
                 Stack(
                   children: [
                     Image.network(
                       property.images.isNotEmpty ? property.images[0] : '',
-                      height: 220,
+                      height: 230,
                       width: double.infinity,
                       fit: BoxFit.cover,
                       errorBuilder: (c, e, s) => Container(
-                        height: 220,
-                        color: theme.dividerColor,
-                        child: Icon(
+                        height: 230,
+                        color: isDark ? Colors.white10 : Colors.grey[200],
+                        child: const Icon(
                           Icons.broken_image,
-                          color: colorScheme.onSurface.withOpacity(0.5),
+                          color: AppColors.textGrey,
                         ),
                       ),
                     ),
-                    PositionedDirectional(
+                    Positioned(
                       top: 16,
-                      start: 16,
+                      left: 16,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 12,
-                          vertical: 8,
+                          vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: colorScheme.primary.withOpacity(0.9),
-                          borderRadius: BorderRadius.circular(12),
+                          color: AppColors.primaryNavy.withOpacity(0.9),
+                          borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
                           property.status.toUpperCase(),
                           style: const TextStyle(
-                            color: Colors.white,
+                            color: AppColors.accentYellow,
                             fontSize: 10,
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
                     ),
                   ],
                 ),
+
+                // Info Section
                 Padding(
                   padding: const EdgeInsets.all(20),
                   child: Column(
@@ -170,59 +193,52 @@ class PropertiesScreen extends StatelessWidget {
                           Expanded(
                             child: Text(
                               property.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                fontSize: 20,
+                                fontSize: 18,
                                 fontWeight: FontWeight.bold,
-                                color: colorScheme.onSurface,
+                                color: isDark
+                                    ? Colors.white
+                                    : AppColors.primaryNavy,
                               ),
                             ),
                           ),
-                          // Logic for Payment Plan icon (assuming isFeatured or similar check)
                           if (property.isFeatured == 1)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: colorScheme.secondary.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Icon(
-                                Icons.credit_card,
-                                color: colorScheme.secondary,
-                                size: 18,
-                              ),
+                            const Icon(
+                              Icons.verified_rounded,
+                              color: AppColors.accentYellow,
+                              size: 22,
                             ),
                         ],
                       ),
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          Icon(
-                            Icons.location_on,
-                            size: 16,
-                            color: colorScheme.secondary,
+                          const Icon(
+                            Icons.location_on_rounded,
+                            size: 14,
+                            color: AppColors.accentYellow,
                           ),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
                               property.location,
-                              style: TextStyle(
-                                color: colorScheme.onSurface.withOpacity(0.6),
-                                fontSize: 14,
+                              style: const TextStyle(
+                                color: AppColors.textGrey,
+                                fontSize: 13,
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 20),
-                      Divider(
-                        height: 1,
-                        color: theme.dividerColor.withOpacity(0.1),
+
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        child: Divider(height: 1, thickness: 0.5),
                       ),
-                      const SizedBox(height: 16),
+
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -231,9 +247,9 @@ class PropertiesScreen extends StatelessWidget {
                             children: [
                               Text(
                                 loc.startingFrom,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: colorScheme.onSurface.withOpacity(0.5),
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: AppColors.textGrey,
                                 ),
                               ),
                               Text(
@@ -241,7 +257,9 @@ class PropertiesScreen extends StatelessWidget {
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w900,
-                                  color: colorScheme.primary,
+                                  color: isDark
+                                      ? AppColors.accentYellow
+                                      : AppColors.primaryNavy,
                                 ),
                               ),
                             ],
@@ -256,17 +274,22 @@ class PropertiesScreen extends StatelessWidget {
                               ),
                             ),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: colorScheme.secondary,
-                              foregroundColor: colorScheme.onSecondary,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
+                              backgroundColor: AppColors.accentYellow,
+                              foregroundColor: AppColors.primaryNavy,
                               elevation: 0,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
                             child: Text(
                               loc.viewDetails,
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
+                                fontSize: 13,
                               ),
                             ),
                           ),
