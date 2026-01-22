@@ -17,42 +17,32 @@ class ListingService {
       final cookie = await LoginService.getAuthCookie();
       var uri = Uri.parse("$_baseUrl/listings");
 
-      // MultipartRequest is required for 'multipart/form-data' (Files + Fields)
       var request = http.MultipartRequest('POST', uri);
 
-      // 1. Add Headers
       request.headers.addAll({
         'Cookie': cookie ?? '',
         'Accept': 'application/json',
       });
 
-      // 2. Add Text Fields
-      // Multer expects all non-file fields as Strings
       data.forEach((key, value) {
         if (value != null) {
           request.fields[key] = value.toString();
         }
       });
 
-      // 3. Add Images
-      // Changed from 'images[]' to 'images' to fix MulterError: Unexpected field
       for (var file in imageFiles) {
         request.files.add(
           await http.MultipartFile.fromPath('images', file.path),
         );
       }
 
-      // 4. Execute the request
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
-
       final result = jsonDecode(response.body);
 
       if (response.statusCode == 201 || response.statusCode == 200) {
-        // Safe navigation to handle different backend response structures
         var responseData = result['data'];
         var id = responseData != null ? responseData['id'] : result['id'];
-
         return {"success": true, "id": id};
       }
 
@@ -83,6 +73,37 @@ class ListingService {
     } catch (e) {
       debugPrint("Fetch Error: $e");
       return [];
+    }
+  }
+
+  /// NEW: Delete Method fixed for Integer IDs and Cookie Auth
+  static Future<bool> deleteListing(int id) async {
+    try {
+      final cookie = await LoginService.getAuthCookie();
+      final url = Uri.parse("$_baseUrl/listings/$id");
+
+      final response = await http.delete(
+        url,
+        headers: {
+          'Cookie': cookie ?? '',
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      debugPrint("DELETE Request to: $url");
+      debugPrint("Server Status Code: ${response.statusCode}");
+
+      // Most backends return 200 or 204 on successful deletion
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        return true;
+      } else {
+        debugPrint("Server rejected delete: ${response.body}");
+        return false;
+      }
+    } catch (e) {
+      debugPrint("Delete Network Error: $e");
+      return false;
     }
   }
 }
