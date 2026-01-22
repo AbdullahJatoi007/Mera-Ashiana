@@ -96,55 +96,43 @@ class _ProfileContentState extends State<_ProfileContent> {
     }
   }
 
-  // ================= UPDATED AGENCY NAVIGATION (ONLY CHANGE) =================
+  // ================= MERGED NAVIGATION LOGIC =================
   void _handleAgencyNavigation() async {
-    // If agency already loaded → go directly
-    if (userAgency != null) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const AgencyStatusScreen()),
-      ).then((_) => _loadUser());
-      return;
-    }
-
-    // Show loader
+    // 1. Show a loading indicator while we check the latest status
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (_) => const Center(child: CircularProgressIndicator()),
     );
 
+    // 2. Always fetch latest from server to be 100% sure
     final agency = await AgencyService.fetchMyAgency();
 
     if (!mounted) return;
-    Navigator.pop(context);
+    Navigator.pop(context); // Remove loading indicator
+
+    if (mounted) {
+      setState(() => userAgency = agency);
+    }
 
     if (agency != null) {
-      setState(() => userAgency = agency);
-
+      // If agency exists, go to Status Screen
+      if (!mounted) return;
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const AgencyStatusScreen()),
-      ).then((_) => _loadUser());
+      ).then((_) => _loadUser()); // Refresh profile when coming back
     } else {
-      // 👉 Register agency and WAIT for result
-      final newAgency = await Navigator.push<Agency>(
+      // If NO agency, go to Registration
+      if (!mounted) return;
+      Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const RealEstateRegistrationScreen()),
-      );
-
-      if (newAgency != null) {
-        setState(() => userAgency = newAgency);
-
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const AgencyStatusScreen()),
-        ).then((_) => _loadUser());
-      }
+      ).then((_) => _loadUser()); // This re-runs _loadUser() to update UI
     }
   }
 
-  // ===========================================================================
+  // ===========================================================
 
   void _launchURL(String url) async {
     final Uri uri = Uri.parse(url);

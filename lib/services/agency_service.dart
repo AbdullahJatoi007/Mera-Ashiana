@@ -12,6 +12,7 @@ class AgencyService {
       "http://api.staging.mera-ashiana.com/api/agency";
 
   /// Fetches the current user's agency details
+  /// Updated to handle both single object and list responses
   static Future<Agency?> fetchMyAgency() async {
     try {
       final cookie = await LoginService.getAuthCookie();
@@ -24,8 +25,16 @@ class AgencyService {
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> decoded = jsonDecode(response.body);
-        // Assumes API returns { "success": true, "agency": {...} }
-        return Agency.fromJson(decoded['agency']);
+
+        // 1. Check if the API returns a single agency object
+        if (decoded['agency'] != null) {
+          return Agency.fromJson(decoded['agency']);
+        }
+        // 2. Check if the API returns an array (common if query returns rows)
+        else if (decoded['agencies'] != null &&
+            (decoded['agencies'] as List).isNotEmpty) {
+          return Agency.fromJson(decoded['agencies'][0]);
+        }
       }
       return null;
     } catch (e) {
@@ -82,7 +91,6 @@ class AgencyService {
         return {
           "success": true,
           "message": decoded['message'] ?? "Registered successfully",
-          // Maps the response data into the Agency model
           "agency": decoded['agency'] != null
               ? Agency.fromJson(decoded['agency'])
               : null,
