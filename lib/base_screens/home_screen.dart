@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:mera_ashiana/base_screens/properties_screen.dart';
 import 'package:mera_ashiana/models/property_model.dart';
 import 'package:mera_ashiana/services/property_service.dart';
 import 'package:mera_ashiana/screens/home/home_top_section.dart';
@@ -22,25 +23,18 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _hasError = false;
   List<PropertyModel> _properties = [];
 
+  final List<Map<String, dynamic>> _categories = [
+    {'name': 'All', 'icon': Icons.grid_view_rounded},
+    {'name': 'House', 'icon': Icons.home_rounded},
+    {'name': 'Flat', 'icon': Icons.apartment_rounded},
+    {'name': 'Plot', 'icon': Icons.landscape_rounded},
+    {'name': 'Shop', 'icon': Icons.storefront_rounded},
+  ];
+
   @override
   void initState() {
     super.initState();
     _fetchProperties();
-  }
-
-  Future<void> _fetchProperties() async {
-    try {
-      final properties = await PropertyService.fetchProperties();
-      setState(() {
-        _properties = properties;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _hasError = true;
-        _isLoading = false;
-      });
-    }
   }
 
   @override
@@ -49,17 +43,48 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
+  // --- Dynamic Filtering Logic ---
+  List<PropertyModel> get _filteredProperties {
+    if (_selectedCategoryIndex == 0) return _properties;
+    String categoryName = _categories[_selectedCategoryIndex]['name'] as String;
+    // Note: status check is used here; ensure your model's status matches the category names
+    return _properties
+        .where((p) => p.status.toLowerCase() == categoryName.toLowerCase())
+        .toList();
+  }
+
+  Future<void> _fetchProperties() async {
+    try {
+      final properties = await PropertyService.fetchProperties();
+      if (mounted) {
+        setState(() {
+          _properties = properties;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _hasError = true;
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   void _handleSnap(double maxSnapOffset) {
     if (!_scrollController.hasClients) return;
     double currentOffset = _scrollController.offset;
     if (currentOffset > 0 && currentOffset < maxSnapOffset) {
       double target = (currentOffset < maxSnapOffset / 2) ? 0 : maxSnapOffset;
       Future.microtask(() {
-        _scrollController.animateTo(
-          target,
-          duration: const Duration(milliseconds: 250),
-          curve: Curves.easeOutCubic,
-        );
+        if (_scrollController.hasClients) {
+          _scrollController.animateTo(
+            target,
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOutCubic,
+          );
+        }
       });
     }
   }
@@ -76,7 +101,9 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     if (_hasError) {
-      return Scaffold(body: Center(child: Text("Failed to load properties")));
+      return const Scaffold(
+        body: Center(child: Text("Failed to load properties")),
+      );
     }
 
     return Scaffold(
@@ -96,9 +123,8 @@ class _HomeScreenState extends State<HomeScreen> {
             HomeTopSection(
               selectedOption: _selectedOption,
               statusBarHeight: statusBarHeight,
-              onOptionSelected: (value) {
-                setState(() => _selectedOption = value);
-              },
+              onOptionSelected: (value) =>
+                  setState(() => _selectedOption = value),
             ),
             SliverPadding(
               padding: const EdgeInsets.only(top: 15, bottom: 5),
@@ -106,20 +132,41 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             SliverToBoxAdapter(
               child: _buildSectionTitle(theme, loc.exploreProjects, () {
-                // Navigate to see all projects
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => PropertiesScreen(
+                      properties: _properties
+                          .where((p) => p.isFeatured == 1)
+                          .toList(),
+                      title: loc.exploreProjects,
+                    ),
+                  ),
+                );
               }),
             ),
             SliverToBoxAdapter(child: _buildFeaturedProjects(theme)),
             SliverToBoxAdapter(
-              child: _buildSectionTitle(theme, "Recently Added", () {}),
+              child: _buildSectionTitle(theme, "Recently Added", () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => PropertiesScreen(
+                      properties: _properties,
+                      title: "Recently Added",
+                    ),
+                  ),
+                );
+              }),
             ),
             SliverPadding(
               padding: const EdgeInsets.only(bottom: 20),
               sliver: SliverList(
-                delegate: SliverChildBuilderDelegate((context, index) {
-                  final property = _properties[index];
-                  return _buildPropertyListItem(theme, property);
-                }, childCount: _properties.length),
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) =>
+                      _buildPropertyListItem(theme, _filteredProperties[index]),
+                  childCount: _filteredProperties.length,
+                ),
               ),
             ),
           ],
@@ -129,41 +176,32 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildCategoryList(ThemeData theme) {
-    final categories = [
-      {'name': 'All', 'icon': Icons.grid_view_rounded},
-      {'name': 'House', 'icon': Icons.home_rounded},
-      {'name': 'Flat', 'icon': Icons.apartment_rounded},
-      {'name': 'Plot', 'icon': Icons.landscape_rounded},
-      {'name': 'Shop', 'icon': Icons.storefront_rounded},
-    ];
-
     return SizedBox(
       height: 45,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: categories.length,
+        itemCount: _categories.length,
         itemBuilder: (context, index) {
           bool isSelected = _selectedCategoryIndex == index;
           return Padding(
             padding: const EdgeInsets.only(right: 10),
             child: FilterChip(
               showCheckmark: false,
-              label: Text(categories[index]['name'] as String),
+              label: Text(_categories[index]['name'] as String),
               labelStyle: TextStyle(
                 color: isSelected ? Colors.white : theme.colorScheme.onSurface,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                 fontSize: 13,
               ),
               avatar: Icon(
-                categories[index]['icon'] as IconData,
+                _categories[index]['icon'] as IconData,
                 size: 16,
                 color: isSelected ? Colors.white : theme.colorScheme.primary,
               ),
               selected: isSelected,
-              onSelected: (bool selected) {
-                setState(() => _selectedCategoryIndex = index);
-              },
+              onSelected: (bool selected) =>
+                  setState(() => _selectedCategoryIndex = index),
               backgroundColor: theme.colorScheme.surface,
               selectedColor: theme.colorScheme.primary,
               shape: RoundedRectangleBorder(
@@ -185,7 +223,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final featuredProperties = _properties
         .where((p) => p.isFeatured == 1)
         .toList();
-
     if (featuredProperties.isEmpty) return const SizedBox.shrink();
 
     return SizedBox(
@@ -215,7 +252,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     property.images.isNotEmpty ? property.images[0] : '',
                   ),
                   fit: BoxFit.cover,
-                  onError: (error, stackTrace) {},
                 ),
               ),
               child: Container(

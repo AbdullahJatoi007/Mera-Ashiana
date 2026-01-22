@@ -350,11 +350,11 @@ abstract class AppLocalizations {
   /// **'Commercial'**
   String get commercial;
 
-  /// No description provided for @projects.
+  /// No description provided for @properties.
   ///
   /// In en, this message translates to:
-  /// **'Projects'**
-  String get projects;
+  /// **'Properties'**
+  String get properties;
 
   /// No description provided for @exploreProjects.
   ///

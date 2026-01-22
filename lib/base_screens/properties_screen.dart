@@ -1,66 +1,99 @@
 import 'package:flutter/material.dart';
+import 'package:mera_ashiana/models/property_model.dart';
+import 'package:mera_ashiana/services/property_service.dart';
 import 'package:mera_ashiana/screens/project_details_screen.dart';
 import 'package:mera_ashiana/l10n/app_localizations.dart';
 
-class ProjectsScreen extends StatelessWidget {
-  const ProjectsScreen({super.key});
+class PropertiesScreen extends StatelessWidget {
+  final List<PropertyModel>?
+  properties; // Nullable for when used in MainScaffold
+  final String? title;
+
+  const PropertiesScreen({super.key, this.properties, this.title});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final loc = AppLocalizations.of(context);
-    if (loc == null) return const SizedBox.shrink();
+    final loc = AppLocalizations.of(context)!;
+
+    // Determine if we are viewing a specific list (from See All) or all properties
+    final bool isFilteredView = properties != null;
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor, // Use Theme
-      body: ListView.separated(
-        padding: const EdgeInsets.all(16),
-        itemCount: 2,
-        separatorBuilder: (context, index) => const SizedBox(height: 16),
-        itemBuilder: (context, index) {
-          if (index == 0) {
-            return _buildProjectCard(
-              context,
-              name: "Ashiana Heights",
-              location: "DHA Phase 8, Karachi",
-              price: "2.5 Crore",
-              status: loc.underConstruction,
-              imageUrl:
-                  "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?q=80&w=1000",
-              hasPaymentPlan: true,
+      backgroundColor: theme.scaffoldBackgroundColor,
+      // Only show AppBar if we navigated here via "See All"
+      appBar: isFilteredView
+          ? AppBar(
+              title: Text(title ?? 'Properties'),
+              centerTitle: true,
+              elevation: 0,
+              backgroundColor: theme.scaffoldBackgroundColor,
+              foregroundColor: theme.colorScheme.onSurface,
+            )
+          : null,
+      body: FutureBuilder<List<PropertyModel>>(
+        // If properties were passed, use them. Otherwise, fetch all from service.
+        future: isFilteredView
+            ? Future.value(properties)
+            : _fetchAllProperties(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError ||
+              !snapshot.hasData ||
+              snapshot.data!.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.house_siding_rounded,
+                    size: 64,
+                    color: theme.dividerColor,
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    "No properties found.",
+                    style: TextStyle(fontSize: 16),
+                  ),
+                ],
+              ),
             );
           }
-          return _buildProjectCard(
-            context,
-            name: "Palm Residency",
-            location: "Gulshan-e-Iqbal, Karachi",
-            price: "85 Lakh",
-            status: loc.readyToMove,
-            imageUrl:
-                "https://images.unsplash.com/photo-1582407947304-fd86f028f716?q=80&w=1000",
-            hasPaymentPlan: false,
+
+          final list = snapshot.data!;
+
+          return ListView.separated(
+            padding: const EdgeInsets.all(16),
+            itemCount: list.length,
+            separatorBuilder: (context, index) => const SizedBox(height: 16),
+            itemBuilder: (context, index) {
+              return _buildProjectCard(context, list[index]);
+            },
           );
         },
       ),
     );
   }
 
-  Widget _buildProjectCard(
-    BuildContext context, {
-    required String name,
-    required String location,
-    required String price,
-    required String status,
-    required String imageUrl,
-    required bool hasPaymentPlan,
-  }) {
+  // Helper to fetch all properties if none were passed (for the Bottom Nav tab)
+  Future<List<PropertyModel>> _fetchAllProperties() async {
+    try {
+      return await PropertyService.fetchProperties();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Widget _buildProjectCard(BuildContext context, PropertyModel property) {
     final loc = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
     return Container(
       decoration: BoxDecoration(
-        color: colorScheme.surface, // Background of card
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
@@ -77,14 +110,19 @@ class ProjectsScreen extends StatelessWidget {
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            onTap: () {},
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ProjectDetailsScreen(propertyId: property.id),
+              ),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Stack(
                   children: [
                     Image.network(
-                      imageUrl,
+                      property.images.isNotEmpty ? property.images[0] : '',
                       height: 220,
                       width: double.infinity,
                       fit: BoxFit.cover,
@@ -107,12 +145,11 @@ class ProjectsScreen extends StatelessWidget {
                         ),
                         decoration: BoxDecoration(
                           color: colorScheme.primary.withOpacity(0.9),
-                          // Primary Navy
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Text(
-                          "FOR SALE", // Or use 'status' variable
-                          style: TextStyle(
+                        child: Text(
+                          property.status.toUpperCase(),
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 10,
                             fontWeight: FontWeight.w800,
@@ -132,7 +169,7 @@ class ProjectsScreen extends StatelessWidget {
                         children: [
                           Expanded(
                             child: Text(
-                              name,
+                              property.title,
                               style: TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
@@ -140,7 +177,8 @@ class ProjectsScreen extends StatelessWidget {
                               ),
                             ),
                           ),
-                          if (hasPaymentPlan)
+                          // Logic for Payment Plan icon (assuming isFeatured or similar check)
+                          if (property.isFeatured == 1)
                             Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 8,
@@ -167,11 +205,14 @@ class ProjectsScreen extends StatelessWidget {
                             color: colorScheme.secondary,
                           ),
                           const SizedBox(width: 4),
-                          Text(
-                            location,
-                            style: TextStyle(
-                              color: colorScheme.onSurface.withOpacity(0.6),
-                              fontSize: 14,
+                          Expanded(
+                            child: Text(
+                              property.location,
+                              style: TextStyle(
+                                color: colorScheme.onSurface.withOpacity(0.6),
+                                fontSize: 14,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
@@ -196,7 +237,7 @@ class ProjectsScreen extends StatelessWidget {
                                 ),
                               ),
                               Text(
-                                "PKR $price",
+                                "PKR ${property.price}",
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w900,
@@ -206,22 +247,21 @@ class ProjectsScreen extends StatelessWidget {
                             ],
                           ),
                           ElevatedButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      const ProjectDetailsScreen(),
+                            onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ProjectDetailsScreen(
+                                  propertyId: property.id,
                                 ),
-                              );
-                            },
+                              ),
+                            ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: colorScheme.secondary,
                               foregroundColor: colorScheme.onSecondary,
-                              // Usually Navy on Yellow
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(14),
                               ),
+                              elevation: 0,
                             ),
                             child: Text(
                               loc.viewDetails,

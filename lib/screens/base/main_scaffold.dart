@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mera_ashiana/l10n/app_localizations.dart';
 import 'package:mera_ashiana/base_screens/home_screen.dart';
-import 'package:mera_ashiana/base_screens/projects_screen.dart';
+import 'package:mera_ashiana/base_screens/properties_screen.dart';
 import 'package:mera_ashiana/base_screens/search_screen.dart';
 import 'package:mera_ashiana/base_screens/favourite_screen.dart';
 import 'package:mera_ashiana/base_screens/profile_screen.dart';
@@ -23,7 +23,7 @@ class _MainScaffoldState extends State<MainScaffold> {
   // These are constant so they don't rebuild unnecessarily
   final List<Widget> _screens = const [
     HomeScreen(),
-    ProjectsScreen(),
+    PropertiesScreen(),
     SearchScreen(),
     FavouritesScreen(),
     ProfileScreen(),
@@ -114,7 +114,7 @@ class _MainScaffoldState extends State<MainScaffold> {
       case 0:
         return 'MERA ASHIANA';
       case 1:
-        return loc.projects ?? 'Projects';
+        return loc.properties ?? 'Properties';
       case 2:
         return loc.propertySearch ?? 'Find Home';
       case 3:
@@ -142,7 +142,7 @@ class _MainScaffoldState extends State<MainScaffold> {
         BottomNavigationBarItem(
           icon: const Icon(Icons.apartment_outlined),
           activeIcon: const Icon(Icons.apartment_rounded),
-          label: loc.projects ?? 'Projects',
+          label: loc.properties ?? 'Properties',
         ),
         BottomNavigationBarItem(
           icon: const Icon(Icons.search_rounded),

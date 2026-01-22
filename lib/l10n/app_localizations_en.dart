@@ -136,7 +136,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commercial => 'Commercial';
 
   @override
-  String get projects => 'Projects';
+  String get properties => 'Properties';
 
   @override
   String get exploreProjects => 'Explore New Projects';

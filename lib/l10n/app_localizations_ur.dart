@@ -136,7 +136,7 @@ class AppLocalizationsUr extends AppLocalizations {
   String get commercial => 'کمرشل';
 
   @override
-  String get projects => 'پروجیکٹس';
+  String get properties => 'پروجیکٹس';
 
   @override
   String get exploreProjects => 'نئے پروجیکٹس دریافت کریں';
