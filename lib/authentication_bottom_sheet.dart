@@ -7,7 +7,6 @@ import 'package:mera_ashiana/services/auth_state.dart';
 import 'package:mera_ashiana/helpers/validation_helper.dart';
 import 'package:mera_ashiana/helpers/loader_helper.dart';
 import 'package:mera_ashiana/theme/app_colors.dart';
-import 'package:flutter/material.dart';
 
 
 class AuthenticationBottomSheet extends StatefulWidget {

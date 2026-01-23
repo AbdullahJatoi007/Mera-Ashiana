@@ -1,8 +1,12 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:mera_ashiana/services/profile_service.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
+// Imports for your helpers
 import 'package:mera_ashiana/theme/app_colors.dart';
 import 'package:mera_ashiana/helpers/image_picker_helper.dart';
+import 'package:mera_ashiana/helpers/loader_helper.dart';
+import 'package:mera_ashiana/helpers/validation_helper.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -13,70 +17,94 @@ class EditProfileScreen extends StatefulWidget {
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
-  File? _profileImage;
-  bool _isLoading = false;
-  bool _isFetching = true;
 
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _phoneController = TextEditingController();
+  final _storage = const FlutterSecureStorage(
+    aOptions: AndroidOptions(
+      encryptedSharedPreferences: true,
+      resetOnError: true,
+    ),
+  );
+
+  final _nameController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _emailController =
+      TextEditingController(); // Added for ValidationHelper demo
+
+  File? _profileImage;
 
   @override
   void initState() {
     super.initState();
-    _loadInitialData();
+    _loadProfile();
   }
 
-  Future<void> _loadInitialData() async {
-    try {
-      final user = await ProfileService.fetchProfile();
-      setState(() {
-        _nameController.text = user.username;
-        _emailController.text = user.email;
-        _phoneController.text = user.phone ?? "";
-        _isFetching = false;
-      });
-    } catch (e) {
-      setState(() => _isFetching = false);
-      if (mounted)
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.toString())));
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _phoneController.dispose();
+    _emailController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadProfile() async {
+    final name = await _storage.read(key: 'user_name');
+    final phone = await _storage.read(key: 'user_phone');
+    final email = await _storage.read(key: 'user_email');
+
+    setState(() {
+      _nameController.text = name ?? '';
+      _phoneController.text = phone ?? '';
+      _emailController.text = email ?? '';
+    });
+  }
+
+  Future<void> _handleImagePick() async {
+    // Using your ImagePickerHelper
+    final File? image = await ImagePickerHelper.pickFromGallery();
+    if (image != null) {
+      setState(() => _profileImage = image);
     }
   }
 
-  Future<void> _saveChanges() async {
+  Future<void> _saveProfile() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
+    // Using your LoaderHelper
+    LoaderHelper.instance.showLoader(context, message: "Updating profile...");
+
     try {
-      await ProfileService.updateProfile(
-        name: _nameController.text,
-        email: _emailController.text,
-        phone: _phoneController.text,
-        imageFile: _profileImage,
+      await _storage.write(
+        key: 'user_name',
+        value: _nameController.text.trim(),
       );
+      await _storage.write(
+        key: 'user_phone',
+        value: _phoneController.text.trim(),
+      );
+      await _storage.write(
+        key: 'user_email',
+        value: _emailController.text.trim(),
+      );
+
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text("Profile Updated!")));
-        Navigator.pop(context, true); // Go back and refresh
+        LoaderHelper.instance.hideLoader(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Profile saved successfully!")),
+        );
+        Navigator.pop(context, true);
       }
     } catch (e) {
-      if (mounted)
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.toString())));
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) LoaderHelper.instance.hideLoader(context);
+      _showError("Failed to save profile");
     }
+  }
+
+  void _showError(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isFetching)
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-
     return Scaffold(
       appBar: AppBar(title: const Text("Edit Profile")),
       body: SingleChildScrollView(
@@ -85,38 +113,59 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           key: _formKey,
           child: Column(
             children: [
-              _buildImagePicker(),
-              const SizedBox(height: 30),
-              _buildField("Full Name", _nameController, Icons.person),
-              const SizedBox(height: 15),
-              _buildField(
-                "Email",
-                _emailController,
-                Icons.email,
-                TextInputType.emailAddress,
+              _buildAvatar(),
+              const SizedBox(height: 32),
+
+              // Name Field
+              TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  labelText: "Full Name",
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) => (value == null || value.isEmpty)
+                    ? "Name is required"
+                    : null,
               ),
-              const SizedBox(height: 15),
-              _buildField(
-                "Phone",
-                _phoneController,
-                Icons.phone,
-                TextInputType.phone,
+              const SizedBox(height: 16),
+
+              // Email Field using your ValidationHelper
+              TextFormField(
+                controller: _emailController,
+                decoration: const InputDecoration(
+                  labelText: "Email Address",
+                  border: OutlineInputBorder(),
+                ),
+                validator: ValidationHelper.validateEmail,
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 16),
+
+              // Phone Field
+              TextFormField(
+                controller: _phoneController,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(
+                  labelText: "Phone Number",
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) => (value == null || value.length < 8)
+                    ? "Invalid phone number"
+                    : null,
+              ),
+              const SizedBox(height: 32),
+
               SizedBox(
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: _isLoading ? null : _saveChanges,
+                  onPressed: _saveProfile,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.accentYellow,
                   ),
-                  child: _isLoading
-                      ? const CircularProgressIndicator()
-                      : const Text(
-                          "SAVE CHANGES",
-                          style: TextStyle(color: AppColors.primaryNavy),
-                        ),
+                  child: const Text(
+                    "SAVE CHANGES",
+                    style: TextStyle(color: AppColors.primaryNavy),
+                  ),
                 ),
               ),
             ],
@@ -126,11 +175,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
-  Widget _buildImagePicker() {
+  Widget _buildAvatar() {
     return Stack(
       children: [
         CircleAvatar(
-          radius: 60,
+          radius: 55,
           backgroundImage: _profileImage != null
               ? FileImage(_profileImage!)
               : null,
@@ -141,33 +190,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         Positioned(
           bottom: 0,
           right: 0,
-          child: IconButton(
-            icon: const Icon(Icons.camera_alt, color: AppColors.accentYellow),
-            onPressed: () async {
-              final img = await ImagePickerHelper.pickFromGallery();
-              if (img != null) setState(() => _profileImage = img);
-            },
+          child: FloatingActionButton.small(
+            onPressed: _handleImagePick,
+            backgroundColor: AppColors.accentYellow,
+            child: const Icon(
+              Icons.camera_alt,
+              size: 18,
+              color: AppColors.primaryNavy,
+            ),
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildField(
-    String label,
-    TextEditingController controller,
-    IconData icon, [
-    TextInputType type = TextInputType.text,
-  ]) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: type,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-      validator: (v) => v!.isEmpty ? "Required" : null,
     );
   }
 }

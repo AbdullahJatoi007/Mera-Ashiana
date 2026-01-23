@@ -18,4 +18,10 @@ class AuthConfig {
   static const String authCookieKey = 'auth_cookie';
   static const String loginAttemptsKey = 'login_attempts';
   static const String lastAttemptKey = 'last_attempt_timestamp';
+
+  // ✅ ADD THIS: Security/URL Validation
+  static const List<String> allowedDomains = [
+    'mera-ashiana.com',
+    'staging.mera-ashiana.com',
+  ];
 }

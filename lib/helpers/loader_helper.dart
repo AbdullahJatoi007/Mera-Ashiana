@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mera_ashiana/theme/app_colors.dart';
 
 class LoaderHelper {
   // Private constructor for singleton
@@ -16,30 +17,33 @@ class LoaderHelper {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) {
+      builder: (dialogContext) {
         final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
-        return WillPopScope(
-          onWillPop: () async => false, // Prevent back press
+        // PopScope is the modern replacement for WillPopScope
+        return PopScope(
+          canPop: false, // Strictly prevents back-button dismissal
           child: Dialog(
-            backgroundColor:
-            isDark ? Colors.black87 : Colors.white,
+            backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
             child: Padding(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(24),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const CircularProgressIndicator(),
+                  const CircularProgressIndicator(
+                    color: AppColors.accentYellow,
+                  ),
                   const SizedBox(width: 20),
                   Expanded(
                     child: Text(
                       message ?? 'Loading...',
                       style: TextStyle(
                         fontSize: 16,
-                        color: isDark ? Colors.white : Colors.black87,
+                        fontWeight: FontWeight.w500,
+                        color: isDark ? Colors.white : AppColors.primaryNavy,
                       ),
                     ),
                   ),
@@ -56,6 +60,8 @@ class LoaderHelper {
   void hideLoader(BuildContext context) {
     if (!_isShowing) return;
     _isShowing = false;
+
+    // Using rootNavigator: true ensures we close the dialog specifically
     Navigator.of(context, rootNavigator: true).pop();
   }
 }

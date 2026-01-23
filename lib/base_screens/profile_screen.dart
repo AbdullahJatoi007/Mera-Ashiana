@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:mera_ashiana/base_screens/profile_screen.dart';
+import 'package:mera_ashiana/theme/app_colors.dart';
 import 'package:mera_ashiana/base_screens/favourite_screen.dart';
+import 'package:mera_ashiana/helpers/account_ui_helper.dart';
 import 'package:mera_ashiana/l10n/app_localizations.dart';
 import 'package:mera_ashiana/screens/real_estate_registration_screen.dart';
 import 'package:mera_ashiana/screens/AgencyStatusScreen.dart';
@@ -15,27 +18,7 @@ import 'package:mera_ashiana/models/user_model.dart';
 import 'package:mera_ashiana/models/agency_model.dart';
 import 'package:mera_ashiana/authentication_bottom_sheet.dart';
 import 'package:url_launcher/url_launcher.dart';
-
-// Brand Palette - Consider moving to a separate theme file
-class AppColors {
-  static const Color primaryNavy = Color(0xFF0A1D37);
-  static const Color accentYellow = Color(0xFFFFC400);
-  static const Color white = Colors.white;
-  static const Color background = Color(0xFFF5F5F5);
-  static const Color textGrey = Color(0xFF757575);
-  static const Color errorRed = Color(0xFFD32F2F);
-}
-
-// Configuration constants
-class AppConfig {
-  static const List<String> allowedDomains = [
-    'mera-ashiana.com',
-    'staging.mera-ashiana.com',
-  ];
-
-  static const Duration apiTimeout = Duration(seconds: 30);
-  static const int maxRetries = 3;
-}
+import 'package:mera_ashiana/services/auth/auth_config.dart';
 
 // User metrics model - Replace hardcoded values
 class UserMetrics {
@@ -113,12 +96,16 @@ class _ProfileContentState extends State<_ProfileContent> {
 
     try {
       // Parallel API calls for better performance
+      // CHANGE THIS:
       final results = await Future.wait([
         ProfileService.fetchProfile(
           forceRefresh: true,
-        ).timeout(AppConfig.apiTimeout),
-        AgencyService.fetchMyAgency().timeout(AppConfig.apiTimeout),
-        _fetchUserMetrics().timeout(AppConfig.apiTimeout),
+        ).timeout(AuthConfig.connectionTimeout),
+        // Changed
+        AgencyService.fetchMyAgency().timeout(AuthConfig.connectionTimeout),
+        // Changed
+        _fetchUserMetrics().timeout(AuthConfig.connectionTimeout),
+        // Changed
       ]);
 
       if (mounted) {
@@ -170,8 +157,9 @@ class _ProfileContentState extends State<_ProfileContent> {
     _showLoadingDialog();
 
     try {
+      // CHANGE THIS:
       final agency = await AgencyService.fetchMyAgency().timeout(
-        AppConfig.apiTimeout,
+        AuthConfig.connectionTimeout, // Changed
       );
 
       if (!mounted) return;
@@ -200,15 +188,17 @@ class _ProfileContentState extends State<_ProfileContent> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => WillPopScope(
-        onWillPop: () async => false,
-        child: const Center(
-          child: CircularProgressIndicator(
-            color: AppColors.accentYellow,
-            semanticsLabel: 'Loading',
+      builder: (BuildContext context) {
+        return const PopScope(
+          canPop: false, // Prevents the back button from closing the dialog
+          child: Center(
+            child: CircularProgressIndicator(
+              color: AppColors.accentYellow,
+              semanticsLabel: 'Loading',
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -244,8 +234,12 @@ class _ProfileContentState extends State<_ProfileContent> {
         return;
       }
 
+      // Change LaunchMode in _launchURL
       if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
+        await launchUrl(
+          uri,
+          mode: LaunchMode.inAppBrowserView, // Better than externalApplication
+        );
       } else {
         _showErrorSnackBar('Could not open link');
       }
@@ -254,8 +248,11 @@ class _ProfileContentState extends State<_ProfileContent> {
     }
   }
 
+  // CHANGE THIS:
   bool _isAllowedDomain(String host) {
-    return AppConfig.allowedDomains.any((domain) => host.endsWith(domain));
+    return AuthConfig.allowedDomains.any(
+      (domain) => host.endsWith(domain),
+    ); // Changed
   }
 
   void _showLoginSheet() {

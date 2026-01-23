@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mera_ashiana/helpers/account_deletion_helper.dart';
+import 'package:mera_ashiana/helpers/account_ui_helper.dart';
 import 'package:mera_ashiana/l10n/app_localizations.dart';
 import 'package:mera_ashiana/screens/edit_profile_screen.dart';
 import 'package:mera_ashiana/main.dart';
@@ -92,13 +93,8 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                   textColor: colorScheme.error,
                   iconColor: colorScheme.error,
                   onTap: () {
-                    AccountHelper.showDeleteAccountDialog(
-                      context,
-                      onDeleteConfirmed: () {
-                        AccountHelper.performAccountDeletion();
-                        Navigator.popUntil(context, (route) => route.isFirst);
-                      },
-                    );
+                    // Calling the improved, themed, and Google-compliant dialog
+                    AccountUIHelper.showDeleteConfirmation(context);
                   },
                 ),
               ],
