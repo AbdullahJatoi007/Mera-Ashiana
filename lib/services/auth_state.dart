@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:mera_ashiana/services/login_service.dart';
+import 'package:mera_ashiana/services/auth/login_service.dart';
 
 class AuthState {
   static final ValueNotifier<bool> isLoggedIn = ValueNotifier<bool>(false);

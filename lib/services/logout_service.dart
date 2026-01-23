@@ -1,5 +1,5 @@
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:mera_ashiana/services/login_service.dart';
+import 'package:mera_ashiana/services/auth/login_service.dart';
 import 'package:mera_ashiana/services/profile_service.dart';
 import 'package:flutter/material.dart';
 

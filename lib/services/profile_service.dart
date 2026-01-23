@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'package:mera_ashiana/services/login_service.dart';
+import 'package:mera_ashiana/services/auth/login_service.dart';
 import 'package:mera_ashiana/models/user_model.dart';
 
 class ProfileService {

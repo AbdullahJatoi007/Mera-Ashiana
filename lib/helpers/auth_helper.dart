@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:mera_ashiana/l10n/app_localizations.dart';
-import 'package:mera_ashiana/screens/base/main_scaffold.dart%20%20';
-import 'package:mera_ashiana/services/logout_service.dart';
+import 'package:mera_ashiana/screens/base/main_scaffold.dart';
+import 'package:mera_ashiana/services/auth/auth_service.dart';
+
 
 class AuthHelper {
   static void showLogoutDialog(BuildContext context) {
@@ -10,7 +11,7 @@ class AuthHelper {
 
     showDialog(
       context: context,
-      barrierDismissible: !isLoggingOut, // Prevent closing while loading
+      barrierDismissible: false, // Start false to be safe
       builder: (context) => StatefulBuilder(
         builder: (context, setState) {
           return AlertDialog(
@@ -22,9 +23,9 @@ class AuthHelper {
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
             content: isLoggingOut
-                ? const Column(
+                ? Column(
                     mainAxisSize: MainAxisSize.min,
-                    children: [
+                    children: const [
                       CircularProgressIndicator(),
                       SizedBox(height: 16),
                       Text("Logging out safely..."),
@@ -45,13 +46,12 @@ class AuthHelper {
                       onPressed: () async {
                         setState(() => isLoggingOut = true);
 
-                        // 1. Perform Wipe
-                        await LogoutService.logout();
+                        // 1. Perform Wipe using the merged service
+                        await AuthService.logout();
 
                         if (!context.mounted) return;
 
                         // 2. Clear navigation stack and go to Home
-                        // This ensures MainScaffold starts fresh with _selectedIndex = 0
                         Navigator.pushAndRemoveUntil(
                           context,
                           MaterialPageRoute(

@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:mera_ashiana/models/property_model.dart';
 import 'package:mera_ashiana/services/FavoriteService.dart';
-import 'package:mera_ashiana/services/login_service.dart';
+import 'package:mera_ashiana/services/auth/login_service.dart';
 
 class AppColors {
   static const Color primaryNavy = Color(0xFF0A1D37);

@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import 'package:mera_ashiana/models/listing_model.dart';
-import 'package:mera_ashiana/services/login_service.dart';
+import 'package:mera_ashiana/services/auth/login_service.dart';
 
 class ListingService {
   static const String _baseUrl = "http://api.staging.mera-ashiana.com/api";

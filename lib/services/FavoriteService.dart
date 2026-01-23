@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:mera_ashiana/models/property_model.dart';
-import 'package:mera_ashiana/services/login_service.dart';
+import 'package:mera_ashiana/services/auth/login_service.dart';
 
 class FavoriteService {
   static const String baseUrl = "http://api.staging.mera-ashiana.com/api";
