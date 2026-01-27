@@ -1,17 +1,13 @@
 import 'dart:convert';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:mera_ashiana/models/property_model.dart';
 import 'package:mera_ashiana/services/FavoriteService.dart';
 import 'package:mera_ashiana/services/auth/login_service.dart';
-
-class AppColors {
-  static const Color primaryNavy = Color(0xFF0A1D37);
-  static const Color accentYellow = Color(0xFFFFC400);
-  static const Color white = Colors.white;
-  static const Color textGrey = Color(0xFF757575);
-}
+import 'package:mera_ashiana/theme/app_colors.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ProjectDetailsScreen extends StatefulWidget {
   final int? propertyId;
@@ -23,8 +19,8 @@ class ProjectDetailsScreen extends StatefulWidget {
 }
 
 class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
-  // Swipe Logic Variables
   final PageController _pageController = PageController();
+  final ScrollController _scrollController = ScrollController();
   int _currentPage = 0;
 
   bool isLoading = true;
@@ -40,7 +36,8 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
 
   @override
   void dispose() {
-    _pageController.dispose(); // Always dispose controllers
+    _pageController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -62,6 +59,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
             ? decoded['data']
             : (decoded['data'] as List).first;
 
+        if (!mounted) return;
         setState(() {
           property = PropertyModel.fromJson(data);
           if (data['is_liked'] == true) {
@@ -73,12 +71,14 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
           isLoading = false;
         });
       } else {
+        if (!mounted) return;
         setState(() {
           hasError = true;
           isLoading = false;
         });
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         hasError = true;
         isLoading = false;
@@ -99,25 +99,60 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
         propertyData: property,
       );
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(e.toString())));
+      }
     } finally {
       if (mounted) setState(() => isToggling = false);
     }
   }
 
+  void _contactAgent() async {
+    if (property == null) return;
+
+    final whatsapp = property!.contactWhatsapp;
+    final phone = property!.contactPhone;
+
+    if (whatsapp.isNotEmpty) {
+      final whatsappUrl = "https://wa.me/$whatsapp";
+      if (await canLaunchUrl(Uri.parse(whatsappUrl))) {
+        await launchUrl(Uri.parse(whatsappUrl));
+      } else {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("Cannot open WhatsApp")));
+      }
+    } else if (phone.isNotEmpty) {
+      final telUrl = "tel:$phone";
+      if (await canLaunchUrl(Uri.parse(telUrl))) {
+        await launchUrl(Uri.parse(telUrl));
+      } else {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("Cannot make a call")));
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("No contact info available")),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (isLoading)
+    if (isLoading) {
       return const Scaffold(
         body: Center(
           child: CircularProgressIndicator(color: AppColors.accentYellow),
         ),
       );
-    if (hasError || property == null)
+    }
+
+    if (hasError || property == null) {
       return const Scaffold(body: Center(child: Text("Error loading data")));
+    }
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -125,11 +160,12 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
       backgroundColor: isDark ? const Color(0xFF0F0F0F) : Colors.white,
       body: Stack(
         children: [
-          CustomScrollView(
-            slivers: [
-              _buildSliverAppBar(property!.images),
-              SliverToBoxAdapter(
-                child: Padding(
+          SingleChildScrollView(
+            controller: _scrollController,
+            child: Column(
+              children: [
+                _buildImageGallery(property!.images),
+                Padding(
                   padding: const EdgeInsets.all(24.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -159,109 +195,124 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                     ],
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
+          _buildFloatingHeader(isDark),
           _buildBottomAction(isDark),
         ],
       ),
     );
   }
 
-  Widget _buildSliverAppBar(List<String> images) {
-    return SliverAppBar(
-      expandedHeight: 400,
-      pinned: true,
-      elevation: 0,
-      backgroundColor: AppColors.primaryNavy,
-      leading: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: CircleAvatar(
-          backgroundColor: Colors.black38,
-          child: const BackButton(color: Colors.white),
-        ),
+  Widget _buildImageGallery(List<String> images) {
+    return SizedBox(
+      height: 400,
+      child: Stack(
+        children: [
+          PageView.builder(
+            controller: _pageController,
+            onPageChanged: (int page) {
+              if (mounted) setState(() => _currentPage = page);
+            },
+            itemCount: images.length,
+            itemBuilder: (context, i) {
+              return Image.network(
+                images[i],
+                fit: BoxFit.cover,
+                loadingBuilder: (context, child, progress) {
+                  if (progress == null) return child;
+                  return const Center(
+                    child: CircularProgressIndicator(
+                      color: AppColors.accentYellow,
+                    ),
+                  );
+                },
+                errorBuilder: (context, error, stackTrace) => Container(
+                  color: Colors.grey[800],
+                  child: const Icon(
+                    Icons.broken_image,
+                    color: Colors.white54,
+                    size: 50,
+                  ),
+                ),
+              );
+            },
+          ),
+          const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Colors.black45, Colors.transparent, Colors.black87],
+              ),
+            ),
+          ),
+          if (images.length > 1)
+            Positioned(
+              bottom: 25,
+              left: 0,
+              right: 0,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(
+                  images.length,
+                  (index) => AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    height: 8,
+                    width: _currentPage == index ? 24 : 8,
+                    decoration: BoxDecoration(
+                      color: _currentPage == index
+                          ? AppColors.accentYellow
+                          : Colors.white.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
-      actions: [
-        ValueListenableBuilder<Set<int>>(
-          valueListenable: FavoriteService.favoriteIds,
-          builder: (context, favSet, _) {
-            final isLiked = favSet.contains(property!.id);
-            return Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: CircleAvatar(
+    );
+  }
+
+  Widget _buildFloatingHeader(bool isDark) {
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              CircleAvatar(
                 backgroundColor: Colors.black38,
                 child: IconButton(
-                  icon: Icon(
-                    isLiked ? Icons.favorite : Icons.favorite_border,
-                    color: isLiked ? Colors.red : Colors.white,
-                  ),
-                  onPressed: isToggling ? null : _handleFavoriteToggle,
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  onPressed: () => Navigator.pop(context),
                 ),
               ),
-            );
-          },
-        ),
-      ],
-      flexibleSpace: FlexibleSpaceBar(
-        background: Stack(
-          fit: StackFit.expand,
-          children: [
-            // FIXED: RESTORED SWIPE LOGIC
-            PageView.builder(
-              controller: _pageController,
-              onPageChanged: (int page) => setState(() => _currentPage = page),
-              itemCount: images.length,
-              itemBuilder: (context, i) {
-                return Image.network(
-                  images[i],
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    color: Colors.grey[800],
-                    child: const Icon(
-                      Icons.broken_image,
-                      color: Colors.white54,
-                      size: 50,
-                    ),
-                  ),
-                );
-              },
-            ),
-            // Gradient for better text/icon visibility
-            const DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.black45, Colors.transparent, Colors.black87],
-                ),
-              ),
-            ),
-            // FIXED: ADDED DOT INDICATORS
-            if (images.length > 1)
-              Positioned(
-                bottom: 25,
-                left: 0,
-                right: 0,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(
-                    images.length,
-                    (index) => AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
-                      height: 8,
-                      width: _currentPage == index ? 24 : 8,
-                      decoration: BoxDecoration(
-                        color: _currentPage == index
-                            ? AppColors.accentYellow
-                            : Colors.white.withOpacity(0.5),
-                        borderRadius: BorderRadius.circular(4),
+              ValueListenableBuilder<Set<int>>(
+                valueListenable: FavoriteService.favoriteIds,
+                builder: (context, favSet, _) {
+                  final isLiked = favSet.contains(property!.id);
+                  return CircleAvatar(
+                    backgroundColor: Colors.black38,
+                    child: IconButton(
+                      icon: Icon(
+                        isLiked ? Icons.favorite : Icons.favorite_border,
+                        color: isLiked ? Colors.red : Colors.white,
                       ),
+                      onPressed: isToggling ? null : _handleFavoriteToggle,
                     ),
-                  ),
-                ),
+                  );
+                },
               ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -405,7 +456,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
           children: [
             Expanded(
               child: ElevatedButton.icon(
-                onPressed: () {},
+                onPressed: _contactAgent,
                 icon: const Icon(Icons.phone_rounded),
                 label: const Text(
                   "CONTACT AGENT",
