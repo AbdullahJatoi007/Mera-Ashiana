@@ -11,7 +11,7 @@
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:label="mera_ashiana"
-        android:usesCleartextTraffic="true"
+        android:usesCleartextTraffic="false"
         >
 
         <meta-data

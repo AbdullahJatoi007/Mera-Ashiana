@@ -6,7 +6,7 @@ import 'package:mera_ashiana/models/listing_model.dart';
 import 'package:mera_ashiana/services/auth/login_service.dart';
 
 class ListingService {
-  static const String _baseUrl = "http://api.staging.mera-ashiana.com/api";
+  static const String _baseUrl = "https://api-staging.mera-ashiana.com/api";
 
   /// Sends both property details and images in a single Multipart request.
   static Future<Map<String, dynamic>> createListing({

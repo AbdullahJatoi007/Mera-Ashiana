@@ -5,7 +5,7 @@ import 'package:mera_ashiana/models/property_model.dart';
 import 'package:mera_ashiana/services/auth/login_service.dart';
 
 class FavoriteService {
-  static const String baseUrl = "http://api.staging.mera-ashiana.com/api";
+  static const String baseUrl = "https://api-staging.mera-ashiana.com/api";
 
   // Using Set for O(1) lookups. ValueNotifier triggers UI on value change.
   static ValueNotifier<Set<int>> favoriteIds = ValueNotifier<Set<int>>({});

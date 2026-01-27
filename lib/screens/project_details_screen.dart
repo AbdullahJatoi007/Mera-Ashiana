@@ -48,8 +48,8 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
     try {
       final cookie = await LoginService.getAuthCookie();
       final url = widget.propertyId != null
-          ? "http://api.staging.mera-ashiana.com/api/properties/${widget.propertyId}"
-          : "http://api.staging.mera-ashiana.com/api/properties?recent=true";
+          ? "https://api-staging.mera-ashiana.com/api/properties/${widget.propertyId}"
+          : "https://api-staging.mera-ashiana.com/api/properties?recent=true";
 
       final response = await http.get(
         Uri.parse(url),

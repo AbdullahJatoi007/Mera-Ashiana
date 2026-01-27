@@ -199,7 +199,7 @@ class CustomDrawer extends StatelessWidget {
                   theme,
                   loc.helpSupport,
                   Icons.help_outline_rounded,
-                  () => _launchURL('http://staging.mera-ashiana.com/contact'),
+                  () => _launchURL('https://mera-ashiana.com/contact'),
                   isDark: isDark,
                 ),
                 _buildMenuItem(
@@ -207,7 +207,7 @@ class CustomDrawer extends StatelessWidget {
                   theme,
                   loc.aboutUs,
                   Icons.info_outline_rounded,
-                  () => _launchURL('http://staging.mera-ashiana.com/about'),
+                  () => _launchURL('https://mera-ashiana.com/about'),
                   isDark: isDark,
                 ),
               ],

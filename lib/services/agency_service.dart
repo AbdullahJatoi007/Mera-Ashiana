@@ -9,7 +9,7 @@ import 'package:mera_ashiana/models/agency_model.dart';
 
 class AgencyService {
   static const String baseUrl =
-      "http://api.staging.mera-ashiana.com/api/agency";
+      "https://api-staging.mera-ashiana.com/api/agency";
 
   /// Fetches the current user's agency details
   /// Updated to handle both single object and list responses

@@ -59,7 +59,7 @@ class PropertyModel {
       contactWhatsapp: json['contact_whatsapp'] ?? '',
       contactEmail: json['contact_email'] ?? '',
       images: (json['images'] as List?)
-          ?.map((e) => "http://api.staging.mera-ashiana.com$e")
+          ?.map((e) => "https://api-staging.mera-ashiana.com$e")
           .toList() ??
           [],
       isFeatured: json['is_featured'] ?? 0, // NEW

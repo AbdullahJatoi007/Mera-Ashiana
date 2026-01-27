@@ -13,7 +13,7 @@ class MyListingsScreen extends StatefulWidget {
 class _MyListingsScreenState extends State<MyListingsScreen> {
   bool _isLoading = true;
   List<Listing> _myListings = [];
-  final String _imageBaseUrl = "http://api.staging.mera-ashiana.com";
+  final String _imageBaseUrl = "https://api-staging.mera-ashiana.com";
 
   @override
   void initState() {

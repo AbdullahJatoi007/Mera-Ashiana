@@ -5,7 +5,7 @@ import 'package:mera_ashiana/services/auth/login_service.dart';
 import 'package:mera_ashiana/models/user_model.dart';
 
 class ProfileService {
-  static const String baseUrl = "http://api.staging.mera-ashiana.com/api";
+  static const String baseUrl = "https://api-staging.mera-ashiana.com/api";
 
   // --- CACHE VARIABLE ---
   static User? _cachedUser;

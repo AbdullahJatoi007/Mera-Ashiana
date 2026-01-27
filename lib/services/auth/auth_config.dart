@@ -1,6 +1,6 @@
 class AuthConfig {
   // CRITICAL: Use HTTPS in production - HTTP violates Google Play policy
-  static const String baseUrl = "http://api.staging.mera-ashiana.com/api";
+  static const String baseUrl = "https://api-staging.mera-ashiana.com/api";
 
   // Timeouts
   static const Duration connectionTimeout = Duration(seconds: 30);
@@ -22,6 +22,6 @@ class AuthConfig {
   // ✅ ADD THIS: Security/URL Validation
   static const List<String> allowedDomains = [
     'mera-ashiana.com',
-    'staging.mera-ashiana.com',
+    'api-staging.mera-ashiana.com',
   ];
 }

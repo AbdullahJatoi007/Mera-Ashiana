@@ -14,7 +14,7 @@ class BlogsScreen extends StatefulWidget {
 class _BlogsScreenState extends State<BlogsScreen> {
   List<Blog> _blogs = [];
   bool _isLoading = true;
-  final String _imageBaseUrl = "http://api.staging.mera-ashiana.com";
+  final String _imageBaseUrl = "https://api-staging.mera-ashiana.com";
 
   @override
   void initState() {

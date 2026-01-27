@@ -6,7 +6,7 @@ import 'package:mera_ashiana/models/blog_model.dart';
 class BlogService {
   // Corrected Base URL based on your app.js: app.use("/admin/blogs", blogs);
   static const String baseUrl =
-      "http://api.staging.mera-ashiana.com/admin/blogs";
+      "https://api-staging.mera-ashiana.com/admin/blogs";
 
   /// Fetches the list of all blogs from the backend
   static Future<List<Blog>> fetchAllBlogs() async {

@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class GoogleLoginService {
-  static const String baseUrl = 'http://api.staging.mera-ashiana.com/api';
+  static const String baseUrl = 'https://api-staging.mera-ashiana.com/api';
   static final FlutterSecureStorage _storage = FlutterSecureStorage();
 
   // Use .instance for 7.2.0

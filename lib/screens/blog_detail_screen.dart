@@ -8,7 +8,7 @@ class BlogDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String imageFullUrl = "http://api.staging.mera-ashiana.com${blog.image}";
+    final String imageFullUrl = "https://api-staging.mera-ashiana.com${blog.image}";
 
     return Scaffold(
       body: CustomScrollView(

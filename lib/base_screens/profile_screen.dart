@@ -637,7 +637,7 @@ class _ProfileContentState extends State<_ProfileContent> {
             isDark: isDark,
             onTap: () {
               HapticFeedback.lightImpact();
-              _launchURL('https://staging.mera-ashiana.com/about');
+              _launchURL('https://mera-ashiana.com/about');
             },
           ),
           _buildSettingsTile(

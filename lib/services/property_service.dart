@@ -4,7 +4,7 @@ import '../models/property_model.dart';
 
 class PropertyService {
   static const String apiUrl =
-      "http://api.staging.mera-ashiana.com/api/properties";
+      "https://api-staging.mera-ashiana.com/api/properties";
 
   static Future<List<PropertyModel>> fetchProperties() async {
     final response = await http.get(Uri.parse(apiUrl));
