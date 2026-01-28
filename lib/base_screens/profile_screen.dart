@@ -582,7 +582,20 @@ class _ProfileContentState extends State<_ProfileContent> {
         ],
       ),
       child: Column(
-        children: [
+        children: [  _buildSettingsTile(
+        title: loc.accountSettings,
+        icon: Icons.manage_accounts_outlined,
+        isDark: isDark,
+        onTap: () {
+          HapticFeedback.lightImpact();
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const AccountSettingsScreen(),
+            ),
+          );
+        },
+      ),
           _buildSettingsTile(
             title: 'Post Property Ad',
             icon: Icons.add_circle_outline_rounded,
@@ -595,20 +608,7 @@ class _ProfileContentState extends State<_ProfileContent> {
               );
             },
           ),
-          _buildSettingsTile(
-            title: loc.accountSettings,
-            icon: Icons.manage_accounts_outlined,
-            isDark: isDark,
-            onTap: () {
-              HapticFeedback.lightImpact();
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const AccountSettingsScreen(),
-                ),
-              );
-            },
-          ),
+
           if (userType == 'agent')
             _buildSettingsTile(
               title: 'Agency Management',
