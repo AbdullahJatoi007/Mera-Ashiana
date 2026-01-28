@@ -10,7 +10,7 @@
     <application
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
-        android:label="mera_ashiana"
+        android:label="Mera Ashiana"
         android:usesCleartextTraffic="false"
         >
 

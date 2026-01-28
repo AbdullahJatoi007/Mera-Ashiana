@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart'; // Added for Haptic Feedback
 import 'package:mera_ashiana/base_screens/properties_screen.dart';
 import 'package:mera_ashiana/models/property_model.dart';
 import 'package:mera_ashiana/services/property_service.dart';
@@ -44,7 +45,6 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  // FIXED: RESTORED FILTER LOGIC
   List<PropertyModel> get _filteredProperties {
     if (_selectedCategoryIndex == 0) return _properties;
     String categoryName = _categories[_selectedCategoryIndex]['name'] as String;
@@ -53,25 +53,35 @@ class _HomeScreenState extends State<HomeScreen> {
         .toList();
   }
 
-  Future<void> _fetchProperties() async {
+  /// Fetches properties from the service.
+  /// [isRefresh] determines if we show the full-screen loader or a silent update.
+  Future<void> _fetchProperties({bool isRefresh = false}) async {
+    if (!isRefresh) {
+      setState(() {
+        _isLoading = true;
+        _hasError = false;
+      });
+    }
+
     try {
       final properties = await PropertyService.fetchProperties();
       if (mounted) {
         setState(() {
           _properties = properties;
           _isLoading = false;
+          _hasError = false;
         });
       }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _hasError = true;
           _isLoading = false;
         });
+      }
     }
   }
 
-  // FIXED: RESTORED SNAP LOGIC
   void _handleSnap(double maxSnapOffset) {
     if (!_scrollController.hasClients) return;
     double currentOffset = _scrollController.offset;
@@ -96,102 +106,139 @@ class _HomeScreenState extends State<HomeScreen> {
     final double statusBarHeight = MediaQuery.of(context).padding.top;
     const double maxSnapOffset = 110.0;
 
-    if (_isLoading)
+    // Loading State
+    if (_isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    if (_hasError)
-      return const Scaffold(
-        body: Center(child: Text("Failed to load properties")),
+    }
+
+    // Error State with Retry Best Practice
+    if (_hasError) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 48, color: Colors.red),
+              const SizedBox(height: 16),
+              const Text("Failed to load properties"),
+              TextButton(
+                onPressed: () => _fetchProperties(),
+                child: const Text("Try Again"),
+              ),
+            ],
+          ),
+        ),
       );
+    }
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      body: NotificationListener<ScrollNotification>(
-        onNotification: (notification) {
-          if (notification is UserScrollNotification &&
-              notification.direction == ScrollDirection.idle) {
-            _handleSnap(maxSnapOffset);
-          }
-          return false;
+      body: RefreshIndicator(
+        // Google Best Practice: Use theme colors and position correctly
+        color: theme.colorScheme.primary,
+        backgroundColor: theme.colorScheme.surface,
+        displacement: 40,
+        edgeOffset: statusBarHeight + 20,
+        onRefresh: () async {
+          // Play Console Best Practice: Provide haptic feedback on manual refresh
+          HapticFeedback.mediumImpact();
+          await _fetchProperties(isRefresh: true);
         },
-        child: CustomScrollView(
-          controller: _scrollController,
-          physics: const BouncingScrollPhysics(),
-          slivers: [
-            HomeTopSection(
-              selectedOption: _selectedOption,
-              statusBarHeight: statusBarHeight,
-              onOptionSelected: (value) =>
-                  setState(() => _selectedOption = value),
+        child: NotificationListener<ScrollNotification>(
+          onNotification: (notification) {
+            if (notification is UserScrollNotification &&
+                notification.direction == ScrollDirection.idle) {
+              _handleSnap(maxSnapOffset);
+            }
+            return false;
+          },
+          child: CustomScrollView(
+            controller: _scrollController,
+            // Use AlwaysScrollableScrollPhysics so swipe-to-refresh works even on short lists
+            physics: const BouncingScrollPhysics(
+              parent: AlwaysScrollableScrollPhysics(),
             ),
+            slivers: [
+              HomeTopSection(
+                selectedOption: _selectedOption,
+                statusBarHeight: statusBarHeight,
+                onOptionSelected: (value) =>
+                    setState(() => _selectedOption = value),
+              ),
 
-            // Category Selector
-            SliverPadding(
-              padding: const EdgeInsets.only(top: 15, bottom: 5),
-              sliver: SliverToBoxAdapter(child: _buildCategoryList(theme)),
-            ),
+              // Category Selector
+              SliverPadding(
+                padding: const EdgeInsets.only(top: 15, bottom: 5),
+                sliver: SliverToBoxAdapter(child: _buildCategoryList(theme)),
+              ),
 
-            // 1. FEATURED SECTION (HORIZONTAL)
-            SliverToBoxAdapter(
-              child: _buildSectionTitle(theme, loc.exploreProjects, () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => PropertiesScreen(
-                      properties: _properties
-                          .where((p) => p.isFeatured == 1)
-                          .toList(),
-                      title: loc.exploreProjects,
+              // 1. FEATURED SECTION
+              SliverToBoxAdapter(
+                child: _buildSectionTitle(theme, loc.exploreProjects, () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => PropertiesScreen(
+                        properties: _properties
+                            .where((p) => p.isFeatured == 1)
+                            .toList(),
+                        title: loc.exploreProjects,
+                      ),
                     ),
-                  ),
-                );
-              }),
-            ),
-            SliverToBoxAdapter(child: _buildFeaturedProjects(theme)),
+                  );
+                }),
+              ),
+              SliverToBoxAdapter(child: _buildFeaturedProjects(theme)),
 
-            // 2. RECENTLY ADDED SECTION (HORIZONTAL)
-            SliverToBoxAdapter(
-              child: _buildSectionTitle(theme, "Recently Added", () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => PropertiesScreen(
-                      properties: _properties,
-                      title: "Recently Added",
+              // 2. RECENTLY ADDED SECTION
+              SliverToBoxAdapter(
+                child: _buildSectionTitle(theme, "Recently Added", () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => PropertiesScreen(
+                        properties: _properties,
+                        title: "Recently Added",
+                      ),
                     ),
-                  ),
-                );
-              }),
-            ),
-            SliverToBoxAdapter(child: _buildRecentlyAddedHorizontal(theme)),
+                  );
+                }),
+              ),
+              SliverToBoxAdapter(child: _buildRecentlyAddedHorizontal(theme)),
 
-            // 3. FILTERED LIST SECTION (VERTICAL)
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 25, 12, 10),
-                child: Text(
-                  "All ${_categories[_selectedCategoryIndex]['name']} Listings",
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+              // 3. FILTERED LIST SECTION
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 25, 12, 10),
+                  child: Text(
+                    "All ${_categories[_selectedCategoryIndex]['name']} Listings",
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.only(bottom: 20),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) =>
-                      _buildPropertyListItem(theme, _filteredProperties[index]),
-                  childCount: _filteredProperties.length,
+              SliverPadding(
+                padding: const EdgeInsets.only(bottom: 20),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) => _buildPropertyListItem(
+                      theme,
+                      _filteredProperties[index],
+                    ),
+                    childCount: _filteredProperties.length,
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
+
+  // --- Helper Widgets Below ---
 
   Widget _buildCategoryList(ThemeData theme) {
     return SizedBox(
@@ -246,9 +293,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // NEW: RECENTLY ADDED HORIZONTAL LIST
   Widget _buildRecentlyAddedHorizontal(ThemeData theme) {
-    // Show last 6 added properties
     final recent = _properties.reversed.take(6).toList();
     return SizedBox(
       height: 160,
@@ -343,15 +388,18 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         child: Row(
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                property.images.isNotEmpty ? property.images[0] : '',
-                width: 90,
-                height: 90,
-                fit: BoxFit.cover,
-                errorBuilder: (c, e, s) =>
-                    Container(width: 90, height: 90, color: Colors.grey[200]),
+            Hero(
+              tag: 'property_${property.id}',
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  property.images.isNotEmpty ? property.images[0] : '',
+                  width: 90,
+                  height: 90,
+                  fit: BoxFit.cover,
+                  errorBuilder: (c, e, s) =>
+                      Container(width: 90, height: 90, color: Colors.grey[200]),
+                ),
               ),
             ),
             const SizedBox(width: 16),
@@ -419,7 +467,7 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 // =============================================================================
-// AUTO SLIDING CARD (IMAGE SAFETY FIXED)
+// AUTO SLIDING CARD
 // =============================================================================
 
 class AutoSlidingFeaturedCard extends StatefulWidget {
@@ -469,7 +517,6 @@ class _AutoSlidingFeaturedCardState extends State<AutoSlidingFeaturedCard> {
 
   @override
   Widget build(BuildContext context) {
-    // Safety check for empty image lists
     final hasImages = widget.property.images.isNotEmpty;
 
     return GestureDetector(
