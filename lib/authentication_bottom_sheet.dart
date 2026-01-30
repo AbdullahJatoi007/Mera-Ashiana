@@ -7,7 +7,8 @@ import 'package:mera_ashiana/services/auth_state.dart';
 import 'package:mera_ashiana/helpers/validation_helper.dart';
 import 'package:mera_ashiana/helpers/loader_helper.dart';
 import 'package:mera_ashiana/theme/app_colors.dart';
-
+import 'package:flutter/gestures.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AuthenticationBottomSheet extends StatefulWidget {
   final VoidCallback onLoginSuccess;
@@ -159,19 +160,14 @@ class _AuthenticationBottomSheetState extends State<AuthenticationBottomSheet> {
             const Icon(Icons.error_outline, color: Colors.white, size: 20),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(
-                message,
-                style: const TextStyle(fontSize: 14),
-              ),
+              child: Text(message, style: const TextStyle(fontSize: 14)),
             ),
           ],
         ),
         backgroundColor: AppColors.errorRed,
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.all(16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         duration: const Duration(seconds: 4),
       ),
     );
@@ -184,22 +180,21 @@ class _AuthenticationBottomSheetState extends State<AuthenticationBottomSheet> {
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
+            const Icon(
+              Icons.check_circle_outline,
+              color: Colors.white,
+              size: 20,
+            ),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(
-                message,
-                style: const TextStyle(fontSize: 14),
-              ),
+              child: Text(message, style: const TextStyle(fontSize: 14)),
             ),
           ],
         ),
         backgroundColor: AppColors.successGreen,
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.all(16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
@@ -364,8 +359,9 @@ class _AuthenticationBottomSheetState extends State<AuthenticationBottomSheet> {
                       : TextInputAction.done,
                   onFieldSubmitted: (_) {
                     if (_isRegisterMode) {
-                      FocusScope.of(context)
-                          .requestFocus(_confirmPasswordFocus);
+                      FocusScope.of(
+                        context,
+                      ).requestFocus(_confirmPasswordFocus);
                     } else {
                       _handleAuth();
                     }
@@ -390,13 +386,16 @@ class _AuthenticationBottomSheetState extends State<AuthenticationBottomSheet> {
                     textInputAction: TextInputAction.done,
                     onFieldSubmitted: (_) => _handleAuth(),
                     onToggleVisibility: () {
-                      setState(() =>
-                      _obscureConfirmPassword = !_obscureConfirmPassword);
+                      setState(
+                        () =>
+                            _obscureConfirmPassword = !_obscureConfirmPassword,
+                      );
                     },
-                    validator: (value) => ValidationHelper.validateConfirmPassword(
-                      value,
-                      _passwordController.text,
-                    ),
+                    validator: (value) =>
+                        ValidationHelper.validateConfirmPassword(
+                          value,
+                          _passwordController.text,
+                        ),
                   ),
                   const SizedBox(height: 10),
 
@@ -409,12 +408,15 @@ class _AuthenticationBottomSheetState extends State<AuthenticationBottomSheet> {
                   ),
 
                   // Terms checkbox
+                  // Find this section in your Column:
                   _buildCheckbox(
                     value: _termsAccepted,
                     onChanged: (val) => setState(() => _termsAccepted = val!),
-                    label: "I accept the Terms & Privacy Policy",
-                    isRequired: true,
+                    label: "",
+                    // Label is ignored when isTerms is true
                     isDark: isDark,
+                    isTerms: true,
+                    isRequired: true,
                   ),
                 ],
 
@@ -486,18 +488,18 @@ class _AuthenticationBottomSheetState extends State<AuthenticationBottomSheet> {
                       onPressed: _isGoogleLoading ? null : _handleGoogleLogin,
                       icon: _isGoogleLoading
                           ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppColors.primaryNavy,
-                        ),
-                      )
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppColors.primaryNavy,
+                              ),
+                            )
                           : const Icon(
-                        Icons.g_mobiledata,
-                        size: 32,
-                        color: AppColors.primaryNavy,
-                      ),
+                              Icons.g_mobiledata,
+                              size: 32,
+                              color: AppColors.primaryNavy,
+                            ),
                       label: Text(
                         "Continue with Google",
                         style: TextStyle(
@@ -529,7 +531,9 @@ class _AuthenticationBottomSheetState extends State<AuthenticationBottomSheet> {
                         ? "Already have an account? Sign In"
                         : "Don't have an account? Register Now",
                     style: TextStyle(
-                      color: isDark ? AppColors.accentYellow : AppColors.primaryNavy,
+                      color: isDark
+                          ? AppColors.accentYellow
+                          : AppColors.primaryNavy,
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
                     ),
@@ -588,17 +592,19 @@ class _AuthenticationBottomSheetState extends State<AuthenticationBottomSheet> {
           ),
           suffixIcon: isPassword
               ? IconButton(
-            icon: Icon(
-              obscureText ? Icons.visibility_off : Icons.visibility,
-              color: isDark ? Colors.white60 : AppColors.textGrey,
-              size: 20,
-            ),
-            onPressed: onToggleVisibility,
-            tooltip: obscureText ? 'Show password' : 'Hide password',
-          )
+                  icon: Icon(
+                    obscureText ? Icons.visibility_off : Icons.visibility,
+                    color: isDark ? Colors.white60 : AppColors.textGrey,
+                    size: 20,
+                  ),
+                  onPressed: onToggleVisibility,
+                  tooltip: obscureText ? 'Show password' : 'Hide password',
+                )
               : null,
           filled: true,
-          fillColor: isDark ? Colors.white.withOpacity(0.05) : AppColors.background,
+          fillColor: isDark
+              ? Colors.white.withOpacity(0.05)
+              : AppColors.background,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 16,
             vertical: 16,
@@ -622,15 +628,9 @@ class _AuthenticationBottomSheetState extends State<AuthenticationBottomSheet> {
           ),
           focusedErrorBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(15),
-            borderSide: const BorderSide(
-              color: AppColors.errorRed,
-              width: 2,
-            ),
+            borderSide: const BorderSide(color: AppColors.errorRed, width: 2),
           ),
-          errorStyle: const TextStyle(
-            fontSize: 12,
-            height: 1.2,
-          ),
+          errorStyle: const TextStyle(fontSize: 12, height: 1.2),
         ),
       ),
     );
@@ -641,44 +641,64 @@ class _AuthenticationBottomSheetState extends State<AuthenticationBottomSheet> {
     required void Function(bool?) onChanged,
     required String label,
     required bool isDark,
+    bool isTerms = false, // Toggle for the clickable link logic
     bool isRequired = false,
   }) {
-    return Semantics(
-      checked: value,
-      label: label,
-      child: CheckboxListTile(
-        value: value,
-        onChanged: (val) {
-          HapticFeedback.selectionClick();
-          onChanged(val);
-        },
-        title: Row(
-          children: [
-            Expanded(
-              child: Text(
-                label,
+    return CheckboxListTile(
+      value: value,
+      onChanged: (val) {
+        HapticFeedback.selectionClick();
+        onChanged(val);
+      },
+      controlAffinity: ListTileControlAffinity.leading,
+      contentPadding: EdgeInsets.zero,
+      activeColor: AppColors.primaryNavy,
+      checkColor: AppColors.accentYellow,
+      dense: true,
+      title: isTerms
+          ? RichText(
+              text: TextSpan(
                 style: TextStyle(
                   fontSize: 14,
                   color: isDark ? Colors.white : AppColors.textDark,
                 ),
+                children: [
+                  const TextSpan(text: "I accept the "),
+                  TextSpan(
+                    text: "Terms & Privacy Policy",
+                    style: TextStyle(
+                      color: isDark ? AppColors.accentYellow : Colors.blue,
+                      fontWeight: FontWeight.bold,
+                      decoration: TextDecoration.underline,
+                    ),
+                    recognizer: TapGestureRecognizer()
+                      ..onTap = () async {
+                        final Uri url = Uri.parse(
+                          'https://mera-ashiana.com/about',
+                        );
+                        if (await canLaunchUrl(url)) {
+                          await launchUrl(
+                            url,
+                            mode: LaunchMode.externalApplication,
+                          );
+                        }
+                      },
+                  ),
+                  if (isRequired)
+                    const TextSpan(
+                      text: " *",
+                      style: TextStyle(color: AppColors.errorRed),
+                    ),
+                ],
+              ),
+            )
+          : Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                color: isDark ? Colors.white : AppColors.textDark,
               ),
             ),
-            if (isRequired)
-              const Text(
-                '*',
-                style: TextStyle(
-                  color: AppColors.errorRed,
-                  fontSize: 16,
-                ),
-              ),
-          ],
-        ),
-        contentPadding: EdgeInsets.zero,
-        controlAffinity: ListTileControlAffinity.leading,
-        activeColor: AppColors.primaryNavy,
-        checkColor: AppColors.accentYellow,
-        dense: true,
-      ),
     );
   }
 }
