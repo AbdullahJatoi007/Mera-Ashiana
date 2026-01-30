@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mera_ashiana/models/agency_model.dart';
 import 'package:mera_ashiana/services/agency_service.dart';
-import 'package:mera_ashiana/screens/real_estate_registration_screen.dart';
+import 'package:mera_ashiana/screens/agency_registration_screen.dart';
 
 class AgencyStatusScreen extends StatefulWidget {
   const AgencyStatusScreen({super.key});

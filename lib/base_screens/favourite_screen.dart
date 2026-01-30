@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:mera_ashiana/models/property_model.dart';
 import 'package:mera_ashiana/services/FavoriteService.dart';
+import 'package:mera_ashiana/helpers/favorite_helpers.dart';
 
 class FavouritesScreen extends StatefulWidget {
   const FavouritesScreen({super.key});
@@ -16,57 +16,52 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
     FavoriteService.fetchMyFavorites();
   }
 
+  Future<void> _refreshFavorites() async {
+    // Simply refetch local favorites (no API)
+    await FavoriteService.fetchMyFavorites();
+    setState(() {}); // refresh UI
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: ValueListenableBuilder<Set<int>>(
         valueListenable: FavoriteService.favoriteIds,
         builder: (context, favSet, _) {
+          // No favorites case
           if (favSet.isEmpty) {
-            return const Center(child: Text("No favorites found."));
+            return RefreshIndicator(
+              onRefresh: _refreshFavorites,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: const [
+                  SizedBox(height: 150),
+                  Center(
+                    child: Text(
+                      "No favorites found.",
+                      style: TextStyle(fontSize: 16),
+                    ),
+                  ),
+                ],
+              ),
+            );
           }
 
           final favList = FavoriteService.favoritesMap.values.toList();
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: favList.length,
-            itemBuilder: (context, index) {
-              final PropertyModel item = favList[index];
-
-              return Card(
-                clipBehavior: Clip.antiAlias,
-                margin: const EdgeInsets.only(bottom: 16),
-                child: InkWell(
-                  onTap: () {
-                    // Navigate to details if needed
-                  },
-                  child: Column(
-                    children: [
-                      if (item.images.isNotEmpty)
-                        Image.network(
-                          item.images[0],
-                          height: 150,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                        ),
-                      ListTile(
-                        title: Text(
-                          item.title,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        subtitle: Text("PKR ${item.price}"),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.favorite, color: Colors.red),
-                          onPressed: () =>
-                              FavoriteService.toggleFavorite(item.id, true),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
+          return RefreshIndicator(
+            onRefresh: _refreshFavorites,
+            child: ListView.builder(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(16),
+              itemCount: favList.length,
+              itemBuilder: (context, index) {
+                return FavoriteHelpers.buildFavoriteCard(
+                  context,
+                  favList[index],
+                );
+              },
+            ),
           );
         },
       ),

@@ -8,6 +8,9 @@ import 'package:mera_ashiana/services/auth/login_service.dart';
 class ListingService {
   static const String _baseUrl = "https://api-staging.mera-ashiana.com/api";
 
+  /// Real-time listings count
+  static ValueNotifier<int> myListingsCount = ValueNotifier<int>(0);
+
   /// Sends both property details and images in a single Multipart request.
   static Future<Map<String, dynamic>> createListing({
     required Map<String, dynamic> data,
@@ -41,6 +44,9 @@ class ListingService {
       final result = jsonDecode(response.body);
 
       if (response.statusCode == 201 || response.statusCode == 200) {
+        // Increment listing count in real-time
+        myListingsCount.value += 1;
+
         var responseData = result['data'];
         var id = responseData != null ? responseData['id'] : result['id'];
         return {"success": true, "id": id};
@@ -67,16 +73,20 @@ class ListingService {
       if (response.statusCode == 200) {
         final Map<String, dynamic> responseBody = jsonDecode(response.body);
         final List<dynamic> data = responseBody['data'] ?? [];
+        // Update real-time count
+        myListingsCount.value = data.length;
         return data.map((json) => Listing.fromJson(json)).toList();
       }
+      myListingsCount.value = 0;
       return [];
     } catch (e) {
       debugPrint("Fetch Error: $e");
+      myListingsCount.value = 0;
       return [];
     }
   }
 
-  /// NEW: Delete Method fixed for Integer IDs and Cookie Auth
+  /// Delete listing
   static Future<bool> deleteListing(int id) async {
     try {
       final cookie = await LoginService.getAuthCookie();
@@ -91,11 +101,9 @@ class ListingService {
         },
       );
 
-      debugPrint("DELETE Request to: $url");
-      debugPrint("Server Status Code: ${response.statusCode}");
-
-      // Most backends return 200 or 204 on successful deletion
       if (response.statusCode == 200 || response.statusCode == 204) {
+        // Decrement count in real-time
+        myListingsCount.value -= 1;
         return true;
       } else {
         debugPrint("Server rejected delete: ${response.body}");

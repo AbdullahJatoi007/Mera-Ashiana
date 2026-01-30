@@ -11,8 +11,9 @@ import 'package:url_launcher/url_launcher.dart';
 
 class ProjectDetailsScreen extends StatefulWidget {
   final int? propertyId;
+  final PropertyModel? property;
 
-  const ProjectDetailsScreen({super.key, this.propertyId});
+  const ProjectDetailsScreen({super.key, this.propertyId, this.property});
 
   @override
   State<ProjectDetailsScreen> createState() => _ProjectDetailsScreenState();
@@ -31,7 +32,12 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
   @override
   void initState() {
     super.initState();
-    fetchPropertyDetails();
+    if (widget.property != null) {
+      property = widget.property;
+      isLoading = false;
+    } else {
+      fetchPropertyDetails();
+    }
   }
 
   @override

@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mera_ashiana/base_screens/profile_screen.dart';
+import 'package:mera_ashiana/services/FavoriteService.dart';
+import 'package:mera_ashiana/services/listing_service.dart';
 import 'package:mera_ashiana/theme/app_colors.dart';
 import 'package:mera_ashiana/base_screens/favourite_screen.dart';
 import 'package:mera_ashiana/helpers/account_ui_helper.dart';
 import 'package:mera_ashiana/l10n/app_localizations.dart';
-import 'package:mera_ashiana/screens/real_estate_registration_screen.dart';
+import 'package:mera_ashiana/screens/agency_registration_screen.dart';
 import 'package:mera_ashiana/screens/AgencyStatusScreen.dart';
 import 'package:mera_ashiana/screens/account_settings_screen.dart';
 import 'package:mera_ashiana/screens/my_listings_screen.dart';
@@ -84,7 +86,6 @@ class _ProfileContentState extends State<_ProfileContent> {
         setState(() {
           _user = null;
           _userAgency = null;
-          _metrics = UserMetrics.empty();
           _isLoading = false;
           _error = null;
         });
@@ -95,24 +96,18 @@ class _ProfileContentState extends State<_ProfileContent> {
     if (mounted) setState(() => _isLoading = true);
 
     try {
-      // Parallel API calls for better performance
-      // CHANGE THIS:
+      // Only fetch profile and agency, no metrics needed here
       final results = await Future.wait([
         ProfileService.fetchProfile(
           forceRefresh: true,
         ).timeout(AuthConfig.connectionTimeout),
-        // Changed
         AgencyService.fetchMyAgency().timeout(AuthConfig.connectionTimeout),
-        // Changed
-        _fetchUserMetrics().timeout(AuthConfig.connectionTimeout),
-        // Changed
       ]);
 
       if (mounted) {
         setState(() {
           _user = results[0] as User?;
           _userAgency = results[1] as Agency?;
-          _metrics = results[2] as UserMetrics;
           _error = null;
           _isLoading = false;
         });
@@ -126,20 +121,6 @@ class _ProfileContentState extends State<_ProfileContent> {
         });
       }
     }
-  }
-
-  // Extract user metrics - Replace with actual API call
-  Future<UserMetrics> _fetchUserMetrics() async {
-    // TODO: Replace with actual API call
-    // This is a placeholder - fetch real data from your backend
-    return Future.delayed(
-      const Duration(milliseconds: 100),
-      () => const UserMetrics(
-        listingsCount: 12,
-        favoritesCount: 45,
-        viewsCount: '3.2K',
-      ),
-    );
   }
 
   String? _getUserFriendlyError(Object error) {
@@ -524,39 +505,45 @@ class _ProfileContentState extends State<_ProfileContent> {
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
         children: [
-          _MetricCard(
-            count: _metrics.listingsCount.toString(),
-            label: 'Listings',
-            icon: Icons.apartment_rounded,
-            isDark: isDark,
-            onTap: () {
-              HapticFeedback.selectionClick();
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const MyListingsScreen()),
+          // Real-time Listings count
+          ValueListenableBuilder<int>(
+            valueListenable: ListingService.myListingsCount,
+            builder: (context, count, _) {
+              return _MetricCard(
+                count: count.toString(),
+                label: 'Listings',
+                icon: Icons.apartment_rounded,
+                isDark: isDark,
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const MyListingsScreen()),
+                  );
+                },
               );
             },
           ),
           const SizedBox(width: 12),
-          _MetricCard(
-            count: _metrics.favoritesCount.toString(),
-            label: 'Favorites',
-            icon: Icons.favorite_rounded,
-            isDark: isDark,
-            onTap: () {
-              HapticFeedback.selectionClick();
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const FavouritesScreen()),
+
+          // Real-time Favorites count
+          ValueListenableBuilder<int>(
+            valueListenable: FavoriteService.favoriteIdsCount,
+            builder: (context, count, _) {
+              return _MetricCard(
+                count: count.toString(),
+                label: 'Favorites',
+                icon: Icons.favorite_rounded,
+                isDark: isDark,
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const FavouritesScreen()),
+                  );
+                },
               );
             },
-          ),
-          const SizedBox(width: 12),
-          _MetricCard(
-            count: _metrics.viewsCount,
-            label: 'Views',
-            icon: Icons.visibility_rounded,
-            isDark: isDark,
           ),
         ],
       ),
@@ -582,20 +569,21 @@ class _ProfileContentState extends State<_ProfileContent> {
         ],
       ),
       child: Column(
-        children: [  _buildSettingsTile(
-        title: loc.accountSettings,
-        icon: Icons.manage_accounts_outlined,
-        isDark: isDark,
-        onTap: () {
-          HapticFeedback.lightImpact();
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const AccountSettingsScreen(),
-            ),
-          );
-        },
-      ),
+        children: [
+          _buildSettingsTile(
+            title: loc.accountSettings,
+            icon: Icons.manage_accounts_outlined,
+            isDark: isDark,
+            onTap: () {
+              HapticFeedback.lightImpact();
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const AccountSettingsScreen(),
+                ),
+              );
+            },
+          ),
           _buildSettingsTile(
             title: 'Post Property Ad',
             icon: Icons.add_circle_outline_rounded,

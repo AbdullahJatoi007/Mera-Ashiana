@@ -11,35 +11,36 @@ class FavoriteService {
   static ValueNotifier<Set<int>> favoriteIds = ValueNotifier<Set<int>>({});
   static Map<int, PropertyModel> favoritesMap = {};
 
+  // NEW: reactive count
+  static ValueNotifier<int> favoriteIdsCount = ValueNotifier<int>(0);
+
   static Future<bool> toggleFavorite(
-    int propertyId,
-    bool currentlyLiked, {
-    PropertyModel? propertyData,
-  }) async {
+      int propertyId,
+      bool currentlyLiked, {
+        PropertyModel? propertyData,
+      }) async {
     final cookie = await LoginService.getAuthCookie();
     if (cookie == null || cookie.isEmpty) {
       throw 'Authentication required. Please log in.';
     }
 
-    // Match your backend routes: /properties/:id/like or /properties/:id/unlike
     final action = currentlyLiked ? 'unlike' : 'like';
     final url = Uri.parse('$baseUrl/properties/$propertyId/$action');
 
     try {
       final response = currentlyLiked
           ? await http.delete(
-              url,
-              headers: {'Cookie': cookie, 'Accept': 'application/json'},
-            )
+        url,
+        headers: {'Cookie': cookie, 'Accept': 'application/json'},
+      )
           : await http.post(
-              url,
-              headers: {'Cookie': cookie, 'Accept': 'application/json'},
-            );
+        url,
+        headers: {'Cookie': cookie, 'Accept': 'application/json'},
+      );
 
       debugPrint("FAV API [${response.statusCode}]: ${response.body}");
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        // We create a NEW Set instance to ensure ValueNotifier triggers the UI
         final updatedSet = Set<int>.from(favoriteIds.value);
 
         if (currentlyLiked) {
@@ -51,6 +52,7 @@ class FavoriteService {
         }
 
         favoriteIds.value = updatedSet;
+        _updateCount();
         return true;
       }
       return false;
@@ -84,10 +86,16 @@ class FavoriteService {
         }
 
         favoritesMap = newMap;
-        favoriteIds.value = ids; // Triggers UI in all listeners
+        favoriteIds.value = ids;
+        _updateCount();
       }
     } catch (e) {
       debugPrint("Fetch Favorites Error: $e");
     }
+  }
+
+  // NEW: keep count in sync
+  static void _updateCount() {
+    favoriteIdsCount.value = favoriteIds.value.length;
   }
 }
