@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:mera_ashiana/helpers/account_deletion_helper.dart';
 import 'package:mera_ashiana/helpers/account_ui_helper.dart';
 import 'package:mera_ashiana/l10n/app_localizations.dart';
 import 'package:mera_ashiana/screens/edit_profile_screen.dart';
@@ -20,6 +19,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
     final loc = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final bool isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -29,26 +29,27 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 18,
-            color: colorScheme.onSurface,
+            color: isDark ? Colors.white : colorScheme.onSurface,
           ),
         ),
         centerTitle: true,
         backgroundColor: colorScheme.surface,
         elevation: 0,
-        iconTheme: IconThemeData(color: colorScheme.primary),
+        iconTheme: IconThemeData(
+          color: isDark ? const Color(0xFFFFD54F) : colorScheme.primary,
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. Preferences Group
+            // 1. General Preferences
             _buildSectionLabel(loc.general),
             _SettingsGroup(
               theme: theme,
               children: [
                 _SettingsTile(
-                  colorScheme: colorScheme,
                   icon: Icons.person_outline_rounded,
                   title: loc.editProfile,
                   onTap: () => Navigator.push(
@@ -58,8 +59,8 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                     ),
                   ),
                 ),
-                _LanguageTile(loc: loc, colorScheme: colorScheme),
-                _ThemeTile(loc: loc, colorScheme: colorScheme),
+                _LanguageTile(loc: loc),
+                _ThemeTile(loc: loc),
               ],
             ),
 
@@ -72,7 +73,6 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
               children: [
                 _NotificationTile(
                   loc: loc,
-                  colorScheme: colorScheme,
                   value: _notificationsEnabled,
                   onChanged: (v) => setState(() => _notificationsEnabled = v),
                 ),
@@ -81,21 +81,18 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
 
             const SizedBox(height: 25),
 
-            // 3. Security/Actions
+            // 3. Account Actions
             _buildSectionLabel(loc.accountActions),
             _SettingsGroup(
               theme: theme,
               children: [
                 _SettingsTile(
-                  colorScheme: colorScheme,
                   icon: Icons.delete_forever_rounded,
                   title: loc.deleteAccount,
                   textColor: colorScheme.error,
                   iconColor: colorScheme.error,
-                  onTap: () {
-                    // Calling the improved, themed, and Google-compliant dialog
-                    AccountUIHelper.showDeleteConfirmation(context);
-                  },
+                  // Red for safety/policy compliance
+                  onTap: () => AccountUIHelper.showDeleteConfirmation(context),
                 ),
               ],
             ),
@@ -120,7 +117,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
   );
 }
 
-// --- Internal Helper Widgets (Keep these as they were) ---
+// --- Internal Helper Widgets ---
 
 class _SettingsGroup extends StatelessWidget {
   const _SettingsGroup({required this.theme, required this.children});
@@ -149,7 +146,6 @@ class _SettingsGroup extends StatelessWidget {
 
 class _SettingsTile extends StatelessWidget {
   const _SettingsTile({
-    required this.colorScheme,
     required this.icon,
     required this.title,
     required this.onTap,
@@ -157,7 +153,6 @@ class _SettingsTile extends StatelessWidget {
     this.iconColor,
   });
 
-  final ColorScheme colorScheme;
   final IconData icon;
   final String title;
   final VoidCallback onTap;
@@ -166,12 +161,20 @@ class _SettingsTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color yellowAccent = const Color(0xFFFFD54F);
+
     return ListTile(
-      leading: Icon(icon, color: iconColor ?? colorScheme.primary),
+      leading: Icon(
+        icon,
+        color:
+            iconColor ??
+            (isDark ? yellowAccent : Theme.of(context).colorScheme.primary),
+      ),
       title: Text(
         title,
         style: TextStyle(
-          color: textColor ?? colorScheme.onSurface,
+          color: textColor ?? (isDark ? Colors.white : Colors.black87),
           fontWeight: FontWeight.w600,
           fontSize: 14,
         ),
@@ -179,7 +182,7 @@ class _SettingsTile extends StatelessWidget {
       trailing: Icon(
         Icons.arrow_forward_ios,
         size: 14,
-        color: colorScheme.onSurface.withOpacity(0.3),
+        color: isDark ? Colors.white30 : Colors.black26,
       ),
       onTap: onTap,
     );
@@ -187,45 +190,46 @@ class _SettingsTile extends StatelessWidget {
 }
 
 class _LanguageTile extends StatelessWidget {
-  const _LanguageTile({required this.loc, required this.colorScheme});
+  const _LanguageTile({required this.loc});
 
   final AppLocalizations loc;
-  final ColorScheme colorScheme;
 
   @override
   Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return ValueListenableBuilder<Locale>(
       valueListenable: appLocale,
       builder: (context, locale, _) {
         return ListTile(
-          leading: Icon(Icons.language_rounded, color: colorScheme.primary),
+          leading: Icon(
+            Icons.language_rounded,
+            color: isDark
+                ? const Color(0xFFFFD54F)
+                : Theme.of(context).colorScheme.primary,
+          ),
           title: Text(
             loc.changeLanguage,
             style: TextStyle(
-              color: colorScheme.onSurface,
+              color: isDark ? Colors.white : Colors.black87,
               fontWeight: FontWeight.w600,
               fontSize: 14,
             ),
           ),
-          trailing: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: colorScheme.onSurface.withOpacity(0.05),
-              borderRadius: BorderRadius.circular(10),
+          trailing: DropdownButton<String>(
+            value: locale.languageCode,
+            underline: const SizedBox(),
+            icon: Icon(
+              Icons.keyboard_arrow_down,
+              size: 18,
+              color: isDark ? Colors.white60 : Colors.black45,
             ),
-            child: DropdownButton<String>(
-              value: locale.languageCode,
-              underline: const SizedBox(),
-              dropdownColor: colorScheme.surface,
-              icon: Icon(Icons.keyboard_arrow_down, size: 18),
-              items: [
-                DropdownMenuItem(value: 'en', child: Text(loc.english)),
-                DropdownMenuItem(value: 'ur', child: Text(loc.urdu)),
-              ],
-              onChanged: (value) {
-                if (value != null) appLocale.value = Locale(value);
-              },
-            ),
+            items: [
+              DropdownMenuItem(value: 'en', child: Text(loc.english)),
+              DropdownMenuItem(value: 'ur', child: Text(loc.urdu)),
+            ],
+            onChanged: (value) {
+              if (value != null) appLocale.value = Locale(value);
+            },
           ),
         );
       },
@@ -234,29 +238,32 @@ class _LanguageTile extends StatelessWidget {
 }
 
 class _ThemeTile extends StatelessWidget {
-  const _ThemeTile({required this.loc, required this.colorScheme});
+  const _ThemeTile({required this.loc});
 
   final AppLocalizations loc;
-  final ColorScheme colorScheme;
 
   @override
   Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: appThemeMode,
       builder: (context, currentMode, _) {
-        final isDark = currentMode == ThemeMode.dark;
         return ListTile(
           leading: Icon(
             isDark ? Icons.dark_mode : Icons.light_mode,
-            color: colorScheme.secondary,
+            color: isDark ? const Color(0xFFFFD54F) : Colors.orangeAccent,
           ),
           title: Text(
             loc.darkMode,
-            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+            style: TextStyle(
+              color: isDark ? Colors.white : Colors.black87,
+              fontWeight: FontWeight.w600,
+              fontSize: 14,
+            ),
           ),
           trailing: Switch.adaptive(
             value: isDark,
-            activeColor: colorScheme.secondary,
+            activeColor: const Color(0xFFFFD54F),
             onChanged: (v) =>
                 appThemeMode.value = v ? ThemeMode.dark : ThemeMode.light,
           ),
@@ -269,30 +276,35 @@ class _ThemeTile extends StatelessWidget {
 class _NotificationTile extends StatelessWidget {
   const _NotificationTile({
     required this.loc,
-    required this.colorScheme,
     required this.value,
     required this.onChanged,
   });
 
   final AppLocalizations loc;
-  final ColorScheme colorScheme;
   final bool value;
   final ValueChanged<bool> onChanged;
 
   @override
   Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     return ListTile(
       leading: Icon(
         Icons.notifications_active_outlined,
-        color: colorScheme.primary,
+        color: isDark
+            ? const Color(0xFFFFD54F)
+            : Theme.of(context).colorScheme.primary,
       ),
       title: Text(
         loc.notifications,
-        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+        style: TextStyle(
+          color: isDark ? Colors.white : Colors.black87,
+          fontWeight: FontWeight.w600,
+          fontSize: 14,
+        ),
       ),
       trailing: Switch.adaptive(
         value: value,
-        activeColor: colorScheme.secondary,
+        activeColor: const Color(0xFFFFD54F),
         onChanged: onChanged,
       ),
     );

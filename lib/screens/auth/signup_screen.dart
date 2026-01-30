@@ -3,7 +3,7 @@ import 'package:mera_ashiana/helpers/loader_helper.dart';
 import 'package:mera_ashiana/helpers/validation_helper.dart';
 import 'package:mera_ashiana/screens/auth/login_screen.dart';
 import 'package:mera_ashiana/base_screens/home_screen.dart';
-import 'package:mera_ashiana/services/auth_service.dart';
+import 'package:mera_ashiana/services/auth/auth_service.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});

@@ -7,15 +7,9 @@ import 'package:mera_ashiana/screens/blogs_screen.dart';
 import 'package:mera_ashiana/screens/my_listings_screen.dart';
 import 'package:mera_ashiana/base_screens/favourite_screen.dart';
 import 'package:mera_ashiana/main.dart';
+import 'package:mera_ashiana/services/auth_state.dart';
+import 'package:mera_ashiana/theme/app_colors.dart';
 import 'package:url_launcher/url_launcher.dart';
-
-// Brand Palette
-class AppColors {
-  static const Color primaryNavy = Color(0xFF0A1D37);
-  static const Color accentYellow = Color(0xFFFFC400);
-  static const Color white = Colors.white;
-  static const Color textGrey = Color(0xFF757575);
-}
 
 class CustomDrawer extends StatelessWidget {
   const CustomDrawer({super.key});
@@ -29,13 +23,12 @@ class CustomDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var loc = AppLocalizations.of(context)!;
+    final loc = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
     return Drawer(
-      // In dark mode, we use a deep surface color; in light mode, pure white
-      backgroundColor: isDark ? const Color(0xFF121212) : AppColors.white,
+      backgroundColor: isDark ? AppColors.textDark : AppColors.white,
       child: Column(
         children: <Widget>[
           const CustomDrawerHeader(),
@@ -45,7 +38,6 @@ class CustomDrawer extends StatelessWidget {
               children: <Widget>[
                 _buildMenuItem(
                   context,
-                  theme,
                   loc.home,
                   Icons.home_outlined,
                   () => Navigator.pop(context),
@@ -53,7 +45,6 @@ class CustomDrawer extends StatelessWidget {
                 ),
                 _buildMenuItem(
                   context,
-                  theme,
                   loc.myListings,
                   Icons.apartment_outlined,
                   () {
@@ -69,7 +60,6 @@ class CustomDrawer extends StatelessWidget {
                 ),
                 _buildMenuItem(
                   context,
-                  theme,
                   loc.favorites,
                   Icons.favorite_border_rounded,
                   () {
@@ -85,7 +75,6 @@ class CustomDrawer extends StatelessWidget {
                 ),
                 _buildMenuItem(
                   context,
-                  theme,
                   loc.blogs,
                   Icons.newspaper_outlined,
                   () {
@@ -98,11 +87,10 @@ class CustomDrawer extends StatelessWidget {
                   isDark: isDark,
                 ),
 
-                _buildDivider(theme),
+                _buildDivider(),
 
                 _buildMenuItem(
                   context,
-                  theme,
                   loc.accountSettings,
                   Icons.settings_outlined,
                   () {
@@ -117,7 +105,7 @@ class CustomDrawer extends StatelessWidget {
                   isDark: isDark,
                 ),
 
-                // Polished Language Selector
+                // Language Selector
                 Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
@@ -126,8 +114,8 @@ class CustomDrawer extends StatelessWidget {
                   child: Container(
                     decoration: BoxDecoration(
                       color: isDark
-                          ? Colors.white.withOpacity(0.05)
-                          : Colors.grey.withOpacity(0.05),
+                          ? AppColors.textDark.withOpacity(0.1)
+                          : AppColors.background.withOpacity(0.05),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: ListTile(
@@ -141,20 +129,24 @@ class CustomDrawer extends StatelessWidget {
                       title: Text(
                         loc.changeLanguage,
                         style: TextStyle(
-                          color: isDark ? Colors.white : AppColors.primaryNavy,
+                          color: isDark
+                              ? AppColors.white70
+                              : AppColors.textDark,
                           fontWeight: FontWeight.w600,
                           fontSize: 14,
                         ),
                       ),
                       trailing: DropdownButton<String>(
                         dropdownColor: isDark
-                            ? const Color(0xFF1E1E1E)
-                            : Colors.white,
+                            ? AppColors.textDark
+                            : AppColors.white,
                         value: appLocale.value.languageCode,
                         underline: const SizedBox(),
                         icon: Icon(
                           Icons.keyboard_arrow_down,
-                          color: isDark ? Colors.white54 : AppColors.textGrey,
+                          color: isDark
+                              ? AppColors.white70
+                              : AppColors.textGrey,
                         ),
                         items: [
                           DropdownMenuItem(
@@ -163,8 +155,8 @@ class CustomDrawer extends StatelessWidget {
                               loc.english,
                               style: TextStyle(
                                 color: isDark
-                                    ? Colors.white
-                                    : AppColors.primaryNavy,
+                                    ? AppColors.white70
+                                    : AppColors.textDark,
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -176,8 +168,8 @@ class CustomDrawer extends StatelessWidget {
                               loc.urdu,
                               style: TextStyle(
                                 color: isDark
-                                    ? Colors.white
-                                    : AppColors.primaryNavy,
+                                    ? AppColors.white70
+                                    : AppColors.textDark,
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -192,11 +184,10 @@ class CustomDrawer extends StatelessWidget {
                   ),
                 ),
 
-                _buildDivider(theme),
+                _buildDivider(),
 
                 _buildMenuItem(
                   context,
-                  theme,
                   loc.helpSupport,
                   Icons.help_outline_rounded,
                   () => _launchURL('https://mera-ashiana.com/contact'),
@@ -204,7 +195,6 @@ class CustomDrawer extends StatelessWidget {
                 ),
                 _buildMenuItem(
                   context,
-                  theme,
                   loc.aboutUs,
                   Icons.info_outline_rounded,
                   () => _launchURL('https://mera-ashiana.com/about'),
@@ -214,25 +204,31 @@ class CustomDrawer extends StatelessWidget {
             ),
           ),
 
-          // Logout Section
-          Container(
-            margin: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: isDark
-                  ? Colors.red.withOpacity(0.1)
-                  : Colors.red.withOpacity(0.05),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: _buildMenuItem(
-              context,
-              theme,
-              loc.logout,
-              Icons.logout_rounded,
-              () => AuthHelper.showLogoutDialog(context),
-              iconColor: Colors.redAccent,
-              textColor: Colors.redAccent,
-              isDark: isDark,
-            ),
+          // Logout Section — only show if logged in
+          ValueListenableBuilder<bool>(
+            valueListenable: AuthState.isLoggedIn,
+            builder: (context, isLoggedIn, _) {
+              if (!isLoggedIn) return const SizedBox.shrink();
+
+              return Container(
+                margin: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? AppColors.errorRed.withOpacity(0.1)
+                      : AppColors.errorRed.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: _buildMenuItem(
+                  context,
+                  loc.logout,
+                  Icons.logout_rounded,
+                  () => AuthHelper.showLogoutDialog(context),
+                  iconColor: AppColors.errorRed,
+                  textColor: AppColors.errorRed,
+                  isDark: isDark,
+                ),
+              );
+            },
           ),
           const SizedBox(height: 10),
         ],
@@ -240,16 +236,15 @@ class CustomDrawer extends StatelessWidget {
     );
   }
 
-  Widget _buildDivider(ThemeData theme) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-      child: Divider(height: 1, color: theme.dividerColor.withOpacity(0.05)),
+  Widget _buildDivider() {
+    return const Padding(
+      padding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      child: Divider(height: 1, color: AppColors.borderGrey),
     );
   }
 
   Widget _buildMenuItem(
     BuildContext context,
-    ThemeData theme,
     String title,
     IconData icon,
     VoidCallback onTap, {
@@ -257,11 +252,10 @@ class CustomDrawer extends StatelessWidget {
     Color? textColor,
     required bool isDark,
   }) {
-    // Logic for visibility in Dark Mode
     final Color finalIconColor =
         iconColor ?? (isDark ? AppColors.accentYellow : AppColors.primaryNavy);
     final Color finalTextColor =
-        textColor ?? (isDark ? Colors.white : AppColors.primaryNavy);
+        textColor ?? (isDark ? AppColors.white70 : AppColors.textDark);
 
     return ListTile(
       leading: Icon(icon, color: finalIconColor, size: 22),
