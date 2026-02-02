@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:mera_ashiana/l10n/app_localizations.dart';
 import 'package:mera_ashiana/services/agency_service.dart';
 import 'package:mera_ashiana/models/agency_model.dart';
 import 'package:mera_ashiana/theme/app_colors.dart';
@@ -28,7 +29,6 @@ class _RealEstateRegistrationScreenState
   File? _selectedLogo;
   bool _isSubmitting = false;
 
-  // Yellow brand color for Dark Mode
   final Color yellowAccent = const Color(0xFFFFD54F);
 
   @override
@@ -49,7 +49,7 @@ class _RealEstateRegistrationScreenState
     }
   }
 
-  Future<void> _handleSubmission() async {
+  Future<void> _handleSubmission(AppLocalizations loc) async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isSubmitting = true);
 
@@ -67,8 +67,8 @@ class _RealEstateRegistrationScreenState
 
     if (result['success'] == true && result['agency'] != null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Agency registered successfully"),
+        SnackBar(
+          content: Text(loc.registrationSuccess),
           backgroundColor: Colors.green,
         ),
       );
@@ -87,23 +87,19 @@ class _RealEstateRegistrationScreenState
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final loc = AppLocalizations.of(context)!;
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor, // Adaptive Background
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
-          "Agency Registration",
-          style: TextStyle(
+          loc.agencyRegistration,
+          style: const TextStyle(
             fontWeight: FontWeight.bold,
-            color: isDark
-                ? Colors.white
-                : Colors
-                      .white, // White looks good on both Navy and Dark Surface
+            color: Colors.white,
           ),
         ),
-        backgroundColor: isDark
-            ? theme.colorScheme.surface
-            : AppColors.primaryNavy,
+        backgroundColor: isDark ? theme.colorScheme.surface : AppColors.primaryNavy,
         elevation: 0,
         centerTitle: true,
         iconTheme: IconThemeData(color: isDark ? yellowAccent : Colors.white),
@@ -118,50 +114,50 @@ class _RealEstateRegistrationScreenState
               Center(child: _buildLogoSection(isDark)),
               const SizedBox(height: 40),
 
-              _buildSectionLabel("Company Profile", isDark),
+              _buildSectionLabel(loc.companyProfile, isDark),
               const SizedBox(height: 12),
               _buildModernField(
                 context: context,
                 controller: _nameController,
-                label: "Agency Name",
+                label: loc.agencyName,
                 icon: Icons.business_rounded,
-                validator: (v) => v!.isEmpty ? "Enter agency name" : null,
+                validator: (v) => v!.isEmpty ? loc.requiredError : null,
               ),
               const SizedBox(height: 16),
               _buildModernField(
                 context: context,
                 controller: _descController,
-                label: "Business Description",
+                label: loc.businessDescription,
                 icon: Icons.info_outline_rounded,
                 maxLines: 3,
               ),
 
               const SizedBox(height: 24),
-              _buildSectionLabel("Contact Details", isDark),
+              _buildSectionLabel(loc.contactDetails, isDark),
               const SizedBox(height: 12),
               _buildModernField(
                 context: context,
                 controller: _phoneController,
-                label: "Business Phone",
+                label: loc.businessPhone,
                 icon: Icons.phone_android_rounded,
-                validator: (v) => v!.isEmpty ? "Enter phone number" : null,
+                validator: (v) => v!.isEmpty ? loc.requiredError : null,
               ),
               const SizedBox(height: 16),
               _buildModernField(
                 context: context,
                 controller: _emailController,
-                label: "Business Email",
+                label: loc.businessEmail,
                 icon: Icons.email_outlined,
                 validator: (v) =>
-                    v != null && v.contains('@') ? null : "Enter a valid email",
+                v != null && v.contains('@') ? null : loc.invalidEmail,
               ),
               const SizedBox(height: 16),
               _buildModernField(
                 context: context,
                 controller: _addressController,
-                label: "Office Address",
+                label: loc.officeAddress,
                 icon: Icons.location_on_outlined,
-                validator: (v) => v!.isEmpty ? "Enter address" : null,
+                validator: (v) => v!.isEmpty ? loc.requiredError : null,
               ),
 
               const SizedBox(height: 40),
@@ -173,30 +169,29 @@ class _RealEstateRegistrationScreenState
                   style: ElevatedButton.styleFrom(
                     backgroundColor: yellowAccent,
                     foregroundColor: AppColors.primaryNavy,
-                    // Dark text on yellow for contrast
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(15),
                     ),
                   ),
-                  onPressed: _isSubmitting ? null : _handleSubmission,
+                  onPressed: _isSubmitting ? null : () => _handleSubmission(loc),
                   child: _isSubmitting
                       ? SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            color: AppColors.primaryNavy,
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : const Text(
-                          "REGISTER AGENCY",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            letterSpacing: 1.1,
-                          ),
-                        ),
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                      color: AppColors.primaryNavy,
+                      strokeWidth: 2,
+                    ),
+                  )
+                      : Text(
+                    loc.registerAgency.toUpperCase(),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      letterSpacing: 1.1,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -231,18 +226,14 @@ class _RealEstateRegistrationScreenState
           ),
           child: CircleAvatar(
             radius: 55,
-            backgroundColor: isDark
-                ? const Color(0xFF1E1E1E)
-                : AppColors.background,
-            backgroundImage: _selectedLogo != null
-                ? FileImage(_selectedLogo!)
-                : null,
+            backgroundColor: isDark ? const Color(0xFF1E1E1E) : AppColors.background,
+            backgroundImage: _selectedLogo != null ? FileImage(_selectedLogo!) : null,
             child: _selectedLogo == null
                 ? Icon(
-                    Icons.store_rounded,
-                    size: 45,
-                    color: isDark ? Colors.white24 : AppColors.borderGrey,
-                  )
+              Icons.store_rounded,
+              size: 45,
+              color: isDark ? Colors.white24 : AppColors.borderGrey,
+            )
                 : null,
           ),
         ),
@@ -309,7 +300,6 @@ class _RealEstateRegistrationScreenState
           borderRadius: BorderRadius.circular(15),
           borderSide: BorderSide(color: yellowAccent, width: 2),
         ),
-        // ... (Error borders remain same)
       ),
     );
   }

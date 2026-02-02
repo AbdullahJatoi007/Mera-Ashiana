@@ -182,4 +182,85 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get blogs => 'Blogs';
+
+  @override
+  String get postProperty => 'Post Property';
+
+  @override
+  String get propertyPhotos => 'Property Photos';
+
+  @override
+  String get generalDetails => 'General Details';
+
+  @override
+  String get contactInformation => 'Contact Information';
+
+  @override
+  String get title => 'Title*';
+
+  @override
+  String get price => 'Price*';
+
+  @override
+  String get area => 'Area (sqft)*';
+
+  @override
+  String get beds => 'Beds*';
+
+  @override
+  String get baths => 'Baths*';
+
+  @override
+  String get description => 'Description*';
+
+  @override
+  String get phone => 'Phone*';
+
+  @override
+  String get email => 'Email*';
+
+  @override
+  String get submitAd => 'SUBMIT AD';
+
+  @override
+  String get add => 'Add';
+
+  @override
+  String get photoError => 'Please add at least one photo';
+
+  @override
+  String get requiredError => 'Required';
+
+  @override
+  String get agencyRegistration => 'Agency Registration';
+
+  @override
+  String get companyProfile => 'Company Profile';
+
+  @override
+  String get agencyName => 'Agency Name';
+
+  @override
+  String get businessDescription => 'Business Description';
+
+  @override
+  String get contactDetails => 'Contact Details';
+
+  @override
+  String get businessPhone => 'Business Phone';
+
+  @override
+  String get businessEmail => 'Business Email';
+
+  @override
+  String get officeAddress => 'Office Address';
+
+  @override
+  String get registerAgency => 'REGISTER AGENCY';
+
+  @override
+  String get invalidEmail => 'Enter a valid email';
+
+  @override
+  String get registrationSuccess => 'Agency registered successfully';
 }

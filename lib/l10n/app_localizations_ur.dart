@@ -182,4 +182,85 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get blogs => 'Blogs';
+
+  @override
+  String get postProperty => 'پراپرٹی لگائیں';
+
+  @override
+  String get propertyPhotos => 'پراپرٹی کی تصاویر';
+
+  @override
+  String get generalDetails => 'عام تفصیلات';
+
+  @override
+  String get contactInformation => 'رابطے کی معلومات';
+
+  @override
+  String get title => 'عنوان*';
+
+  @override
+  String get price => 'قیمت*';
+
+  @override
+  String get area => 'رقبہ (مربع فٹ)*';
+
+  @override
+  String get beds => 'بیڈز*';
+
+  @override
+  String get baths => 'باتھ*';
+
+  @override
+  String get description => 'تفصیل*';
+
+  @override
+  String get phone => 'فون نمبر*';
+
+  @override
+  String get email => 'ای میل*';
+
+  @override
+  String get submitAd => 'اشتہار جمع کریں';
+
+  @override
+  String get add => 'شامل کریں';
+
+  @override
+  String get photoError => 'براہ کرم کم از کم ایک تصویر شامل کریں';
+
+  @override
+  String get requiredError => 'ضروری ہے';
+
+  @override
+  String get agencyRegistration => 'ایجنسی کی رجسٹریشن';
+
+  @override
+  String get companyProfile => 'کمپنی پروفائل';
+
+  @override
+  String get agencyName => 'ایجنسی کا نام';
+
+  @override
+  String get businessDescription => 'کاروباری تفصیل';
+
+  @override
+  String get contactDetails => 'رابطے کی تفصیلات';
+
+  @override
+  String get businessPhone => 'کاروباری فون';
+
+  @override
+  String get businessEmail => 'کاروباری ای میل';
+
+  @override
+  String get officeAddress => 'دفتر کا پتہ';
+
+  @override
+  String get registerAgency => 'ایجنسی رجسٹر کریں';
+
+  @override
+  String get invalidEmail => 'درست ای میل درج کریں';
+
+  @override
+  String get registrationSuccess => 'ایجنسی کامیابی کے ساتھ رجسٹر ہو گئی';
 }

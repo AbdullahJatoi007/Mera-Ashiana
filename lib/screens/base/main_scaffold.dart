@@ -5,7 +5,7 @@ import 'package:mera_ashiana/base_screens/home_screen.dart';
 import 'package:mera_ashiana/base_screens/properties_screen.dart';
 import 'package:mera_ashiana/base_screens/search_screen.dart';
 import 'package:mera_ashiana/base_screens/favourite_screen.dart';
-import 'package:mera_ashiana/base_screens/profile_screen.dart';
+import 'package:mera_ashiana/profile//profile_screen.dart';
 import 'package:mera_ashiana/screens/drawer/custom_drawer.dart';
 import 'package:mera_ashiana/authentication_bottom_sheet.dart';
 import 'package:mera_ashiana/services/auth_state.dart';

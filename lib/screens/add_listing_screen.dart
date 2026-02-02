@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:mera_ashiana/services/listing_service.dart';
+import 'package:mera_ashiana/l10n/app_localizations.dart';
 import 'package:mera_ashiana/theme/app_colors.dart';
 
 class AddListingScreen extends StatefulWidget {
@@ -30,14 +30,12 @@ class _AddListingScreenState extends State<AddListingScreen> {
   final _bedsController = TextEditingController();
   final _bathsController = TextEditingController();
 
-  String _selectedType = 'house';
-
-  void _submitData() async {
+  void _submitData(AppLocalizations loc) async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedImages.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Please add at least one photo"),
+        SnackBar(
+          content: Text(loc.photoError), // Localized Error
           backgroundColor: AppColors.errorRed,
         ),
       );
@@ -45,7 +43,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
     }
 
     setState(() => _isSubmitting = true);
-    // ... (Your existing submission logic remains the same)
+    // Submission logic here...
     setState(() => _isSubmitting = false);
   }
 
@@ -56,16 +54,17 @@ class _AddListingScreenState extends State<AddListingScreen> {
     final colorScheme = theme.colorScheme;
     final Color yellowAccent = const Color(0xFFFFD54F);
 
+    // The "loc" helper
+    final loc = AppLocalizations.of(context)!;
+
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor, // Corrected for Dark Mode
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
-          "Post Property",
-          style: TextStyle(
+          loc.postProperty, // Localized Title
+          style: const TextStyle(
             fontWeight: FontWeight.bold,
-            color: isDark
-                ? Colors.white
-                : Colors.white, // Keeping white for AppBar contrast
+            color: Colors.white,
           ),
         ),
         backgroundColor: isDark ? colorScheme.surface : AppColors.primaryNavy,
@@ -74,28 +73,24 @@ class _AddListingScreenState extends State<AddListingScreen> {
         iconTheme: IconThemeData(color: isDark ? yellowAccent : Colors.white),
       ),
       body: _isSubmitting
-          ? Center(
-              child: CircularProgressIndicator(
-                color: isDark ? yellowAccent : AppColors.primaryNavy,
-              ),
-            )
+          ? Center(child: CircularProgressIndicator(color: yellowAccent))
           : Form(
               key: _formKey,
               child: ListView(
                 padding: const EdgeInsets.all(20),
                 children: [
-                  _buildSectionTitle("Property Photos", isDark, yellowAccent),
+                  _buildSectionTitle(loc.propertyPhotos, isDark),
                   const SizedBox(height: 12),
-                  _buildImagePicker(isDark, yellowAccent),
+                  _buildImagePicker(isDark, yellowAccent, loc),
                   const SizedBox(height: 24),
 
-                  _buildSectionTitle("General Details", isDark, yellowAccent),
+                  _buildSectionTitle(loc.generalDetails, isDark),
                   const SizedBox(height: 12),
                   _buildModernField(
-                    context: context,
                     controller: _titleController,
-                    label: "Title*",
+                    label: loc.title,
                     icon: Icons.title_rounded,
+                    errorMsg: loc.requiredError,
                   ),
                   const SizedBox(height: 12),
 
@@ -103,20 +98,20 @@ class _AddListingScreenState extends State<AddListingScreen> {
                     children: [
                       Expanded(
                         child: _buildModernField(
-                          context: context,
                           controller: _priceController,
-                          label: "Price*",
+                          label: loc.price,
                           icon: Icons.money,
                           isNumber: true,
+                          errorMsg: loc.requiredError,
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: _buildModernField(
-                          context: context,
                           controller: _areaController,
-                          label: "Area (sqft)*",
+                          label: loc.area,
                           icon: Icons.square_foot,
+                          errorMsg: loc.requiredError,
                         ),
                       ),
                     ],
@@ -127,81 +122,75 @@ class _AddListingScreenState extends State<AddListingScreen> {
                     children: [
                       Expanded(
                         child: _buildModernField(
-                          context: context,
                           controller: _bedsController,
-                          label: "Beds*",
+                          label: loc.beds,
                           icon: Icons.bed,
                           isNumber: true,
+                          errorMsg: loc.requiredError,
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: _buildModernField(
-                          context: context,
                           controller: _bathsController,
-                          label: "Baths*",
+                          label: loc.baths,
                           icon: Icons.bathtub,
                           isNumber: true,
+                          errorMsg: loc.requiredError,
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
                   _buildModernField(
-                    context: context,
                     controller: _locationController,
-                    label: "Location*",
+                    label: loc.location,
                     icon: Icons.location_on_outlined,
+                    errorMsg: loc.requiredError,
                   ),
                   const SizedBox(height: 12),
                   _buildModernField(
-                    context: context,
                     controller: _descController,
-                    label: "Description*",
+                    label: loc.description,
                     icon: Icons.description_outlined,
                     maxLines: 3,
+                    errorMsg: loc.requiredError,
                   ),
 
                   const SizedBox(height: 24),
-                  _buildSectionTitle(
-                    "Contact Information",
-                    isDark,
-                    yellowAccent,
-                  ),
+                  _buildSectionTitle(loc.contactInformation, isDark),
                   const SizedBox(height: 12),
                   _buildModernField(
-                    context: context,
                     controller: _phoneController,
-                    label: "Phone*",
+                    label: loc.phone,
                     icon: Icons.phone_android,
                     isNumber: true,
+                    errorMsg: loc.requiredError,
                   ),
                   const SizedBox(height: 12),
                   _buildModernField(
-                    context: context,
                     controller: _emailController,
-                    label: "Email*",
+                    label: loc.email,
                     icon: Icons.alternate_email,
                     isEmail: true,
+                    errorMsg: loc.requiredError,
                   ),
 
                   const SizedBox(height: 32),
 
                   ElevatedButton(
-                    onPressed: _submitData,
+                    onPressed: () => _submitData(loc),
                     style: ElevatedButton.styleFrom(
                       minimumSize: const Size(double.infinity, 55),
                       backgroundColor: yellowAccent,
                       foregroundColor: AppColors.primaryNavy,
-                      elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(15),
                       ),
                     ),
-                    child: const Text(
-                      "SUBMIT AD",
-                      style: TextStyle(
-                        fontSize: 16,
+                    child: Text(
+                      loc.submitAd.toUpperCase(),
+                      style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         letterSpacing: 1.1,
                       ),
@@ -214,7 +203,9 @@ class _AddListingScreenState extends State<AddListingScreen> {
     );
   }
 
-  Widget _buildSectionTitle(String title, bool isDark, Color accent) {
+  // --- Helper Methods ---
+
+  Widget _buildSectionTitle(String title, bool isDark) {
     return Text(
       title,
       style: TextStyle(
@@ -226,10 +217,10 @@ class _AddListingScreenState extends State<AddListingScreen> {
   }
 
   Widget _buildModernField({
-    required BuildContext context,
     required TextEditingController controller,
     required String label,
     required IconData icon,
+    required String errorMsg, // Pass the translation
     bool isNumber = false,
     bool isEmail = false,
     int maxLines = 1,
@@ -248,10 +239,6 @@ class _AddListingScreenState extends State<AddListingScreen> {
       ),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(
-          color: isDark ? Colors.white70 : AppColors.textGrey,
-          fontSize: 13,
-        ),
         prefixIcon: Icon(
           icon,
           color: isDark ? const Color(0xFFFFD54F) : AppColors.primaryNavy,
@@ -259,26 +246,13 @@ class _AddListingScreenState extends State<AddListingScreen> {
         ),
         filled: true,
         fillColor: isDark ? const Color(0xFF1E1E1E) : AppColors.background,
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: isDark ? Colors.white10 : AppColors.borderGrey,
-          ),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFFFD54F), width: 2),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.errorRed),
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
       ),
-      validator: (v) => (v == null || v.isEmpty) ? "Required" : null,
+      validator: (v) => (v == null || v.trim().isEmpty) ? errorMsg : null,
     );
   }
 
-  Widget _buildImagePicker(bool isDark, Color accent) {
+  Widget _buildImagePicker(bool isDark, Color accent, AppLocalizations loc) {
     return SizedBox(
       height: 100,
       child: ListView.builder(
@@ -288,7 +262,6 @@ class _AddListingScreenState extends State<AddListingScreen> {
           if (i == _selectedImages.length) {
             return GestureDetector(
               onTap: () async {
-                HapticFeedback.lightImpact();
                 final pics = await _picker.pickMultiImage();
                 if (pics.isNotEmpty) {
                   setState(
@@ -313,7 +286,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                     Icon(Icons.add_photo_alternate_outlined, color: accent),
                     const SizedBox(height: 4),
                     Text(
-                      "Add",
+                      loc.add,
                       style: TextStyle(
                         fontSize: 12,
                         color: isDark ? Colors.white70 : AppColors.primaryNavy,
@@ -326,37 +299,14 @@ class _AddListingScreenState extends State<AddListingScreen> {
           }
           return Padding(
             padding: const EdgeInsets.only(right: 12.0),
-            child: Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(15),
-                  child: Image.file(
-                    _selectedImages[i],
-                    width: 100,
-                    height: 100,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-                Positioned(
-                  right: 4,
-                  top: 4,
-                  child: GestureDetector(
-                    onTap: () => setState(() => _selectedImages.removeAt(i)),
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.close,
-                        size: 14,
-                        color: AppColors.errorRed,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(15),
+              child: Image.file(
+                _selectedImages[i],
+                width: 100,
+                height: 100,
+                fit: BoxFit.cover,
+              ),
             ),
           );
         },

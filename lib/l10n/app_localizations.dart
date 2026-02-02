@@ -445,6 +445,168 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Blogs'**
   String get blogs;
+
+  /// No description provided for @postProperty.
+  ///
+  /// In en, this message translates to:
+  /// **'Post Property'**
+  String get postProperty;
+
+  /// No description provided for @propertyPhotos.
+  ///
+  /// In en, this message translates to:
+  /// **'Property Photos'**
+  String get propertyPhotos;
+
+  /// No description provided for @generalDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'General Details'**
+  String get generalDetails;
+
+  /// No description provided for @contactInformation.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact Information'**
+  String get contactInformation;
+
+  /// No description provided for @title.
+  ///
+  /// In en, this message translates to:
+  /// **'Title*'**
+  String get title;
+
+  /// No description provided for @price.
+  ///
+  /// In en, this message translates to:
+  /// **'Price*'**
+  String get price;
+
+  /// No description provided for @area.
+  ///
+  /// In en, this message translates to:
+  /// **'Area (sqft)*'**
+  String get area;
+
+  /// No description provided for @beds.
+  ///
+  /// In en, this message translates to:
+  /// **'Beds*'**
+  String get beds;
+
+  /// No description provided for @baths.
+  ///
+  /// In en, this message translates to:
+  /// **'Baths*'**
+  String get baths;
+
+  /// No description provided for @description.
+  ///
+  /// In en, this message translates to:
+  /// **'Description*'**
+  String get description;
+
+  /// No description provided for @phone.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone*'**
+  String get phone;
+
+  /// No description provided for @email.
+  ///
+  /// In en, this message translates to:
+  /// **'Email*'**
+  String get email;
+
+  /// No description provided for @submitAd.
+  ///
+  /// In en, this message translates to:
+  /// **'SUBMIT AD'**
+  String get submitAd;
+
+  /// No description provided for @add.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get add;
+
+  /// No description provided for @photoError.
+  ///
+  /// In en, this message translates to:
+  /// **'Please add at least one photo'**
+  String get photoError;
+
+  /// No description provided for @requiredError.
+  ///
+  /// In en, this message translates to:
+  /// **'Required'**
+  String get requiredError;
+
+  /// No description provided for @agencyRegistration.
+  ///
+  /// In en, this message translates to:
+  /// **'Agency Registration'**
+  String get agencyRegistration;
+
+  /// No description provided for @companyProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Company Profile'**
+  String get companyProfile;
+
+  /// No description provided for @agencyName.
+  ///
+  /// In en, this message translates to:
+  /// **'Agency Name'**
+  String get agencyName;
+
+  /// No description provided for @businessDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Business Description'**
+  String get businessDescription;
+
+  /// No description provided for @contactDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact Details'**
+  String get contactDetails;
+
+  /// No description provided for @businessPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Business Phone'**
+  String get businessPhone;
+
+  /// No description provided for @businessEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Business Email'**
+  String get businessEmail;
+
+  /// No description provided for @officeAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Office Address'**
+  String get officeAddress;
+
+  /// No description provided for @registerAgency.
+  ///
+  /// In en, this message translates to:
+  /// **'REGISTER AGENCY'**
+  String get registerAgency;
+
+  /// No description provided for @invalidEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid email'**
+  String get invalidEmail;
+
+  /// No description provided for @registrationSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Agency registered successfully'**
+  String get registrationSuccess;
 }
 
 class _AppLocalizationsDelegate

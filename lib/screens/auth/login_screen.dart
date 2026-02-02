@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mera_ashiana/screens/auth/signup_screen.dart';
 import 'package:mera_ashiana/services/google_login_service.dart';
-import 'package:mera_ashiana/services/login_service.dart';
+import 'package:mera_ashiana/services/auth/login_service.dart';
 import 'package:mera_ashiana/screens/base/main_scaffold.dart';
 
 class LoginScreen extends StatefulWidget {
