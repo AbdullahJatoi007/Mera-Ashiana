@@ -49,11 +49,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _loadUser() async {
     if (!AuthState.isLoggedIn.value) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _user = null;
           _isLoading = false;
         });
+      }
       return;
     }
     if (mounted) setState(() => _isLoading = true);
@@ -97,10 +98,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final loc = AppLocalizations.of(context)!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    if (_isLoading)
+    if (_isLoading) {
       return const Center(
         child: CircularProgressIndicator(color: AppColors.primaryNavy),
       );
+    }
     if (_user == null) return _buildGuestView(isDark);
 
     return RefreshIndicator(

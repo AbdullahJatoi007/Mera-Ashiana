@@ -52,7 +52,6 @@ class _MainScaffoldState extends State<MainScaffold> {
       backgroundColor: Colors.transparent,
       barrierColor: Colors.black54,
       builder: (_) => AuthenticationBottomSheet(
-        title: "Sign In",
         onLoginSuccess: () {
           setState(() => _selectedIndex = targetIndex);
         },
