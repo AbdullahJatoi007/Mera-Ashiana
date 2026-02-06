@@ -2,15 +2,13 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:mera_ashiana/network/endpoints.dart';
 import 'package:mera_ashiana/services/auth/login_service.dart';
 import 'package:mera_ashiana/services/profile_service.dart';
 import 'package:mera_ashiana/models/user_model.dart';
 import 'package:mera_ashiana/models/agency_model.dart';
 
 class AgencyService {
-  static const String baseUrl =
-      "https://api-staging.mera-ashiana.com/api/agency";
-
   /// Fetches the current user's agency details
   /// Updated to handle both single object and list responses
   static Future<Agency?> fetchMyAgency() async {
@@ -19,7 +17,7 @@ class AgencyService {
       if (cookie == null) return null;
 
       final response = await http.get(
-        Uri.parse('$baseUrl/my-agency'),
+        Uri.parse(Endpoints.myAgency),
         headers: {'Accept': 'application/json', 'Cookie': cookie},
       );
 
@@ -59,7 +57,7 @@ class AgencyService {
       // Get the current profile to link the user ID
       final User user = await ProfileService.fetchProfile();
 
-      final Uri uri = Uri.parse('$baseUrl/register');
+      final Uri uri = Uri.parse(Endpoints.registerAgency);
       var request = http.MultipartRequest('POST', uri);
 
       request.headers.addAll({'Accept': 'application/json', 'Cookie': cookie});

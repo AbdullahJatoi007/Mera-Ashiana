@@ -5,6 +5,7 @@ import 'auth_config.dart';
 import 'auth_exceptions.dart';
 import 'secure_storage_service.dart';
 import 'rate_limiter.dart';
+import 'package:mera_ashiana/network/endpoints.dart';
 
 class AuthService {
   static Future<Map<String, String>> _getHeaders({
@@ -90,7 +91,7 @@ class AuthService {
     // FIXED: Added 'async' before the '=>'
     final response = await _makeRequest(
       request: () async => http.post(
-        Uri.parse('${AuthConfig.baseUrl}/register'),
+        Uri.parse(Endpoints.login),
         headers: await _getHeaders(),
         body: jsonEncode({
           'username': username.trim(),
@@ -137,7 +138,7 @@ class AuthService {
       // FIXED: Added 'async' before the '=>'
       final response = await _makeRequest(
         request: () async => http.post(
-          Uri.parse('${AuthConfig.baseUrl}/login'),
+          Uri.parse(Endpoints.register),
           headers: await _getHeaders(),
           body: jsonEncode({
             'email': email.trim().toLowerCase(),

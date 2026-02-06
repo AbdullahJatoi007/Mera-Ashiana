@@ -1,12 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:mera_ashiana/network/endpoints.dart';
 import 'package:mera_ashiana/services/auth/login_service.dart';
 import 'package:mera_ashiana/models/user_model.dart';
 
 class ProfileService {
-  static const String baseUrl = "https://api-staging.mera-ashiana.com/api";
-
   // --- CACHE VARIABLE ---
   static User? _cachedUser;
 
@@ -37,7 +36,7 @@ class ProfileService {
     // 3. Proceed with API call
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/profile'),
+        Uri.parse(Endpoints.profile),
         headers: {'Accept': 'application/json', 'Cookie': cookie},
       );
 
@@ -74,7 +73,7 @@ class ProfileService {
 
     var request = http.MultipartRequest(
       'POST',
-      Uri.parse('$baseUrl/profile/update'),
+      Uri.parse(Endpoints.updateProfile),
     );
 
     request.headers.addAll({'Accept': 'application/json', 'Cookie': cookie});

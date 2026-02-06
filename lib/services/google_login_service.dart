@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:mera_ashiana/network/endpoints.dart';
 
 class GoogleLoginService {
-  static const String baseUrl = 'https://api-staging.mera-ashiana.com/api';
   static final FlutterSecureStorage _storage = FlutterSecureStorage();
 
   // Use .instance for 7.2.0
@@ -24,7 +24,7 @@ class GoogleLoginService {
 
       // Send to backend
       final response = await http.post(
-        Uri.parse('$baseUrl/google-login'),
+        Uri.parse(Endpoints.googleLogin),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'id_token': idToken,

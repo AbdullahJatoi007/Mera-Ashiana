@@ -2,17 +2,14 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:mera_ashiana/models/blog_model.dart';
+import 'package:mera_ashiana/network/endpoints.dart';
 
 class BlogService {
-  // Corrected Base URL based on your app.js: app.use("/admin/blogs", blogs);
-  static const String baseUrl =
-      "https://api-staging.mera-ashiana.com/admin/blogs";
-
   /// Fetches the list of all blogs from the backend
   static Future<List<Blog>> fetchAllBlogs() async {
     try {
       final response = await http.get(
-        Uri.parse(baseUrl),
+        Uri.parse(Endpoints.allBlogs),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
@@ -42,7 +39,7 @@ class BlogService {
   static Future<Blog> fetchBlogById(int id) async {
     try {
       final response = await http.get(
-        Uri.parse("$baseUrl/$id"),
+        Uri.parse(Endpoints.blogById(id)),
         headers: {'Accept': 'application/json'},
       );
 

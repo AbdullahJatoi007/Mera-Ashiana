@@ -2,11 +2,10 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:mera_ashiana/models/property_model.dart';
+import 'package:mera_ashiana/network/endpoints.dart';
 import 'package:mera_ashiana/services/auth/login_service.dart';
 
 class FavoriteService {
-  static const String baseUrl = "https://api-staging.mera-ashiana.com/api";
-
   // Using Set for O(1) lookups. ValueNotifier triggers UI on value change.
   static ValueNotifier<Set<int>> favoriteIds = ValueNotifier<Set<int>>({});
   static Map<int, PropertyModel> favoritesMap = {};
@@ -15,28 +14,32 @@ class FavoriteService {
   static ValueNotifier<int> favoriteIdsCount = ValueNotifier<int>(0);
 
   static Future<bool> toggleFavorite(
-      int propertyId,
-      bool currentlyLiked, {
-        PropertyModel? propertyData,
-      }) async {
+    int propertyId,
+    bool currentlyLiked, {
+    PropertyModel? propertyData,
+  }) async {
     final cookie = await LoginService.getAuthCookie();
     if (cookie == null || cookie.isEmpty) {
       throw 'Authentication required. Please log in.';
     }
 
     final action = currentlyLiked ? 'unlike' : 'like';
-    final url = Uri.parse('$baseUrl/properties/$propertyId/$action');
+    final url = Uri.parse(
+      currentlyLiked
+          ? Endpoints.unlikeProperty(propertyId)
+          : Endpoints.likeProperty(propertyId),
+    );
 
     try {
       final response = currentlyLiked
           ? await http.delete(
-        url,
-        headers: {'Cookie': cookie, 'Accept': 'application/json'},
-      )
+              url,
+              headers: {'Cookie': cookie, 'Accept': 'application/json'},
+            )
           : await http.post(
-        url,
-        headers: {'Cookie': cookie, 'Accept': 'application/json'},
-      );
+              url,
+              headers: {'Cookie': cookie, 'Accept': 'application/json'},
+            );
 
       debugPrint("FAV API [${response.statusCode}]: ${response.body}");
 
@@ -68,7 +71,7 @@ class FavoriteService {
 
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/my-likes'),
+        Uri.parse(Endpoints.myFavorites),
         headers: {'Cookie': cookie, 'Accept': 'application/json'},
       );
 

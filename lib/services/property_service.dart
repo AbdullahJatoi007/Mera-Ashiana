@@ -1,13 +1,11 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:mera_ashiana/network/endpoints.dart';
 import '../models/property_model.dart';
 
 class PropertyService {
-  static const String apiUrl =
-      "https://api-staging.mera-ashiana.com/api/properties";
-
   static Future<List<PropertyModel>> fetchProperties() async {
-    final response = await http.get(Uri.parse(apiUrl));
+    final response = await http.get(Uri.parse(Endpoints.properties));
 
     if (response.statusCode == 200) {
       final decoded = json.decode(response.body);

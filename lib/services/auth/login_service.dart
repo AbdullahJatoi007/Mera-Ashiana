@@ -1,9 +1,6 @@
-import 'auth_config.dart';
 import 'auth_service.dart';
 
 class LoginService {
-  static const String baseUrl = AuthConfig.baseUrl;
-
   static Future<String?> getAuthCookie() => AuthService.getAuthCookie();
 
   static Future<void> logout() => AuthService.logout();

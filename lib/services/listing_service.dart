@@ -3,11 +3,10 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import 'package:mera_ashiana/models/listing_model.dart';
+import 'package:mera_ashiana/network/endpoints.dart';
 import 'package:mera_ashiana/services/auth/login_service.dart';
 
 class ListingService {
-  static const String _baseUrl = "https://api-staging.mera-ashiana.com/api";
-
   /// Real-time listings count
   static ValueNotifier<int> myListingsCount = ValueNotifier<int>(0);
 
@@ -18,7 +17,7 @@ class ListingService {
   }) async {
     try {
       final cookie = await LoginService.getAuthCookie();
-      var uri = Uri.parse("$_baseUrl/listings");
+      var uri = Uri.parse(Endpoints.createListing);
 
       var request = http.MultipartRequest('POST', uri);
 
@@ -66,7 +65,7 @@ class ListingService {
     try {
       final cookie = await LoginService.getAuthCookie();
       final response = await http.get(
-        Uri.parse("$_baseUrl/my-listings"),
+        Uri.parse(Endpoints.myListings),
         headers: {'Cookie': cookie ?? '', 'Accept': 'application/json'},
       );
 
@@ -90,7 +89,7 @@ class ListingService {
   static Future<bool> deleteListing(int id) async {
     try {
       final cookie = await LoginService.getAuthCookie();
-      final url = Uri.parse("$_baseUrl/listings/$id");
+      final url = Uri.parse(Endpoints.deleteListing(id));
 
       final response = await http.delete(
         url,
