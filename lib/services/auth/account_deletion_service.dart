@@ -1,4 +1,5 @@
 import 'package:http/http.dart' as http;
+import 'package:mera_ashiana/network/endpoints.dart';
 import 'auth_config.dart';
 import 'auth_service.dart';
 import 'auth_exceptions.dart';
@@ -15,7 +16,7 @@ class AccountDeletionService {
 
     try {
       final response = await http.delete(
-        Uri.parse('${AuthConfig.baseUrl}/account/delete'),
+        Uri.parse('${Endpoints.apiBase}/account/delete'),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',

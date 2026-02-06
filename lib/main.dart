@@ -1,27 +1,38 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // Added for System UI control
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:mera_ashiana/l10n/app_localizations.dart';
 import 'package:mera_ashiana/screens/splash_screen.dart';
 import 'package:mera_ashiana/theme/app_theme.dart';
 import 'package:mera_ashiana/services/auth_state.dart';
+import 'package:mera_ashiana/core//api_client.dart';
 
-// Global notifiers for app-wide state changes
+// Global navigation key for 401 redirects
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 final ValueNotifier<Locale> appLocale = ValueNotifier(const Locale('en'));
 final ValueNotifier<ThemeMode> appThemeMode = ValueNotifier(ThemeMode.system);
 
-void main() {
-  // 1. Ensures Flutter is ready before plugin initialization
+// ✅ Changed to async so we can await the AuthState
+void main() async {
+  // 1. Ensures Flutter is ready
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 2. Google Play 2026 Mandate: Support Edge-to-Edge display for Android 15
-  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  // 2. ✅ CRITICAL: Initialize ApiClient BEFORE anything else
+  // This prevents the "LateInitializationError: Field 'dio' has not been initialized"
+  ApiClient.init();
 
-  // Optional: Set status bar to transparent to match Edge-to-Edge design
-  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent,
-    systemNavigationBarColor: Colors.transparent,
-  ));
+  // 3. ✅ Initialize AuthState (Check if user is logged in)
+  await AuthState.initialize();
+
+  // 4. Google Play 2026 Mandate: Edge-to-Edge
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      systemNavigationBarColor: Colors.transparent,
+    ),
+  );
 
   runApp(const MyApp());
 }
@@ -31,7 +42,6 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Nested builders to listen to Theme and Locale changes reactively
     return ValueListenableBuilder<Locale>(
       valueListenable: appLocale,
       builder: (context, currentLocale, _) {
@@ -39,15 +49,14 @@ class MyApp extends StatelessWidget {
           valueListenable: appThemeMode,
           builder: (context, currentThemeMode, _) {
             return MaterialApp(
+              // ✅ Added navigatorKey for global logout/redirects
+              navigatorKey: navigatorKey,
+
               title: 'Mera Ashiana',
               debugShowCheckedModeBanner: false,
 
-              // Localization Configuration
               locale: currentLocale,
-              supportedLocales: const [
-                Locale('en'),
-                Locale('ur'),
-              ],
+              supportedLocales: const [Locale('en'), Locale('ur')],
               localizationsDelegates: const [
                 AppLocalizations.delegate,
                 GlobalMaterialLocalizations.delegate,
@@ -55,26 +64,25 @@ class MyApp extends StatelessWidget {
                 GlobalCupertinoLocalizations.delegate,
               ],
 
-              // Theme Configuration
-              themeAnimationDuration: Duration.zero, // Faster transitions
+              themeAnimationDuration: Duration.zero,
               theme: AppTheme.lightTheme.copyWith(
-                // Required for Android 15 Predictive Back Support
                 pageTransitionsTheme: const PageTransitionsTheme(
                   builders: {
-                    TargetPlatform.android: PredictiveBackPageTransitionsBuilder(),
+                    TargetPlatform.android:
+                        PredictiveBackPageTransitionsBuilder(),
                   },
                 ),
               ),
               darkTheme: AppTheme.darkTheme.copyWith(
                 pageTransitionsTheme: const PageTransitionsTheme(
                   builders: {
-                    TargetPlatform.android: PredictiveBackPageTransitionsBuilder(),
+                    TargetPlatform.android:
+                        PredictiveBackPageTransitionsBuilder(),
                   },
                 ),
               ),
               themeMode: currentThemeMode,
 
-              // Initial Route
               home: const SplashScreen(),
             );
           },

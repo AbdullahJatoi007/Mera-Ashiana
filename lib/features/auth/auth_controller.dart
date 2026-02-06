@@ -14,7 +14,7 @@ class AuthController {
     String password,
     VoidCallback onSuccess,
   ) async {
-    _performAuthAction(
+    await _performAuthAction(
       context,
       "Signing in...",
       () => AuthService.login(email: email, password: password),
@@ -27,19 +27,19 @@ class AuthController {
     BuildContext context,
     String name,
     String email,
-    String pass,
-    String confirm,
+    String password,
+    String confirmPassword,
     bool isAgent,
     VoidCallback onSuccess,
   ) async {
-    _performAuthAction(
+    await _performAuthAction(
       context,
       "Creating account...",
       () => AuthService.register(
         username: name,
         email: email,
-        password: pass,
-        repassword: confirm,
+        password: password,
+        repassword: confirmPassword,
         type: isAgent ? "agent" : "user",
       ),
       onSuccess,
@@ -81,6 +81,7 @@ class AuthController {
   ) async {
     HapticFeedback.mediumImpact();
     LoaderHelper.instance.showLoader(context, message: loadingMsg);
+
     try {
       await action();
       LoaderHelper.instance.hideLoader(context);
@@ -94,7 +95,7 @@ class AuthController {
     } on AuthException catch (e) {
       LoaderHelper.instance.hideLoader(context);
       showError(context, e.message);
-    } catch (e) {
+    } catch (_) {
       LoaderHelper.instance.hideLoader(context);
       showError(context, "An unexpected error occurred.");
     }

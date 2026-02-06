@@ -14,17 +14,18 @@ class NetworkException extends AuthException {
 }
 
 class ValidationException extends AuthException {
-  ValidationException(String message) : super(message, code: 'VALIDATION_ERROR');
+  ValidationException(String message)
+    : super(message, code: 'VALIDATION_ERROR');
 }
 
 class RateLimitException extends AuthException {
   final DateTime retryAfter;
 
   RateLimitException(String message, this.retryAfter)
-      : super(message, code: 'RATE_LIMIT');
+    : super(message, code: 'RATE_LIMIT');
 }
 
 class UnauthorizedException extends AuthException {
   UnauthorizedException(String message)
-      : super(message, code: 'UNAUTHORIZED', statusCode: 401);
+    : super(message, code: 'UNAUTHORIZED', statusCode: 401);
 }

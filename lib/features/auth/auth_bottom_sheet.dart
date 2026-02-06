@@ -1,6 +1,6 @@
 import 'package:flutter/cupertino.dart';
-import 'package:mera_ashiana/features/screens/login_form.dart';
-import 'package:mera_ashiana/features/screens/register_form.dart';
+import '../screens/login_form.dart';
+import '../screens/register_form.dart';
 
 class AuthenticationBottomSheet extends StatefulWidget {
   final VoidCallback onLoginSuccess;

@@ -23,6 +23,7 @@ dependencies:
   intl: ^0.20.2
   lottie: ^3.1.0
   cupertino_icons: ^1.0.8
+  dio: ^5.9.1
 
 dev_dependencies:
   flutter_test:

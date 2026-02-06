@@ -5,13 +5,8 @@ class AuthState {
   static final ValueNotifier<bool> isLoggedIn = ValueNotifier<bool>(false);
 
   static Future<void> checkLoginStatus() async {
-    try {
-      final String? cookie = await LoginService.getAuthCookie();
-      // If cookie exists, we consider the user logged in
-      isLoggedIn.value = (cookie != null && cookie.isNotEmpty);
-    } catch (e) {
-      isLoggedIn.value = false;
-    }
+    final String? cookie = await LoginService.getAuthCookie();
+    isLoggedIn.value = (cookie != null && cookie.isNotEmpty);
   }
 
   static Future<void> initialize() => checkLoginStatus();

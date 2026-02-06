@@ -1,35 +1,38 @@
 class Endpoints {
-  // ================= BASES =================
-  static const apiBase = "https://api-staging.mera-ashiana.com/api";
-  static const blogBase = "https://api-staging.mera-ashiana.com/admin/blogs";
+  static const String _base = "https://api-staging.mera-ashiana.com";
+  static const String apiBase = "$_base/api";
 
-  // ================= AUTH =================
-  static const login = "$apiBase/login";
-  static const register = "$apiBase/register";
-  static const googleLogin = "$apiBase/google-login";
+  // AUTH
+  static const String login = "$apiBase/login";
+  static const String register = "$apiBase/register";
+  static const String googleLogin = "$apiBase/google-login";
 
-  // ================= PROFILE =================
-  static const profile = "$apiBase/profile";
-  static const updateProfile = "$apiBase/profile/update";
+  // PROFILE
+  static const String profile = "$apiBase/profile";
+  static const String updateProfile = "$apiBase/profile/update";
 
-  // ================= PROPERTIES =================
-  static const properties = "$apiBase/properties";
-  static const myFavorites = "$apiBase/my-likes";
+  // PROPERTIES
+  static const String properties = "$apiBase/properties";
+  static const String myFavorites = "$apiBase/my-likes";
 
   static String likeProperty(int id) => "$apiBase/properties/$id/like";
+
   static String unlikeProperty(int id) => "$apiBase/properties/$id/unlike";
 
-  // ================= LISTINGS =================
-  static const createListing = "$apiBase/listings";
-  static const myListings = "$apiBase/my-listings";
+  // LISTINGS
+  static const String createListing = "$apiBase/listings";
+  static const String myListings = "$apiBase/my-listings";
+
   static String deleteListing(int id) => "$apiBase/listings/$id";
 
-  // ================= AGENCY =================
-  static const agencyBase = "$apiBase/agency";
-  static const myAgency = "$agencyBase/my-agency";
-  static const registerAgency = "$agencyBase/register";
+  // AGENCY
+  static const String agencyBase = "$apiBase/agency";
+  static const String myAgency = "$agencyBase/my-agency";
+  static const String registerAgency = "$agencyBase/register";
 
-  // ================= BLOGS =================
-  static const allBlogs = blogBase;
+  // BLOGS
+  static const String blogBase = "$_base/admin/blogs";
+  static const String allBlogs = blogBase;
+
   static String blogById(int id) => "$blogBase/$id";
 }

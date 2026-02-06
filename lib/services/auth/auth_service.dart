@@ -88,10 +88,9 @@ class AuthService {
 
     final backendType = type == "user" ? "single_user" : "agent";
 
-    // FIXED: Added 'async' before the '=>'
     final response = await _makeRequest(
       request: () async => http.post(
-        Uri.parse(Endpoints.login),
+        Uri.parse(Endpoints.register),
         headers: await _getHeaders(),
         body: jsonEncode({
           'username': username.trim(),
@@ -138,7 +137,7 @@ class AuthService {
       // FIXED: Added 'async' before the '=>'
       final response = await _makeRequest(
         request: () async => http.post(
-          Uri.parse(Endpoints.register),
+          Uri.parse(Endpoints.login),
           headers: await _getHeaders(),
           body: jsonEncode({
             'email': email.trim().toLowerCase(),
