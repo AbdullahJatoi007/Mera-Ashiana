@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-
+import 'package:mera_ashiana/helpers/internet_helper.dart';
 import 'package:mera_ashiana/services/auth/secure_storage_service.dart';
 import 'package:mera_ashiana/services/auth/auth_config.dart';
 import 'package:mera_ashiana/network/endpoints.dart';
@@ -15,14 +15,16 @@ class ApiClient {
   static Dio? _dio;
 
   static Dio get dio {
-    if (_dio == null) init();
+    _dio ??= _initDio();
     return _dio!;
   }
-
   static void init() {
-    if (_dio != null) return;
+    dio; // forces Dio initialization safely
+  }
 
-    _dio = Dio(
+
+  static Dio _initDio() {
+    final dio = Dio(
       BaseOptions(
         baseUrl: Endpoints.apiBase,
         connectTimeout: const Duration(seconds: 30),
@@ -34,9 +36,9 @@ class ApiClient {
       ),
     );
 
-    _dio!.options.extra['withCredentials'] = true;
+    dio.options.extra['withCredentials'] = true;
 
-    _dio!.interceptors.add(
+    dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
           final cookie = await SecureStorageService.read(
@@ -48,28 +50,89 @@ class ApiClient {
           }
 
           if (kDebugMode) {
-            print("[API REQUEST] ${options.method} ${options.uri}");
-            print("[API HEADERS] ${options.headers}");
+            debugPrint('[API REQUEST] ${options.method} ${options.uri}');
           }
 
           handler.next(options);
         },
+
         onResponse: (response, handler) {
           if (kDebugMode) {
-            print("[API RESPONSE] ${response.statusCode}");
+            debugPrint('[API RESPONSE] ${response.statusCode}');
           }
           handler.next(response);
         },
-        onError: (e, handler) {
+
+        onError: (DioException e, handler) async {
           if (kDebugMode) {
-            print("[API ERROR BODY] ${e.response?.data}");
+            debugPrint('[API ERROR] ${e.type}');
           }
 
-          handler.reject(e);
+          // 🚫 No Internet
+          final hasInternet = await InternetHelper.hasInternetConnection();
+          if (!hasInternet) {
+            handler.reject(
+              DioException(
+                requestOptions: e.requestOptions,
+                error: NetworkException(
+                  'No internet connection. Please check your network and try again.',
+                ),
+                type: DioExceptionType.unknown,
+              ),
+            );
+            return;
+          }
+
+          // ⏱ Timeout
+          if (e.type == DioExceptionType.connectionTimeout ||
+              e.type == DioExceptionType.sendTimeout ||
+              e.type == DioExceptionType.receiveTimeout) {
+            handler.reject(
+              DioException(
+                requestOptions: e.requestOptions,
+                error: NetworkException('Request timed out. Please try again.'),
+                type: e.type,
+              ),
+            );
+            return;
+          }
+
+          // 🧱 Server error with response
+          if (e.response != null) {
+            final data = e.response?.data;
+            final message = data is Map && data['message'] != null
+                ? data['message'].toString()
+                : 'Service is currently unavailable. Please try again later.';
+
+            handler.reject(
+              DioException(
+                requestOptions: e.requestOptions,
+                response: e.response,
+                error: NetworkException(message),
+                type: DioExceptionType.badResponse,
+              ),
+            );
+            return;
+          }
+
+          // ❓ Unknown fallback
+          handler.reject(
+            DioException(
+              requestOptions: e.requestOptions,
+              error: NetworkException(
+                'Unexpected error occurred. Please try again.',
+              ),
+              type: DioExceptionType.unknown,
+            ),
+          );
         },
       ),
     );
+
+    return dio;
   }
+
+  // ---------- HTTP METHODS ----------
 
   static Future<Response> get(
     String path, {

@@ -3,15 +3,9 @@ import 'package:mera_ashiana/models/property_model.dart';
 import 'package:mera_ashiana/services/property_service.dart';
 import 'package:mera_ashiana/screens/project_details_screen.dart';
 import 'package:mera_ashiana/l10n/app_localizations.dart';
-
-// Brand Palette
-class AppColors {
-  static const Color primaryNavy = Color(0xFF0A1D37);
-  static const Color accentYellow = Color(0xFFFFC400);
-  static const Color white = Colors.white;
-  static const Color background = Color(0xFFF5F5F5);
-  static const Color textGrey = Color(0xFF757575);
-}
+import 'package:mera_ashiana/helpers/internet_helper.dart';
+import 'package:mera_ashiana/theme/app_colors.dart';
+import 'package:mera_ashiana/theme/app_colors_dark.dart';
 
 class PropertiesScreen extends StatelessWidget {
   final List<PropertyModel>? properties;
@@ -27,7 +21,7 @@ class PropertiesScreen extends StatelessWidget {
     final bool isFilteredView = properties != null;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF121212) : AppColors.background,
+      backgroundColor: isDark ? AppDarkColors.background : AppColors.background,
       appBar: isFilteredView
           ? AppBar(
               title: Text(
@@ -39,49 +33,83 @@ class PropertiesScreen extends StatelessWidget {
               ),
               centerTitle: true,
               elevation: 0,
-              backgroundColor: AppColors.primaryNavy,
+              backgroundColor: isDark
+                  ? AppDarkColors.primaryNavy
+                  : AppColors.primaryNavy,
               iconTheme: const IconThemeData(color: Colors.white),
             )
           : null,
       body: FutureBuilder<List<PropertyModel>>(
-        future: isFilteredView
-            ? Future.value(properties)
-            : _fetchAllProperties(),
+        future: _fetchProperties(isFilteredView),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(color: AppColors.primaryNavy),
+            return Center(
+              child: CircularProgressIndicator(
+                color: isDark
+                    ? AppDarkColors.primaryNavy
+                    : AppColors.primaryNavy,
+              ),
             );
           }
+
           if (snapshot.hasError ||
               !snapshot.hasData ||
               snapshot.data!.isEmpty) {
-            return _buildEmptyState(theme, isDark);
+            return _buildEmptyState(isDark, context);
           }
 
           final list = snapshot.data!;
 
-          return ListView.separated(
-            padding: const EdgeInsets.all(16),
-            itemCount: list.length,
-            separatorBuilder: (context, index) => const SizedBox(height: 20),
-            itemBuilder: (context, index) =>
-                _buildProjectCard(context, list[index], isDark),
+          return RefreshIndicator(
+            color: isDark ? AppDarkColors.accentYellow : AppColors.accentYellow,
+            onRefresh: () async {
+              bool connected = await InternetHelper.hasInternetConnection();
+              if (connected) {
+                (context as Element).reassemble();
+              } else {
+                _showNoInternetDialog(context);
+              }
+            },
+            child: ListView.separated(
+              padding: const EdgeInsets.all(16),
+              itemCount: list.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 20),
+              itemBuilder: (context, index) =>
+                  _buildProjectCard(context, list[index], isDark),
+            ),
           );
         },
       ),
     );
   }
 
-  Future<List<PropertyModel>> _fetchAllProperties() async {
-    try {
-      return await PropertyService.fetchProperties();
-    } catch (e) {
-      return [];
-    }
+  Future<List<PropertyModel>> _fetchProperties(bool isFilteredView) async {
+    bool connected = await InternetHelper.hasInternetConnection();
+    if (!connected) return [];
+    return isFilteredView
+        ? Future.value(properties)
+        : PropertyService.fetchProperties();
   }
 
-  Widget _buildEmptyState(ThemeData theme, bool isDark) {
+  void _showNoInternetDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("No Internet Connection"),
+        content: const Text(
+          "Please check your internet connection and try again.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("OK"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(bool isDark, BuildContext context) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -90,7 +118,7 @@ class PropertiesScreen extends StatelessWidget {
             Icons.house_siding_rounded,
             size: 80,
             color: isDark
-                ? Colors.white24
+                ? AppDarkColors.textSecondary
                 : AppColors.primaryNavy.withOpacity(0.1),
           ),
           const SizedBox(height: 16),
@@ -98,7 +126,7 @@ class PropertiesScreen extends StatelessWidget {
             "No properties found.",
             style: TextStyle(
               fontSize: 16,
-              color: isDark ? Colors.white70 : AppColors.textGrey,
+              color: isDark ? AppDarkColors.textSecondary : AppColors.textGrey,
             ),
           ),
         ],
@@ -115,7 +143,7 @@ class PropertiesScreen extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+        color: isDark ? AppDarkColors.surface : AppColors.white,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
@@ -139,7 +167,6 @@ class PropertiesScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Image Section with Status Badge
                 Stack(
                   children: [
                     Image.network(
@@ -147,12 +174,16 @@ class PropertiesScreen extends StatelessWidget {
                       height: 230,
                       width: double.infinity,
                       fit: BoxFit.cover,
-                      errorBuilder: (c, e, s) => Container(
+                      errorBuilder: (_, __, ___) => Container(
                         height: 230,
-                        color: isDark ? Colors.white10 : Colors.grey[200],
-                        child: const Icon(
+                        color: isDark
+                            ? AppDarkColors.surface
+                            : Colors.grey[200],
+                        child: Icon(
                           Icons.broken_image,
-                          color: AppColors.textGrey,
+                          color: isDark
+                              ? AppDarkColors.textSecondary
+                              : AppColors.textGrey,
                         ),
                       ),
                     ),
@@ -165,13 +196,19 @@ class PropertiesScreen extends StatelessWidget {
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.primaryNavy.withOpacity(0.9),
+                          color:
+                              (isDark
+                                      ? AppDarkColors.primaryNavy
+                                      : AppColors.primaryNavy)
+                                  .withOpacity(0.9),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
                           property.status.toUpperCase(),
-                          style: const TextStyle(
-                            color: AppColors.accentYellow,
+                          style: TextStyle(
+                            color: isDark
+                                ? AppDarkColors.accentYellow
+                                : AppColors.accentYellow,
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
                           ),
@@ -180,8 +217,6 @@ class PropertiesScreen extends StatelessWidget {
                     ),
                   ],
                 ),
-
-                // Info Section
                 Padding(
                   padding: const EdgeInsets.all(20),
                   child: Column(
@@ -199,15 +234,17 @@ class PropertiesScreen extends StatelessWidget {
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
                                 color: isDark
-                                    ? Colors.white
+                                    ? AppDarkColors.textPrimary
                                     : AppColors.primaryNavy,
                               ),
                             ),
                           ),
                           if (property.isFeatured == 1)
-                            const Icon(
+                            Icon(
                               Icons.verified_rounded,
-                              color: AppColors.accentYellow,
+                              color: isDark
+                                  ? AppDarkColors.accentYellow
+                                  : AppColors.accentYellow,
                               size: 22,
                             ),
                         ],
@@ -215,82 +252,24 @@ class PropertiesScreen extends StatelessWidget {
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.location_on_rounded,
                             size: 14,
-                            color: AppColors.accentYellow,
+                            color: isDark
+                                ? AppDarkColors.accentYellow
+                                : AppColors.accentYellow,
                           ),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
                               property.location,
-                              style: const TextStyle(
-                                color: AppColors.textGrey,
+                              style: TextStyle(
+                                color: isDark
+                                    ? AppDarkColors.textSecondary
+                                    : AppColors.textGrey,
                                 fontSize: 13,
                               ),
                               overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 16),
-                        child: Divider(height: 1, thickness: 0.5),
-                      ),
-
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                loc.startingFrom,
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  color: AppColors.textGrey,
-                                ),
-                              ),
-                              Text(
-                                "PKR ${property.price}",
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w900,
-                                  color: isDark
-                                      ? AppColors.accentYellow
-                                      : AppColors.primaryNavy,
-                                ),
-                              ),
-                            ],
-                          ),
-                          ElevatedButton(
-                            onPressed: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => ProjectDetailsScreen(
-                                  propertyId: property.id,
-                                ),
-                              ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.accentYellow,
-                              foregroundColor: AppColors.primaryNavy,
-                              elevation: 0,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 12,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: Text(
-                              loc.viewDetails,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                              ),
                             ),
                           ),
                         ],

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mera_ashiana/l10n/app_localizations.dart';
@@ -17,6 +18,7 @@ import 'package:mera_ashiana/screens/my_listings_screen.dart';
 import 'package:mera_ashiana/base_screens/favourite_screen.dart';
 import 'package:mera_ashiana/screens/AgencyStatusScreen.dart';
 import 'package:mera_ashiana/screens/agency_registration_screen.dart';
+import 'package:mera_ashiana/helpers/internet_helper.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -29,17 +31,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
   User? _user;
   Agency? _userAgency;
   bool _isLoading = true;
+  bool _hasError = false;
+  String _errorMsg = '';
+
+  // Internet monitoring
+  Timer? _internetTimer;
+  bool _wasOffline = false;
 
   @override
   void initState() {
     super.initState();
     _loadUser();
     AuthState.isLoggedIn.addListener(_handleAuthChange);
+
+    // Monitor internet every 3 seconds and auto-refresh if came back
+    _internetTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
+      final connected = await InternetHelper.hasInternetConnection();
+      if (connected && _wasOffline) {
+        _wasOffline = false;
+        _loadUser();
+      } else if (!connected) {
+        _wasOffline = true;
+      }
+    });
   }
 
   @override
   void dispose() {
     AuthState.isLoggedIn.removeListener(_handleAuthChange);
+    _internetTimer?.cancel();
     super.dispose();
   }
 
@@ -47,28 +67,56 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (mounted) _loadUser();
   }
 
+  /// Load user & agency data with internet detection and error handling
   Future<void> _loadUser() async {
-    if (!AuthState.isLoggedIn.value) {
-      if (mounted) {
-        setState(() {
-          _user = null;
-          _isLoading = false;
-        });
-      }
+    setState(() {
+      _isLoading = true;
+      _hasError = false;
+      _errorMsg = '';
+    });
+
+    // Check internet first
+    final connected = await InternetHelper.hasInternetConnection();
+    if (!connected) {
+      setState(() {
+        _isLoading = false;
+        _user = null;
+        _hasError = true;
+        _errorMsg = "No internet connection. Please check your connection.";
+      });
       return;
     }
-    if (mounted) setState(() => _isLoading = true);
+
+    // Check login state
+    if (!AuthState.isLoggedIn.value) {
+      setState(() {
+        _user = null;
+        _isLoading = false;
+        _hasError = false;
+        _errorMsg = '';
+      });
+      return;
+    }
+
     try {
       final results = await ProfileController.fetchAllData();
-      if (mounted) {
-        setState(() {
-          _user = results[0] as User?;
-          _userAgency = results[1] as Agency?;
-          _isLoading = false;
-        });
-      }
+      if (!mounted) return;
+      setState(() {
+        _user = results[0] as User?;
+        _userAgency = results[1] as Agency?;
+        _isLoading = false;
+        _hasError = false;
+        _errorMsg = '';
+      });
     } catch (e) {
-      if (mounted) setState(() => _isLoading = false);
+      if (!mounted) return;
+      setState(() {
+        _user = null;
+        _isLoading = false;
+        _hasError = true;
+        _errorMsg =
+            "Failed to load profile. Please check your internet connection.";
+      });
     }
   }
 
@@ -98,27 +146,134 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final loc = AppLocalizations.of(context)!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(color: AppColors.primaryNavy),
-      );
-    }
-    if (_user == null) return _buildGuestView(isDark);
-
     return RefreshIndicator(
       color: AppColors.accentYellow,
       onRefresh: _loadUser,
       child: ListView(
         padding: EdgeInsets.zero,
+        physics: const AlwaysScrollableScrollPhysics(),
         children: [
-          ProfileHeader(user: _user!),
-          if (_userAgency != null) _buildAgencyStatusBanner(isDark),
-          const SizedBox(height: 25),
-          _buildMetricsRow(isDark),
-          const SizedBox(height: 25),
-          _buildActionSection(loc, _user!.type, isDark),
-          const SizedBox(height: 40),
+          if (_isLoading)
+            SizedBox(
+              height: MediaQuery.of(context).size.height - kToolbarHeight,
+              child: const Center(
+                child: CircularProgressIndicator(color: AppColors.primaryNavy),
+              ),
+            )
+          else if (_hasError)
+            SizedBox(
+              height: MediaQuery.of(context).size.height - kToolbarHeight,
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 40),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.error_outline,
+                        size: 80,
+                        color: Colors.red,
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        _errorMsg,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: AppColors.textGrey,
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 30),
+                      ElevatedButton(
+                        onPressed: _loadUser,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.accentYellow,
+                          foregroundColor: AppColors.primaryNavy,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                        ),
+                        child: const Text(
+                          "Retry",
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            )
+          else if (_user == null)
+            SizedBox(
+              height: MediaQuery.of(context).size.height - kToolbarHeight,
+              child: _buildGuestView(isDark),
+            )
+          else ...[
+            ProfileHeader(user: _user!),
+            if (_userAgency != null) _buildAgencyStatusBanner(isDark),
+            const SizedBox(height: 25),
+            _buildMetricsRow(isDark),
+            const SizedBox(height: 25),
+            _buildActionSection(loc, _user!.type, isDark),
+            const SizedBox(height: 40),
+          ],
         ],
+      ),
+    );
+  }
+
+  // ==================== UI Widgets ====================
+
+  Widget _buildGuestView(bool isDark) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 40),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.account_circle_rounded,
+              size: 100,
+              color: isDark
+                  ? Colors.white10
+                  : AppColors.primaryNavy.withOpacity(0.1),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              "Profile & Settings",
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 22,
+                color: isDark ? Colors.white : AppColors.primaryNavy,
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              "Login to view your listings and manage your account.",
+              textAlign: TextAlign.center,
+              style: TextStyle(color: AppColors.textGrey),
+            ),
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              height: 55,
+              child: ElevatedButton(
+                onPressed: _showLoginSheet,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.accentYellow,
+                  foregroundColor: AppColors.primaryNavy,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                ),
+                child: const Text(
+                  "LOGIN / REGISTER",
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -136,10 +291,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         border: Border.all(color: statusColor.withOpacity(0.2)),
       ),
       child: ListTile(
-        onTap: () {
-          HapticFeedback.lightImpact();
-          _handleAgencyNavigation();
-        },
+        onTap: _handleAgencyNavigation,
         leading: Icon(
           status == 'approved' ? Icons.verified : Icons.pending,
           color: statusColor,
@@ -168,12 +320,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             'Listings',
             Icons.apartment_rounded,
             isDark,
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const MyListingsScreen()),
-              );
-            },
+            () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const MyListingsScreen()),
+            ),
           ),
           const SizedBox(width: 12),
           _buildMetricCard(
@@ -181,12 +331,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             'Favorites',
             Icons.favorite_rounded,
             isDark,
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const FavouritesScreen()),
-              );
-            },
+            () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const FavouritesScreen()),
+            ),
           ),
         ],
       ),
@@ -297,7 +445,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               'Agency Management',
               Icons.business_center_outlined,
               isDark,
-              () => _handleAgencyNavigation(),
+              _handleAgencyNavigation,
             ),
           _buildSettingsTile(
             'My Listings',
@@ -367,60 +515,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         HapticFeedback.lightImpact();
         onTap();
       },
-    );
-  }
-
-  Widget _buildGuestView(bool isDark) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 40),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.account_circle_rounded,
-              size: 100,
-              color: isDark
-                  ? Colors.white10
-                  : AppColors.primaryNavy.withOpacity(0.1),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              "Profile & Settings",
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 22,
-                color: isDark ? Colors.white : AppColors.primaryNavy,
-              ),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              "Login to view your listings and manage your account.",
-              textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.textGrey),
-            ),
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              height: 55,
-              child: ElevatedButton(
-                onPressed: _showLoginSheet,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.accentYellow,
-                  foregroundColor: AppColors.primaryNavy,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                ),
-                child: const Text(
-                  "LOGIN / REGISTER",
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

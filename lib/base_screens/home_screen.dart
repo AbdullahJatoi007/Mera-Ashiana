@@ -1,13 +1,15 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart'; // Added for Haptic Feedback
+import 'package:flutter/services.dart';
 import 'package:mera_ashiana/base_screens/properties_screen.dart';
 import 'package:mera_ashiana/models/property_model.dart';
 import 'package:mera_ashiana/services/property_service.dart';
 import 'package:mera_ashiana/screens/home/home_top_section.dart';
 import 'package:mera_ashiana/screens/project_details_screen.dart';
 import 'package:mera_ashiana/l10n/app_localizations.dart';
+import 'package:mera_ashiana/theme/app_colors.dart';
+import 'package:mera_ashiana/theme/app_colors_dark.dart'; // From second version
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -53,16 +55,8 @@ class _HomeScreenState extends State<HomeScreen> {
         .toList();
   }
 
-  /// Fetches properties from the service.
-  /// [isRefresh] determines if we show the full-screen loader or a silent update.
   Future<void> _fetchProperties({bool isRefresh = false}) async {
-    if (!isRefresh) {
-      setState(() {
-        _isLoading = true;
-        _hasError = false;
-      });
-    }
-
+    if (!isRefresh) setState(() => _isLoading = true);
     try {
       final properties = await PropertyService.fetchProperties();
       if (mounted) {
@@ -73,12 +67,12 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       }
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _hasError = true;
-          _isLoading = false;
-        });
-      }
+      if (!mounted) return;
+      setState(() {
+        _hasError = true;
+        _isLoading = false;
+      });
+      debugPrint('HomeScreen error: $e');
     }
   }
 
@@ -103,26 +97,35 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final double statusBarHeight = MediaQuery.of(context).padding.top;
     const double maxSnapOffset = 110.0;
 
-    // Loading State
     if (_isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    // Error State with Retry Best Practice
     if (_hasError) {
       return Scaffold(
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline, size: 48, color: Colors.red),
+              Icon(
+                Icons.error_outline,
+                size: 48,
+                color: isDark ? AppDarkColors.errorRed : AppColors.errorRed,
+              ),
               const SizedBox(height: 16),
-              const Text("Failed to load properties"),
+              const Text(
+                "Unable to load properties.\nPlease check your internet connection.",
+                textAlign: TextAlign.center,
+              ),
               TextButton(
-                onPressed: () => _fetchProperties(),
+                onPressed: () async {
+                  HapticFeedback.lightImpact();
+                  await _fetchProperties();
+                },
                 child: const Text("Try Again"),
               ),
             ],
@@ -132,15 +135,13 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
+      backgroundColor: isDark ? AppDarkColors.background : AppColors.background,
       body: RefreshIndicator(
-        // Google Best Practice: Use theme colors and position correctly
-        color: theme.colorScheme.primary,
-        backgroundColor: theme.colorScheme.surface,
+        color: isDark ? AppDarkColors.accentYellow : AppColors.accentYellow,
+        backgroundColor: isDark ? AppDarkColors.surface : AppColors.white,
         displacement: 40,
         edgeOffset: statusBarHeight + 20,
         onRefresh: () async {
-          // Play Console Best Practice: Provide haptic feedback on manual refresh
           HapticFeedback.mediumImpact();
           await _fetchProperties(isRefresh: true);
         },
@@ -154,7 +155,6 @@ class _HomeScreenState extends State<HomeScreen> {
           },
           child: CustomScrollView(
             controller: _scrollController,
-            // Use AlwaysScrollableScrollPhysics so swipe-to-refresh works even on short lists
             physics: const BouncingScrollPhysics(
               parent: AlwaysScrollableScrollPhysics(),
             ),
@@ -169,7 +169,9 @@ class _HomeScreenState extends State<HomeScreen> {
               // Category Selector
               SliverPadding(
                 padding: const EdgeInsets.only(top: 15, bottom: 5),
-                sliver: SliverToBoxAdapter(child: _buildCategoryList(theme)),
+                sliver: SliverToBoxAdapter(
+                  child: _buildCategoryList(theme, isDark),
+                ),
               ),
 
               // 1. FEATURED SECTION
@@ -204,7 +206,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   );
                 }),
               ),
-              SliverToBoxAdapter(child: _buildRecentlyAddedHorizontal(theme)),
+              SliverToBoxAdapter(
+                child: _buildRecentlyAddedHorizontal(theme, isDark),
+              ),
 
               // 3. FILTERED LIST SECTION
               SliverToBoxAdapter(
@@ -226,6 +230,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     (context, index) => _buildPropertyListItem(
                       theme,
                       _filteredProperties[index],
+                      isDark,
                     ),
                     childCount: _filteredProperties.length,
                   ),
@@ -238,9 +243,9 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // --- Helper Widgets Below ---
+  // --- Helper Widgets ---
 
-  Widget _buildCategoryList(ThemeData theme) {
+  Widget _buildCategoryList(ThemeData theme, bool isDark) {
     return SizedBox(
       height: 45,
       child: ListView.builder(
@@ -257,15 +262,21 @@ class _HomeScreenState extends State<HomeScreen> {
               avatar: Icon(
                 _categories[index]['icon'] as IconData,
                 size: 16,
-                color: isSelected ? Colors.white : theme.colorScheme.primary,
+                color: isSelected
+                    ? Colors.white
+                    : (isDark ? AppDarkColors.accentYellow : AppColors.primaryNavy),
               ),
               selected: isSelected,
               onSelected: (bool selected) =>
                   setState(() => _selectedCategoryIndex = index),
-              backgroundColor: theme.colorScheme.surface,
-              selectedColor: theme.colorScheme.primary,
+              backgroundColor: isDark ? AppDarkColors.surface : AppColors.white,
+              selectedColor: isDark
+                  ? AppDarkColors.accentYellow
+                  : AppColors.primaryNavy,
               labelStyle: TextStyle(
-                color: isSelected ? Colors.white : theme.colorScheme.onSurface,
+                color: isSelected
+                    ? Colors.white
+                    : (isDark ? Colors.white70 : Colors.black87),
                 fontWeight: FontWeight.bold,
               ),
               shape: RoundedRectangleBorder(
@@ -293,7 +304,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildRecentlyAddedHorizontal(ThemeData theme) {
+  Widget _buildRecentlyAddedHorizontal(ThemeData theme, bool isDark) {
     final recent = _properties.reversed.take(6).toList();
     return SizedBox(
       height: 160,
@@ -314,9 +325,9 @@ class _HomeScreenState extends State<HomeScreen> {
               width: 140,
               margin: const EdgeInsets.only(right: 12),
               decoration: BoxDecoration(
-                color: theme.colorScheme.surface,
+                color: isDark ? AppDarkColors.surface : AppColors.white,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: theme.dividerColor.withOpacity(0.05)),
+                border: Border.all(color: theme.dividerColor.withOpacity(0.1)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -331,7 +342,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       width: 140,
                       fit: BoxFit.cover,
                       errorBuilder: (c, e, s) =>
-                          Container(height: 90, color: Colors.grey[300]),
+                          Container(height: 90, color: Colors.grey[400]),
                     ),
                   ),
                   Padding(
@@ -368,7 +379,11 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildPropertyListItem(ThemeData theme, PropertyModel property) {
+  Widget _buildPropertyListItem(
+    ThemeData theme,
+    PropertyModel property,
+    bool isDark,
+  ) {
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
@@ -380,10 +395,10 @@ class _HomeScreenState extends State<HomeScreen> {
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: theme.colorScheme.surface,
+          color: isDark ? AppDarkColors.surface : AppColors.white,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10),
+            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
           ],
         ),
         child: Row(
@@ -398,7 +413,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   height: 90,
                   fit: BoxFit.cover,
                   errorBuilder: (c, e, s) =>
-                      Container(width: 90, height: 90, color: Colors.grey[200]),
+                      Container(width: 90, height: 90, color: Colors.grey[400]),
                 ),
               ),
             ),
@@ -466,10 +481,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// =============================================================================
-// AUTO SLIDING CARD
-// =============================================================================
-
+// AutoSlidingFeaturedCard remains largely the same but uses theme-inherited colors
 class AutoSlidingFeaturedCard extends StatefulWidget {
   final PropertyModel property;
   final ThemeData theme;
@@ -518,7 +530,6 @@ class _AutoSlidingFeaturedCardState extends State<AutoSlidingFeaturedCard> {
   @override
   Widget build(BuildContext context) {
     final hasImages = widget.property.images.isNotEmpty;
-
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
@@ -531,11 +542,11 @@ class _AutoSlidingFeaturedCardState extends State<AutoSlidingFeaturedCard> {
         margin: const EdgeInsets.only(right: 16, bottom: 5),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [
+          boxShadow: const [
             BoxShadow(
               color: Colors.black12,
               blurRadius: 10,
-              offset: const Offset(0, 5),
+              offset: Offset(0, 5),
             ),
           ],
         ),
@@ -546,16 +557,14 @@ class _AutoSlidingFeaturedCardState extends State<AutoSlidingFeaturedCard> {
               PageView.builder(
                 controller: _pageController,
                 itemCount: hasImages ? widget.property.images.length : 1,
-                itemBuilder: (context, i) {
-                  return Image.network(
-                    hasImages ? widget.property.images[i] : '',
-                    fit: BoxFit.cover,
-                    errorBuilder: (c, e, s) => Container(
-                      color: Colors.grey[300],
-                      child: const Icon(Icons.home, size: 50),
-                    ),
-                  );
-                },
+                itemBuilder: (context, i) => Image.network(
+                  hasImages ? widget.property.images[i] : '',
+                  fit: BoxFit.cover,
+                  errorBuilder: (c, e, s) => Container(
+                    color: Colors.grey[300],
+                    child: const Icon(Icons.home, size: 50),
+                  ),
+                ),
               ),
               const DecoratedBox(
                 decoration: BoxDecoration(
