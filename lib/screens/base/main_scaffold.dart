@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:mera_ashiana/base_screens/home/home_screen.dart';
 import 'package:mera_ashiana/l10n/app_localizations.dart';
-import 'package:mera_ashiana/base_screens/home_screen.dart';
+import 'package:mera_ashiana/base_screens/home/home_screen.dart';
 import 'package:mera_ashiana/base_screens/properties_screen.dart';
 import 'package:mera_ashiana/base_screens/search_screen.dart';
 import 'package:mera_ashiana/base_screens/favourite_screen.dart';
