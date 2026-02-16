@@ -34,7 +34,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _hasError = false;
   String _errorMsg = '';
 
-  // Internet monitoring
   Timer? _internetTimer;
   bool _wasOffline = false;
 
@@ -44,7 +43,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _loadUser();
     AuthState.isLoggedIn.addListener(_handleAuthChange);
 
-    // Monitor internet every 3 seconds and auto-refresh if came back
     _internetTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
       final connected = await InternetHelper.hasInternetConnection();
       if (connected && _wasOffline) {
@@ -67,7 +65,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (mounted) _loadUser();
   }
 
-  /// Load user & agency data with internet detection and error handling
   Future<void> _loadUser() async {
     setState(() {
       _isLoading = true;
@@ -75,7 +72,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _errorMsg = '';
     });
 
-    // Check internet first
     final connected = await InternetHelper.hasInternetConnection();
     if (!connected) {
       setState(() {
@@ -87,7 +83,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return;
     }
 
-    // Check login state
     if (!AuthState.isLoggedIn.value) {
       setState(() {
         _user = null;
@@ -146,78 +141,83 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final loc = AppLocalizations.of(context)!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return RefreshIndicator(
-      color: AppColors.accentYellow,
-      onRefresh: _loadUser,
-      child: ListView(
-        padding: EdgeInsets.zero,
-        physics: const AlwaysScrollableScrollPhysics(),
-        children: [
-          if (_isLoading)
-            SizedBox(
-              height: MediaQuery.of(context).size.height - kToolbarHeight,
-              child: const Center(
-                child: CircularProgressIndicator(color: AppColors.primaryNavy),
-              ),
-            )
-          else if (_hasError)
-            SizedBox(
-              height: MediaQuery.of(context).size.height - kToolbarHeight,
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 40),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.error_outline,
-                        size: 80,
-                        color: Colors.red,
-                      ),
-                      const SizedBox(height: 20),
-                      Text(
-                        _errorMsg,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: AppColors.textGrey,
-                          fontSize: 14,
-                        ),
-                      ),
-                      const SizedBox(height: 30),
-                      ElevatedButton(
-                        onPressed: _loadUser,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.accentYellow,
-                          foregroundColor: AppColors.primaryNavy,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(15),
-                          ),
-                        ),
-                        child: const Text(
-                          "Retry",
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ],
+    return Scaffold(
+      backgroundColor: isDark ? const Color(0xFF121212) : Colors.grey[50],
+      body: RefreshIndicator(
+        color: AppColors.accentYellow,
+        onRefresh: _loadUser,
+        child: ListView(
+          padding: EdgeInsets.zero,
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
+            if (_isLoading)
+              SizedBox(
+                height: MediaQuery.of(context).size.height - kToolbarHeight,
+                child: const Center(
+                  child: CircularProgressIndicator(
+                    color: AppColors.primaryNavy,
                   ),
                 ),
-              ),
-            )
-          else if (_user == null)
-            SizedBox(
-              height: MediaQuery.of(context).size.height - kToolbarHeight,
-              child: _buildGuestView(isDark),
-            )
-          else ...[
-            ProfileHeader(user: _user!),
-            if (_userAgency != null) _buildAgencyStatusBanner(isDark),
-            const SizedBox(height: 25),
-            _buildMetricsRow(isDark),
-            const SizedBox(height: 25),
-            _buildActionSection(loc, _user!.type, isDark),
-            const SizedBox(height: 40),
+              )
+            else if (_hasError)
+              SizedBox(
+                height: MediaQuery.of(context).size.height - kToolbarHeight,
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 40),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.error_outline,
+                          size: 80,
+                          color: Colors.red,
+                        ),
+                        const SizedBox(height: 20),
+                        Text(
+                          _errorMsg,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: AppColors.textGrey,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 30),
+                        ElevatedButton(
+                          onPressed: _loadUser,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.accentYellow,
+                            foregroundColor: AppColors.primaryNavy,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(15),
+                            ),
+                          ),
+                          child: const Text(
+                            "Retry",
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              )
+            else if (_user == null)
+              SizedBox(
+                height: MediaQuery.of(context).size.height - kToolbarHeight,
+                child: _buildGuestView(isDark),
+              )
+            else ...[
+              ProfileHeader(user: _user!),
+              if (_userAgency != null) _buildAgencyStatusBanner(isDark),
+              const SizedBox(height: 25),
+              _buildMetricsRow(isDark),
+              const SizedBox(height: 25),
+              _buildActionSection(loc, _user!.type, isDark),
+              const SizedBox(height: 40),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
