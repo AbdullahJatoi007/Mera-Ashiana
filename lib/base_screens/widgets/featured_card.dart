@@ -1,20 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:mera_ashiana/models/property_model.dart';
+import 'package:mera_ashiana/models/listing_model.dart';
 import 'package:mera_ashiana/base_screens/widgets/auto_sliding_featured_card.dart';
 
 class FeaturedProjects extends StatelessWidget {
-  final List<PropertyModel> properties;
+  final List<Listing> listings;
   final ThemeData theme;
 
   const FeaturedProjects({
     super.key,
-    required this.properties,
+    required this.listings,
     required this.theme,
   });
 
   @override
   Widget build(BuildContext context) {
-    final featured = properties.where((p) => p.isFeatured == 1).toList();
+    final featured = listings.where((l) => l.isFeatured).toList();
+
     if (featured.isEmpty) return const SizedBox.shrink();
 
     return SizedBox(
@@ -23,8 +24,10 @@ class FeaturedProjects extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         itemCount: featured.length,
-        itemBuilder: (context, index) =>
-            AutoSlidingFeaturedCard(property: featured[index], theme: theme),
+        itemBuilder: (context, index) => AutoSlidingFeaturedCard(
+          listing: featured[index],
+          theme: theme,
+        ),
       ),
     );
   }

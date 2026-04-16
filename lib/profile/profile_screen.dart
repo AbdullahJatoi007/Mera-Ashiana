@@ -211,7 +211,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ProfileHeader(user: _user!),
               if (_userAgency != null) _buildAgencyStatusBanner(isDark),
               const SizedBox(height: 25),
-              _buildMetricsRow(isDark),
+              // _buildMetricsRow(isDark),
               const SizedBox(height: 25),
               _buildActionSection(loc, _user!.type, isDark),
               const SizedBox(height: 40),
@@ -310,36 +310,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildMetricsRow(bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Row(
-        children: [
-          _buildMetricCard(
-            ListingService.myListingsCount,
-            'Listings',
-            Icons.apartment_rounded,
-            isDark,
-            () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const MyListingsScreen()),
-            ),
-          ),
-          const SizedBox(width: 12),
-          _buildMetricCard(
-            FavoriteService.favoriteIdsCount,
-            'Favorites',
-            Icons.favorite_rounded,
-            isDark,
-            () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const FavouritesScreen()),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // Widget _buildMetricsRow(bool isDark) {
+  //   return Padding(
+  //     padding: const EdgeInsets.symmetric(horizontal: 20),
+  //     child: Row(
+  //       children: [
+  //         _buildMetricCard(
+  //           ListingService.myListingsCount,
+  //           'Listings',
+  //           Icons.apartment_rounded,
+  //           isDark,
+  //           () => Navigator.push(
+  //             context,
+  //             MaterialPageRoute(builder: (_) => const MyListingsScreen()),
+  //           ),
+  //         ),
+  //         const SizedBox(width: 12),
+  //         _buildMetricCard(
+  //           FavoriteService.favoriteIdsCount,
+  //           'Favorites',
+  //           Icons.favorite_rounded,
+  //           isDark,
+  //           () => Navigator.push(
+  //             context,
+  //             MaterialPageRoute(builder: (_) => const FavouritesScreen()),
+  //           ),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   Widget _buildMetricCard(
     ValueNotifier<int> notifier,
@@ -447,15 +447,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
               isDark,
               _handleAgencyNavigation,
             ),
-          _buildSettingsTile(
-            'My Listings',
-            Icons.format_list_bulleted_rounded,
-            isDark,
-            () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const MyListingsScreen()),
-            ),
-          ),
+          // _buildSettingsTile(
+          //   'My Listings',
+          //   Icons.format_list_bulleted_rounded,
+          //   isDark,
+          //   () => Navigator.push(
+          //     context,
+          //     MaterialPageRoute(builder: (_) => const MyListingsScreen()),
+          //   ),
+          // ),
           _buildSettingsTile(
             'About Us',
             Icons.info_outline_rounded,

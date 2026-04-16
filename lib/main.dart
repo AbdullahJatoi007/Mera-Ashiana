@@ -5,32 +5,32 @@ import 'package:mera_ashiana/l10n/app_localizations.dart';
 import 'package:mera_ashiana/screens/splash_screen.dart';
 import 'package:mera_ashiana/theme/app_theme.dart';
 import 'package:mera_ashiana/services/auth_state.dart';
-import 'package:mera_ashiana/core//api_client.dart';
+import 'package:mera_ashiana/core/api_client.dart';
 
-// Global navigation key for 401 redirects
+// Global navigation key for 401 redirects and global context access
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
+// Global Notifiers for Locale and Theme
 final ValueNotifier<Locale> appLocale = ValueNotifier(const Locale('en'));
 final ValueNotifier<ThemeMode> appThemeMode = ValueNotifier(ThemeMode.system);
 
-// ✅ Changed to async so we can await the AuthState
 void main() async {
-  // 1. Ensures Flutter is ready
+  // 1. Ensures Flutter framework is fully initialized before async calls
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 2. ✅ CRITICAL: Initialize ApiClient BEFORE anything else
-  // This prevents the "LateInitializationError: Field 'dio' has not been initialized"
-  ApiClient.init();
+  // 2. ✅ ApiClient.init() removed as it is now self-initializing
 
-  // 3. ✅ Initialize AuthState (Check if user is logged in)
+  // 3. Initialize AuthState (Check if user is logged in via local storage/cookies)
+  // Ensure that AuthState.initialize() handles its own ApiClient dependency internally
   await AuthState.initialize();
 
-  // 4. Google Play 2026 Mandate: Edge-to-Edge
+  // 4. System UI Configuration (Edge-to-Edge for modern Android/iOS look)
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
       systemNavigationBarColor: Colors.transparent,
+      systemNavigationBarIconBrightness: Brightness.dark,
     ),
   );
 
@@ -49,12 +49,13 @@ class MyApp extends StatelessWidget {
           valueListenable: appThemeMode,
           builder: (context, currentThemeMode, _) {
             return MaterialApp(
-              // ✅ Added navigatorKey for global logout/redirects
+              // Required for redirects from background services/interceptors
               navigatorKey: navigatorKey,
 
               title: 'Mera Ashiana',
               debugShowCheckedModeBanner: false,
 
+              // Localization setup
               locale: currentLocale,
               supportedLocales: const [Locale('en'), Locale('ur')],
               localizationsDelegates: const [
@@ -64,6 +65,7 @@ class MyApp extends StatelessWidget {
                 GlobalCupertinoLocalizations.delegate,
               ],
 
+              // Theme Configuration with Predictive Back support for Android 14+
               themeAnimationDuration: Duration.zero,
               theme: AppTheme.lightTheme.copyWith(
                 pageTransitionsTheme: const PageTransitionsTheme(
@@ -83,6 +85,7 @@ class MyApp extends StatelessWidget {
               ),
               themeMode: currentThemeMode,
 
+              // Entry Point
               home: const SplashScreen(),
             );
           },

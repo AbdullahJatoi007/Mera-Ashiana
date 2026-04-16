@@ -12,6 +12,7 @@ class AuthTextField extends StatelessWidget {
   final TextInputAction textInputAction;
   final FocusNode? focusNode;
   final void Function(String)? onFieldSubmitted;
+  final int? maxLength;
 
   const AuthTextField({
     super.key,
@@ -24,7 +25,7 @@ class AuthTextField extends StatelessWidget {
     this.keyboardType = TextInputType.text,
     this.textInputAction = TextInputAction.next,
     this.focusNode,
-    this.onFieldSubmitted,
+    this.onFieldSubmitted, this.maxLength,
   });
 
   @override

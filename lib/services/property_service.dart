@@ -1,12 +1,17 @@
-import '../models/property_model.dart';
+import '../models/listing_model.dart';
 import '../core/api_client.dart';
 import '../network/endpoints.dart';
+import 'package:flutter/foundation.dart';
 
 class PropertyService {
-  static Future<List<PropertyModel>> fetchProperties() async {
-    final response = await ApiClient.get(Endpoints.properties);
-    // Dio automatically decodes JSON into response.data
-    final List list = response.data['data'];
-    return list.map((e) => PropertyModel.fromJson(e)).toList();
+  static Future<List<Listing>> fetchProperties() async {
+    try {
+      final response = await ApiClient.get(Endpoints.listings);
+      final List rawData = response.data['data'] ?? [];
+      return rawData.map((e) => Listing.fromJson(e)).toList();
+    } catch (e) {
+      debugPrint('PropertyService Error: $e');
+      rethrow;
+    }
   }
 }

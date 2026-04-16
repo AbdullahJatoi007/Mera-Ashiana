@@ -1,66 +1,39 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import '../network/endpoints.dart';
 import '../services/auth/account_service.dart';
 import '../screens/base/main_scaffold.dart';
+import '../services/auth/auth_config.dart';
+import '../services/auth/auth_exceptions.dart';
+import '../services/auth/auth_service.dart';
+import '../services/auth/secure_storage_service.dart';
+class AccountDeletionService {
+  static Future<void> requestAccountDeletion() async {
+    // ✅ Changed from getAuthCookie to reading access_token
+    final token = await SecureStorageService.read(key: 'access_token');
 
-class DeleteAccountHelper {
-  static void confirmDeletion(BuildContext context) {
-    bool isLoading = false;
+    if (token == null) {
+      throw UnauthorizedException('No active session found.');
+    }
 
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) {
-          return AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            title: const Text("Confirm Account Deletion"),
-            content: isLoading
-                ? const Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(color: Colors.red),
-                SizedBox(height: 15),
-                Text("Processing request..."),
-              ],
-            )
-                : const Text("Are you sure? This will permanently remove all your data. This action cannot be undone."),
-            actions: isLoading ? [] : [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("Keep Account"),
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                  foregroundColor: Colors.white,
-                ),
-                onPressed: () async {
-                  setState(() => isLoading = true);
-
-                  try {
-                    await AccountService.deleteUserAccount();
-
-                    if (!context.mounted) return;
-
-                    // Exit to home and clear all screens
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(builder: (context) => const MainScaffold()),
-                          (route) => false,
-                    );
-                  } catch (e) {
-                    setState(() => isLoading = false);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(e.toString())),
-                    );
-                  }
-                },
-                child: const Text("Delete Everything"),
-              ),
-            ],
-          );
+    try {
+      final response = await http.delete(
+        Uri.parse('${Endpoints.apiBase}/account/delete'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token', // ✅ Use Bearer Token
         },
-      ),
-    );
+      ).timeout(AuthConfig.connectionTimeout);
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        await AuthService.logout();
+      } else {
+        throw AuthException('Deletion failed: ${response.statusCode}');
+      }
+    } catch (e) {
+      if (e is AuthException) rethrow;
+      throw NetworkException('Unable to process deletion.');
+    }
   }
 }

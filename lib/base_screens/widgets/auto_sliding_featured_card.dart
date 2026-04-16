@@ -1,15 +1,15 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:mera_ashiana/models/property_model.dart';
+import 'package:mera_ashiana/models/listing_model.dart';
 import 'package:mera_ashiana/screens/project_details_screen.dart';
 
 class AutoSlidingFeaturedCard extends StatefulWidget {
-  final PropertyModel property;
+  final Listing listing;
   final ThemeData theme;
 
   const AutoSlidingFeaturedCard({
     super.key,
-    required this.property,
+    required this.listing,
     required this.theme,
   });
 
@@ -18,7 +18,8 @@ class AutoSlidingFeaturedCard extends StatefulWidget {
       _AutoSlidingFeaturedCardState();
 }
 
-class _AutoSlidingFeaturedCardState extends State<AutoSlidingFeaturedCard> {
+class _AutoSlidingFeaturedCardState
+    extends State<AutoSlidingFeaturedCard> {
   late PageController _pageController;
   int _currentPage = 0;
   Timer? _timer;
@@ -27,10 +28,13 @@ class _AutoSlidingFeaturedCardState extends State<AutoSlidingFeaturedCard> {
   void initState() {
     super.initState();
     _pageController = PageController();
-    if (widget.property.images.length > 1) {
+
+    final images = widget.listing.images;
+
+    if (images.length > 1) {
       _timer = Timer.periodic(const Duration(seconds: 4), (timer) {
         if (_pageController.hasClients) {
-          _currentPage = (_currentPage + 1) % widget.property.images.length;
+          _currentPage = (_currentPage + 1) % images.length;
           _pageController.animateToPage(
             _currentPage,
             duration: const Duration(milliseconds: 800),
@@ -50,12 +54,14 @@ class _AutoSlidingFeaturedCardState extends State<AutoSlidingFeaturedCard> {
 
   @override
   Widget build(BuildContext context) {
-    final hasImages = widget.property.images.isNotEmpty;
+    final hasImages = widget.listing.images.isNotEmpty;
+
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => ProjectDetailsScreen(propertyId: widget.property.id),
+          builder: (_) =>
+              ProjectDetailsScreen(propertyId: widget.listing.id),
         ),
       ),
       child: Container(
@@ -77,9 +83,9 @@ class _AutoSlidingFeaturedCardState extends State<AutoSlidingFeaturedCard> {
             children: [
               PageView.builder(
                 controller: _pageController,
-                itemCount: hasImages ? widget.property.images.length : 1,
+                itemCount: hasImages ? widget.listing.images.length : 1,
                 itemBuilder: (context, i) => Image.network(
-                  hasImages ? widget.property.images[i] : '',
+                  hasImages ? widget.listing.images[i] : '',
                   fit: BoxFit.cover,
                   errorBuilder: (c, e, s) => Container(
                     color: Colors.grey[300],
@@ -87,15 +93,19 @@ class _AutoSlidingFeaturedCardState extends State<AutoSlidingFeaturedCard> {
                   ),
                 ),
               ),
-              const DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Colors.transparent, Colors.black87],
+
+              const Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Colors.transparent, Colors.black87],
+                    ),
                   ),
                 ),
               ),
+
               Positioned(
                 bottom: 15,
                 left: 15,
@@ -104,7 +114,7 @@ class _AutoSlidingFeaturedCardState extends State<AutoSlidingFeaturedCard> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      widget.property.title,
+                      widget.listing.title,
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -113,11 +123,13 @@ class _AutoSlidingFeaturedCardState extends State<AutoSlidingFeaturedCard> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
+                    const SizedBox(height: 4),
                     Text(
-                      "PKR ${widget.property.price}",
+                      "PKR ${widget.listing.price}",
                       style: TextStyle(
                         color: widget.theme.colorScheme.secondary,
                         fontWeight: FontWeight.w900,
+                        fontSize: 15,
                       ),
                     ),
                   ],

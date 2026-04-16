@@ -1,13 +1,17 @@
 import 'auth_service.dart';
+import 'secure_storage_service.dart';
 
 class LoginService {
-  static Future<String?> getAuthCookie() => AuthService.getAuthCookie();
+  // Updated to read access_token
+  static Future<String?> getAuthToken() =>
+      SecureStorageService.read(key: 'access_token');
 
   static Future<void> logout() => AuthService.logout();
 
-  static Future<void> handleUnauthorized() => AuthService.handleUnauthorized();
+  // In your Dio Interceptor, this clears the token and updates AuthState
+  static Future<void> handleUnauthorized() => AuthService.logout();
 
-  static Future<Map<String, dynamic>> login({
+  static Future<void> login({
     required String email,
     required String password,
   }) => AuthService.login(email: email, password: password);

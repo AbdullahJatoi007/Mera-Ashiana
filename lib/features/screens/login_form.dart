@@ -17,15 +17,10 @@ class LoginForm extends StatefulWidget {
 
 class _LoginFormState extends State<LoginForm> {
   final _formKey = GlobalKey<FormState>();
-
-  // Controllers
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
-
-  // Focus Nodes
   final _passwordFocus = FocusNode();
 
-  // State
   bool _obscurePassword = true;
   bool _isGoogleLoading = false;
 
@@ -39,7 +34,6 @@ class _LoginFormState extends State<LoginForm> {
 
   void _handleLogin() {
     FocusScope.of(context).unfocus();
-
     if (!_formKey.currentState!.validate()) {
       HapticFeedback.mediumImpact();
       return;
@@ -61,22 +55,16 @@ class _LoginFormState extends State<LoginForm> {
       key: _formKey,
       child: Column(
         children: [
-          // Email Field
           AuthTextField(
             label: "Email",
             icon: Icons.email_outlined,
             controller: emailController,
             keyboardType: TextInputType.emailAddress,
             textInputAction: TextInputAction.next,
-            onFieldSubmitted: (_) {
-              FocusScope.of(context).requestFocus(_passwordFocus);
-            },
+            onFieldSubmitted: (_) => FocusScope.of(context).requestFocus(_passwordFocus),
             validator: ValidationHelper.validateEmail,
           ),
-
           const SizedBox(height: 16),
-
-          // Password Field
           AuthTextField(
             label: "Password",
             icon: Icons.lock_outline,
@@ -88,112 +76,18 @@ class _LoginFormState extends State<LoginForm> {
             toggle: () => setState(() => _obscurePassword = !_obscurePassword),
             validator: ValidationHelper.validatePassword,
           ),
-
           const SizedBox(height: 25),
-
-          // Main Login Button
-          SizedBox(
-            width: double.infinity,
-            height: 55,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.accentYellow,
-                foregroundColor: AppColors.primaryNavy,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15),
-                ),
-              ),
-              onPressed: _handleLogin,
-              child: const Text(
-                "LOGIN",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-            ),
+          _buildButton(
+            label: "LOGIN",
+            onPressed: _handleLogin,
+            color: AppColors.accentYellow,
+            textColor: AppColors.primaryNavy,
           ),
-
           const SizedBox(height: 20),
-
-          // OR Divider
-          Row(
-            children: [
-              Expanded(
-                child: Divider(
-                  color: isDark ? Colors.white24 : AppColors.borderGrey,
-                  thickness: 1,
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  "OR",
-                  style: TextStyle(
-                    color: isDark ? Colors.white60 : AppColors.textGrey,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-              Expanded(
-                child: Divider(
-                  color: isDark ? Colors.white24 : AppColors.borderGrey,
-                  thickness: 1,
-                ),
-              ),
-            ],
-          ),
-
+          _buildDivider(isDark),
           const SizedBox(height: 20),
-
-          // Google Login Button
-          SizedBox(
-            width: double.infinity,
-            height: 55,
-            child: OutlinedButton.icon(
-              onPressed: _isGoogleLoading
-                  ? null
-                  : () => AuthController.google(
-                      context,
-                      widget.onSuccess,
-                      (loading) => setState(() => _isGoogleLoading = loading),
-                    ),
-              icon: _isGoogleLoading
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppColors.primaryNavy,
-                      ),
-                    )
-                  : const Icon(
-                      Icons.g_mobiledata,
-                      size: 32,
-                      color: AppColors.primaryNavy,
-                    ),
-              label: Text(
-                "Continue with Google",
-                style: TextStyle(
-                  color: isDark ? Colors.white : AppColors.textDark,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                ),
-              ),
-              style: OutlinedButton.styleFrom(
-                side: BorderSide(
-                  color: isDark ? Colors.white24 : AppColors.borderGrey,
-                  width: 1.5,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15),
-                ),
-              ),
-            ),
-          ),
-
+          _buildGoogleButton(isDark),
           const SizedBox(height: 20),
-
-          // Switch to Register Mode Button
           TextButton(
             onPressed: () {
               HapticFeedback.lightImpact();
@@ -204,11 +98,59 @@ class _LoginFormState extends State<LoginForm> {
               style: TextStyle(
                 color: isDark ? AppColors.accentYellow : AppColors.primaryNavy,
                 fontWeight: FontWeight.bold,
-                fontSize: 14,
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildButton({required String label, required VoidCallback onPressed, required Color color, required Color textColor}) {
+    return SizedBox(
+      width: double.infinity,
+      height: 55,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          foregroundColor: textColor,
+          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        ),
+        onPressed: onPressed,
+        child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+      ),
+    );
+  }
+
+  Widget _buildDivider(bool isDark) {
+    final color = isDark ? Colors.white24 : AppColors.borderGrey;
+    return Row(
+      children: [
+        Expanded(child: Divider(color: color)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Text("OR", style: TextStyle(color: isDark ? Colors.white60 : AppColors.textGrey, fontSize: 12)),
+        ),
+        Expanded(child: Divider(color: color)),
+      ],
+    );
+  }
+
+  Widget _buildGoogleButton(bool isDark) {
+    return SizedBox(
+      width: double.infinity,
+      height: 55,
+      child: OutlinedButton.icon(
+        onPressed: _isGoogleLoading ? null : () => AuthController.google(context, widget.onSuccess, (l) => setState(() => _isGoogleLoading = l)),
+        icon: _isGoogleLoading
+            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+            : const Icon(Icons.g_mobiledata, size: 32),
+        label: const Text("Continue with Google"),
+        style: OutlinedButton.styleFrom(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          side: BorderSide(color: isDark ? Colors.white24 : AppColors.borderGrey),
+        ),
       ),
     );
   }

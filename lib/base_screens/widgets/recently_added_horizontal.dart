@@ -1,24 +1,24 @@
 import 'package:flutter/material.dart';
-import 'package:mera_ashiana/models/property_model.dart';
+import 'package:mera_ashiana/models/listing_model.dart';
 import 'package:mera_ashiana/screens/project_details_screen.dart';
 import 'package:mera_ashiana/theme/app_colors.dart';
 import 'package:mera_ashiana/theme/app_colors_dark.dart';
 
 class RecentlyAddedHorizontal extends StatelessWidget {
-  final List<PropertyModel> properties;
+  final List<Listing> listings;
   final ThemeData theme;
   final bool isDark;
 
   const RecentlyAddedHorizontal({
     super.key,
-    required this.properties,
+    required this.listings,
     required this.theme,
     required this.isDark,
   });
 
   @override
   Widget build(BuildContext context) {
-    final recent = properties.reversed.take(6).toList();
+    final recent = listings.reversed.take(6).toList();
 
     return SizedBox(
       height: 160,
@@ -27,21 +27,35 @@ class RecentlyAddedHorizontal extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16),
         itemCount: recent.length,
         itemBuilder: (context, index) {
-          final property = recent[index];
+          final listing = recent[index];
+
           return GestureDetector(
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => ProjectDetailsScreen(propertyId: property.id),
+                builder: (_) =>
+                    ProjectDetailsScreen(propertyId: listing.id),
               ),
             ),
             child: Container(
               width: 140,
-              margin: const EdgeInsets.only(right: 12),
+              margin: const EdgeInsets.only(right: 12, bottom: 4),
               decoration: BoxDecoration(
-                color: isDark ? AppDarkColors.surface : AppColors.white,
+                color: isDark
+                    ? AppDarkColors.surface
+                    : AppColors.white,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: theme.dividerColor.withOpacity(0.1)),
+                border: Border.all(
+                  color: theme.dividerColor.withOpacity(0.1),
+                ),
+                boxShadow: [
+                  if (!isDark)
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -51,12 +65,20 @@ class RecentlyAddedHorizontal extends StatelessWidget {
                       top: Radius.circular(16),
                     ),
                     child: Image.network(
-                      property.images.isNotEmpty ? property.images[0] : '',
+                      listing.images.isNotEmpty
+                          ? listing.images[0]
+                          : '',
                       height: 90,
                       width: 140,
                       fit: BoxFit.cover,
-                      errorBuilder: (c, e, s) =>
-                          Container(height: 90, color: Colors.grey[400]),
+                      errorBuilder: (c, e, s) => Container(
+                        height: 90,
+                        color: Colors.grey[300],
+                        child: const Icon(
+                          Icons.home,
+                          color: Colors.grey,
+                        ),
+                      ),
                     ),
                   ),
                   Padding(
@@ -65,7 +87,7 @@ class RecentlyAddedHorizontal extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          property.title,
+                          listing.title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
@@ -73,10 +95,13 @@ class RecentlyAddedHorizontal extends StatelessWidget {
                             fontSize: 12,
                           ),
                         ),
+                        const SizedBox(height: 2),
                         Text(
-                          "PKR ${property.price}",
+                          "PKR ${listing.price}",
                           style: TextStyle(
-                            color: theme.colorScheme.secondary,
+                            color: isDark
+                                ? AppDarkColors.accentYellow
+                                : AppColors.accentYellow,
                             fontWeight: FontWeight.bold,
                             fontSize: 11,
                           ),

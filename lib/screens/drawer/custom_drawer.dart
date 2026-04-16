@@ -43,21 +43,21 @@ class CustomDrawer extends StatelessWidget {
                   () => Navigator.pop(context),
                   isDark: isDark,
                 ),
-                _buildMenuItem(
-                  context,
-                  loc.myListings,
-                  Icons.apartment_outlined,
-                  () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const MyListingsScreen(),
-                      ),
-                    );
-                  },
-                  isDark: isDark,
-                ),
+                // _buildMenuItem(
+                //   context,
+                //   loc.myListings,
+                //   Icons.apartment_outlined,
+                //   () {
+                //     Navigator.pop(context);
+                //     Navigator.push(
+                //       context,
+                //       MaterialPageRoute(
+                //         builder: (_) => const MyListingsScreen(),
+                //       ),
+                //     );
+                //   },
+                //   isDark: isDark,
+                // ),
                 _buildMenuItem(
                   context,
                   loc.favorites,

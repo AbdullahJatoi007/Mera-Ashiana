@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:mera_ashiana/models/property_model.dart';
+import 'package:mera_ashiana/models/listing_model.dart'; // ✅ use Listing
 import 'package:mera_ashiana/screens/project_details_screen.dart';
 import 'package:mera_ashiana/services/FavoriteService.dart';
 import 'package:mera_ashiana/theme/app_colors.dart';
 
 class FavoriteHelpers {
-  // Build a single favorite card
-  static Widget buildFavoriteCard(BuildContext context, PropertyModel item) {
+  // ✅ UPDATED: now uses Listing
+  static Widget buildFavoriteCard(BuildContext context, Listing item) {
     return Card(
       clipBehavior: Clip.antiAlias,
       margin: const EdgeInsets.only(bottom: 16),
@@ -16,13 +16,14 @@ class FavoriteHelpers {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => ProjectDetailsScreen(property: item),
+              builder: (_) => ProjectDetailsScreen(propertyId: item.id),
             ),
           );
         },
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // ✅ IMAGE
             if (item.images.isNotEmpty)
               ClipRRect(
                 borderRadius: const BorderRadius.vertical(
@@ -36,8 +37,11 @@ class FavoriteHelpers {
                   loadingBuilder: (context, child, progress) {
                     if (progress == null) return child;
                     return const Center(
-                      child: CircularProgressIndicator(
-                        color: AppColors.accentYellow,
+                      child: Padding(
+                        padding: EdgeInsets.all(20.0),
+                        child: CircularProgressIndicator(
+                          color: AppColors.accentYellow,
+                        ),
                       ),
                     );
                   },
@@ -52,6 +56,8 @@ class FavoriteHelpers {
                   ),
                 ),
               ),
+
+            // ✅ DETAILS
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Row(
@@ -71,31 +77,41 @@ class FavoriteHelpers {
                         const SizedBox(height: 4),
                         Text(
                           "PKR ${item.price}",
-                          style: const TextStyle(color: AppColors.accentYellow),
+                          style: const TextStyle(
+                            color: AppColors.accentYellow,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          item.location,
-                          style: const TextStyle(color: AppColors.textGrey),
+                          item.location ?? '',
+                          style: const TextStyle(
+                            color: AppColors.textGrey,
+                          ),
                         ),
                       ],
                     ),
                   ),
+
+                  // ❤️ FAVORITE BUTTON
                   IconButton(
                     icon: const Icon(Icons.favorite, color: Colors.red),
-                    onPressed: () =>
-                        FavoriteService.toggleFavorite(item.id, true),
+                    onPressed: () {
+                      FavoriteService.toggleFavorite(item.id);
+                    },
                   ),
                 ],
               ),
             ),
+
+            // ✅ EXTRA INFO
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    "${item.bedrooms} Beds | ${item.bathrooms} Baths | ${item.area}",
+                    "${item.bedrooms} Beds | ${item.bathrooms} Baths | ${item.area ?? ''}",
                     style: const TextStyle(
                       fontSize: 12,
                       color: AppColors.textGrey,

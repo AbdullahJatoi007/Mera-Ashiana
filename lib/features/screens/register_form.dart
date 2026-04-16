@@ -10,11 +10,7 @@ class RegisterForm extends StatefulWidget {
   final VoidCallback onSwitch;
   final VoidCallback onSuccess;
 
-  const RegisterForm({
-    super.key,
-    required this.onSwitch,
-    required this.onSuccess,
-  });
+  const RegisterForm({super.key, required this.onSwitch, required this.onSuccess});
 
   @override
   State<RegisterForm> createState() => _RegisterFormState();
@@ -22,15 +18,16 @@ class RegisterForm extends StatefulWidget {
 
 class _RegisterFormState extends State<RegisterForm> {
   final _formKey = GlobalKey<FormState>();
+
+  // Input Controllers
   final name = TextEditingController();
   final email = TextEditingController();
   final pass = TextEditingController();
   final confirm = TextEditingController();
+  final otpController = TextEditingController();
 
-  final _emailFocus = FocusNode();
-  final _passFocus = FocusNode();
-  final _confirmFocus = FocusNode();
-
+  // State
+  bool _showOtpField = false;
   bool agent = false;
   bool terms = false;
   bool obscurePass = true;
@@ -38,39 +35,37 @@ class _RegisterFormState extends State<RegisterForm> {
 
   @override
   void dispose() {
-    name.dispose();
-    email.dispose();
-    pass.dispose();
-    confirm.dispose();
-    _emailFocus.dispose();
-    _passFocus.dispose();
-    _confirmFocus.dispose();
+    name.dispose(); email.dispose(); pass.dispose(); confirm.dispose(); otpController.dispose();
     super.dispose();
   }
 
-  void _handleRegister() {
+  void _handleAction() async {
     FocusScope.of(context).unfocus();
-    if (!_formKey.currentState!.validate()) {
-      HapticFeedback.mediumImpact();
-      return;
-    }
-    if (!terms) {
-      AuthController.showError(
-        context,
-        "Please accept the Terms and Privacy Policy",
-      );
-      return;
-    }
 
-    AuthController.register(
-      context,
-      name.text.trim(),
-      email.text.trim(),
-      pass.text,
-      confirm.text,
-      agent,
-      widget.onSuccess,
-    );
+    if (!_showOtpField) {
+      // PHASE 1: Send OTP to Backend (Redis)
+      if (!_formKey.currentState!.validate()) return;
+      if (!terms) {
+        AuthController.showError(context, "Please accept the Terms & Privacy Policy");
+        return;
+      }
+
+      final success = await AuthController.requestOtp(
+          context, name.text.trim(), email.text.trim(), pass.text, agent
+      );
+
+      if (success) setState(() => _showOtpField = true);
+    } else {
+      // PHASE 2: Verify OTP and Mint JWT
+      if (otpController.text.length < 6) {
+        AuthController.showError(context, "Please enter the 6-digit code sent to your email");
+        return;
+      }
+
+      await AuthController.verifyAndRegister(
+          context, email.text.trim(), otpController.text.trim(), widget.onSuccess
+      );
+    }
   }
 
   @override
@@ -79,107 +74,83 @@ class _RegisterFormState extends State<RegisterForm> {
 
     return Form(
       key: _formKey,
-      child: Column(
-        children: [
-          AuthTextField(
-            label: "Full Name",
-            icon: Icons.person_outline,
-            controller: name,
-            textInputAction: TextInputAction.next,
-            onFieldSubmitted: (_) =>
-                FocusScope.of(context).requestFocus(_emailFocus),
-            validator: (value) {
-              if (value == null || value.trim().isEmpty)
-                return "Full name is required";
-              if (value.trim().length < 3)
-                return "Name must be at least 3 characters";
-              return null;
-            },
-          ),
-          const SizedBox(height: 16),
-          AuthTextField(
-            label: "Email",
-            icon: Icons.email_outlined,
-            controller: email,
-            focusNode: _emailFocus,
-            keyboardType: TextInputType.emailAddress,
-            textInputAction: TextInputAction.next,
-            onFieldSubmitted: (_) =>
-                FocusScope.of(context).requestFocus(_passFocus),
-            validator: ValidationHelper.validateEmail,
-          ),
-          const SizedBox(height: 16),
-          AuthTextField(
-            label: "Password",
-            icon: Icons.lock_outline,
-            controller: pass,
-            focusNode: _passFocus,
-            obscure: obscurePass,
-            textInputAction: TextInputAction.next,
-            onFieldSubmitted: (_) =>
-                FocusScope.of(context).requestFocus(_confirmFocus),
-            toggle: () => setState(() => obscurePass = !obscurePass),
-            validator: ValidationHelper.validatePassword,
-          ),
-          const SizedBox(height: 16),
-          AuthTextField(
-            label: "Confirm Password",
-            icon: Icons.lock_outline,
-            controller: confirm,
-            focusNode: _confirmFocus,
-            obscure: obscureConfirm,
-            textInputAction: TextInputAction.done,
-            onFieldSubmitted: (_) => _handleRegister(),
-            toggle: () => setState(() => obscureConfirm = !obscureConfirm),
-            validator: (value) =>
-                ValidationHelper.validateConfirmPassword(value, pass.text),
-          ),
-          const SizedBox(height: 10),
-          AuthCheckbox(
-            value: agent,
-            onChanged: (v) => setState(() => agent = v!),
-            label: "I'm a real estate agent",
-            isDark: isDark,
-          ),
-          AuthCheckbox(
-            value: terms,
-            onChanged: (v) => setState(() => terms = v!),
-            label: "",
-            isTerms: true,
-            isDark: isDark,
-          ),
-          const SizedBox(height: 25),
-          SizedBox(
-            width: double.infinity,
-            height: 55,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.accentYellow,
-                foregroundColor: AppColors.primaryNavy,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15),
-                ),
-              ),
-              onPressed: _handleRegister,
-              child: const Text(
-                "REGISTER",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          TextButton(
-            onPressed: widget.onSwitch,
-            child: Text(
-              "Already have an account? Sign In",
-              style: TextStyle(
-                color: isDark ? AppColors.accentYellow : AppColors.primaryNavy,
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-              ),
-            ),
-          ),
-        ],
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 300),
+        child: _showOtpField ? _buildOtpView(isDark) : _buildRegisterView(isDark),
+      ),
+    );
+  }
+
+  Widget _buildRegisterView(bool isDark) {
+    return Column(
+      key: const ValueKey("reg_view"),
+      children: [
+        AuthTextField(label: "Full Name", icon: Icons.person_outline, controller: name),
+        const SizedBox(height: 16),
+        AuthTextField(label: "Email", icon: Icons.email_outlined, controller: email, keyboardType: TextInputType.emailAddress),
+        const SizedBox(height: 16),
+        AuthTextField(label: "Password", icon: Icons.lock_outline, controller: pass, obscure: obscurePass, toggle: () => setState(() => obscurePass = !obscurePass)),
+        const SizedBox(height: 16),
+        AuthTextField(label: "Confirm Password", icon: Icons.lock_outline, controller: confirm, obscure: obscureConfirm, toggle: () => setState(() => obscureConfirm = !obscureConfirm)),
+        const SizedBox(height: 10),
+        AuthCheckbox(value: agent, onChanged: (v) => setState(() => agent = v!), label: "I'm a real estate agent", isDark: isDark),
+        AuthCheckbox(value: terms, onChanged: (v) => setState(() => terms = v!), label: "", isTerms: true, isDark: isDark),
+        const SizedBox(height: 25),
+        _buildSubmitButton("SEND VERIFICATION CODE"),
+        _buildSwitchButton(isDark),
+      ],
+    );
+  }
+
+  Widget _buildOtpView(bool isDark) {
+    return Column(
+      key: const ValueKey("otp_view"),
+      children: [
+        Icon(Icons.mark_email_read_outlined, size: 60, color: AppColors.accentYellow),
+        const SizedBox(height: 16),
+        const Text("Verify Your Email", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        Text("We sent a code to ${email.text}", textAlign: TextAlign.center, style: const TextStyle(color: Colors.grey)),
+        const SizedBox(height: 24),
+        AuthTextField(
+          label: "6-Digit Code",
+          icon: Icons.vpn_key_outlined,
+          controller: otpController,
+          keyboardType: TextInputType.number,
+          maxLength: 6,
+        ),
+        const SizedBox(height: 25),
+        _buildSubmitButton("VERIFY & CREATE ACCOUNT"),
+        TextButton(
+          onPressed: () => setState(() => _showOtpField = false),
+          child: const Text("Edit registration details", style: TextStyle(color: AppColors.textGrey)),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSubmitButton(String text) {
+    return SizedBox(
+      width: double.infinity,
+      height: 55,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.accentYellow,
+          foregroundColor: AppColors.primaryNavy,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        ),
+        onPressed: _handleAction,
+        child: Text(text, style: const TextStyle(fontWeight: FontWeight.bold)),
+      ),
+    );
+  }
+
+  Widget _buildSwitchButton(bool isDark) {
+    return TextButton(
+      onPressed: widget.onSwitch,
+      child: Text(
+        "Already have an account? Sign In",
+        style: TextStyle(color: isDark ? AppColors.accentYellow : AppColors.primaryNavy, fontWeight: FontWeight.bold),
       ),
     );
   }

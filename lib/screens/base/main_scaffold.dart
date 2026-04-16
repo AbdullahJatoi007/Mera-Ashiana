@@ -2,11 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mera_ashiana/base_screens/home/home_screen.dart';
 import 'package:mera_ashiana/l10n/app_localizations.dart';
-import 'package:mera_ashiana/base_screens/home/home_screen.dart';
 import 'package:mera_ashiana/base_screens/properties_screen.dart';
 import 'package:mera_ashiana/base_screens/search_screen.dart';
 import 'package:mera_ashiana/base_screens/favourite_screen.dart';
-import 'package:mera_ashiana/profile//profile_screen.dart';
+import 'package:mera_ashiana/profile/profile_screen.dart';
 import 'package:mera_ashiana/screens/drawer/custom_drawer.dart';
 import 'package:mera_ashiana/authentication_bottom_sheet.dart';
 import 'package:mera_ashiana/services/auth_state.dart';
@@ -29,12 +28,16 @@ class MainScaffold extends StatefulWidget {
 class _MainScaffoldState extends State<MainScaffold> {
   int _selectedIndex = 0;
 
-  final List<Widget> _screens = const [
-    HomeScreen(),
-    PropertiesScreen(),
-    SearchScreen(),
-    FavouritesScreen(),
-    ProfileScreen(),
+  // ✅ FIX: removed const + pass required params
+  final List<Widget> _screens = [
+    const HomeScreen(),
+    const PropertiesScreen(
+      listings: [],
+      title: "Properties",
+    ),
+    const SearchScreen(),
+    const FavouritesScreen(),
+    const ProfileScreen(),
   ];
 
   void _onItemTapped(int index) {
@@ -82,13 +85,12 @@ class _MainScaffoldState extends State<MainScaffold> {
   }
 
   PreferredSizeWidget _buildAppBar(
-    BuildContext context,
-    ThemeData theme,
-    bool isHome,
-    AppLocalizations loc,
-    bool isDark,
-  ) {
-    // Dynamic Icon Color
+      BuildContext context,
+      ThemeData theme,
+      bool isHome,
+      AppLocalizations loc,
+      bool isDark,
+      ) {
     Color iconColor;
     if (isHome) {
       iconColor = Colors.white;
@@ -98,10 +100,8 @@ class _MainScaffoldState extends State<MainScaffold> {
 
     return AppBar(
       centerTitle: true,
-      // Adjust status bar icons based on mode
-      systemOverlayStyle: isHome || isDark
-          ? SystemUiOverlayStyle.light
-          : SystemUiOverlayStyle.dark,
+      systemOverlayStyle:
+      isHome || isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
       title: Text(
         _getAppBarTitle(loc, _selectedIndex),
         style: TextStyle(
@@ -113,19 +113,18 @@ class _MainScaffoldState extends State<MainScaffold> {
         ),
       ),
       iconTheme: IconThemeData(color: iconColor),
-      backgroundColor: isHome
-          ? Colors.transparent
-          : (isDark ? theme.cardColor : Colors.white),
+      backgroundColor:
+      isHome ? Colors.transparent : (isDark ? theme.cardColor : Colors.white),
       elevation: isHome ? 0 : 0.5,
       bottom: isHome
           ? null
           : PreferredSize(
-              preferredSize: const Size.fromHeight(1),
-              child: Divider(
-                height: 1,
-                color: theme.dividerColor.withOpacity(0.05),
-              ),
-            ),
+        preferredSize: const Size.fromHeight(1),
+        child: Divider(
+          height: 1,
+          color: theme.dividerColor.withOpacity(0.05),
+        ),
+      ),
     );
   }
 
@@ -145,11 +144,8 @@ class _MainScaffoldState extends State<MainScaffold> {
         type: BottomNavigationBarType.fixed,
         elevation: 0,
         backgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
-
-        // High Contrast colors for visibility
         selectedItemColor: AppColors.accentYellow,
         unselectedItemColor: isDark ? Colors.white54 : Colors.black38,
-
         selectedLabelStyle: const TextStyle(
           fontWeight: FontWeight.bold,
           fontSize: 12,
@@ -158,7 +154,6 @@ class _MainScaffoldState extends State<MainScaffold> {
           fontWeight: FontWeight.w500,
           fontSize: 12,
         ),
-
         items: [
           _navItem(Icons.home_outlined, Icons.home_rounded, loc.home),
           _navItem(
@@ -187,10 +182,10 @@ class _MainScaffoldState extends State<MainScaffold> {
   }
 
   BottomNavigationBarItem _navItem(
-    IconData icon,
-    IconData activeIcon,
-    String label,
-  ) {
+      IconData icon,
+      IconData activeIcon,
+      String label,
+      ) {
     return BottomNavigationBarItem(
       icon: Padding(
         padding: const EdgeInsets.only(bottom: 4),

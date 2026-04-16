@@ -1,20 +1,17 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart';
 import 'package:mera_ashiana/base_screens/properties_screen.dart';
-import 'package:mera_ashiana/models/property_model.dart';
+import 'package:mera_ashiana/models/listing_model.dart';
 import 'package:mera_ashiana/services/property_service.dart';
 import 'package:mera_ashiana/screens/home/home_top_section.dart';
-import 'package:mera_ashiana/screens/project_details_screen.dart';
 import 'package:mera_ashiana/l10n/app_localizations.dart';
 import 'package:mera_ashiana/theme/app_colors.dart';
 import 'package:mera_ashiana/theme/app_colors_dark.dart';
 import 'package:mera_ashiana/base_screens/widgets/category_list.dart';
-import 'package:mera_ashiana/base_screens/widgets/featured_card.dart';
 import 'package:mera_ashiana/base_screens/widgets/recently_added_horizontal.dart';
 import 'package:mera_ashiana/base_screens/widgets/property_list_item.dart';
-import 'package:mera_ashiana/base_screens/widgets/auto_sliding_featured_card.dart';
+import 'package:mera_ashiana/base_screens/widgets/featured_card.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -30,14 +27,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
   bool _isLoading = true;
   bool _hasError = false;
-  List<PropertyModel> _properties = [];
 
+  List<Listing> _listings = [];
+
+  // Names match the listings_type enum in your Prisma schema
   final List<Map<String, dynamic>> _categories = [
     {'name': 'All', 'icon': Icons.grid_view_rounded},
     {'name': 'House', 'icon': Icons.home_rounded},
-    {'name': 'Flat', 'icon': Icons.apartment_rounded},
+    {'name': 'Apartment', 'icon': Icons.apartment_rounded},
     {'name': 'Plot', 'icon': Icons.landscape_rounded},
-    {'name': 'Shop', 'icon': Icons.storefront_rounded},
+    {'name': 'Commercial', 'icon': Icons.storefront_rounded},
   ];
 
   @override
@@ -52,21 +51,28 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  List<PropertyModel> get _filteredProperties {
-    if (_selectedCategoryIndex == 0) return _properties;
+  List<Listing> get _filteredListings {
+    List<Listing> baseFiltered = _listings.where((l) {
+      // Logic to match 'sale' or 'rent' enum from DB
+      String status = _selectedOption == 'BUY' ? 'sale' : 'rent';
+      return l.status.toLowerCase() == status;
+    }).toList();
+
+    if (_selectedCategoryIndex == 0) return baseFiltered;
+
     String categoryName = _categories[_selectedCategoryIndex]['name'] as String;
-    return _properties
-        .where((p) => p.status.toLowerCase() == categoryName.toLowerCase())
-        .toList();
+    return baseFiltered.where((l) {
+      return l.type.toLowerCase() == categoryName.toLowerCase();
+    }).toList();
   }
 
   Future<void> _fetchProperties({bool isRefresh = false}) async {
     if (!isRefresh) setState(() => _isLoading = true);
     try {
-      final properties = await PropertyService.fetchProperties();
+      final listings = await PropertyService.fetchProperties();
       if (mounted) {
         setState(() {
-          _properties = properties;
+          _listings = listings;
           _isLoading = false;
           _hasError = false;
         });
@@ -107,7 +113,11 @@ class _HomeScreenState extends State<HomeScreen> {
     const double maxSnapOffset = 110.0;
 
     if (_isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(color: AppColors.accentYellow),
+        ),
+      );
     }
 
     if (_hasError) {
@@ -123,14 +133,12 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 16),
               const Text(
-                "Unable to load properties.\nPlease check your internet connection.",
+                "Unable to load properties.\nPlease check your connection.",
                 textAlign: TextAlign.center,
               ),
-              TextButton(
-                onPressed: () async {
-                  HapticFeedback.lightImpact();
-                  await _fetchProperties();
-                },
+              const SizedBox(height: 12),
+              ElevatedButton(
+                onPressed: () => _fetchProperties(),
                 child: const Text("Try Again"),
               ),
             ],
@@ -142,14 +150,8 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: isDark ? AppDarkColors.background : AppColors.background,
       body: RefreshIndicator(
-        color: isDark ? AppDarkColors.accentYellow : AppColors.accentYellow,
-        backgroundColor: isDark ? AppDarkColors.surface : AppColors.white,
-        displacement: 40,
-        edgeOffset: statusBarHeight + 20,
-        onRefresh: () async {
-          HapticFeedback.mediumImpact();
-          await _fetchProperties(isRefresh: true);
-        },
+        color: AppColors.accentYellow,
+        onRefresh: () async => await _fetchProperties(isRefresh: true),
         child: NotificationListener<ScrollNotification>(
           onNotification: (notification) {
             if (notification is UserScrollNotification &&
@@ -170,27 +172,23 @@ class _HomeScreenState extends State<HomeScreen> {
                 onOptionSelected: (value) =>
                     setState(() => _selectedOption = value),
               ),
-
-              SliverPadding(
-                padding: const EdgeInsets.only(top: 15, bottom: 5),
-                sliver: SliverToBoxAdapter(
-                  child: CategoryList(
-                    categories: _categories,
-                    selectedIndex: _selectedCategoryIndex,
-                    onSelected: (index) =>
-                        setState(() => _selectedCategoryIndex = index),
-                  ),
+              SliverToBoxAdapter(
+                child: CategoryList(
+                  categories: _categories,
+                  selectedIndex: _selectedCategoryIndex,
+                  onSelected: (index) =>
+                      setState(() => _selectedCategoryIndex = index),
                 ),
               ),
-
+              // Featured Section - Updated for Boolean logic
               SliverToBoxAdapter(
                 child: _buildSectionTitle(theme, loc.exploreProjects, () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (_) => PropertiesScreen(
-                        properties: _properties
-                            .where((p) => p.isFeatured == 1)
+                        listings: _listings
+                            .where((l) => l.isFeatured)
                             .toList(),
                         title: loc.exploreProjects,
                       ),
@@ -199,16 +197,19 @@ class _HomeScreenState extends State<HomeScreen> {
                 }),
               ),
               SliverToBoxAdapter(
-                child: FeaturedProjects(properties: _properties, theme: theme),
+                child: FeaturedProjects(
+                  listings: _listings.where((l) => l.isFeatured).toList(),
+                  theme: theme,
+                ),
               ),
-
+              // Recently Added
               SliverToBoxAdapter(
                 child: _buildSectionTitle(theme, "Recently Added", () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (_) => PropertiesScreen(
-                        properties: _properties,
+                        listings: _listings,
                         title: "Recently Added",
                       ),
                     ),
@@ -217,17 +218,17 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               SliverToBoxAdapter(
                 child: RecentlyAddedHorizontal(
-                  properties: _properties,
+                  listings: _listings,
                   theme: theme,
                   isDark: isDark,
                 ),
               ),
-
+              // Main List
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 25, 12, 10),
                   child: Text(
-                    "All ${_categories[_selectedCategoryIndex]['name']} Listings",
+                    "${_categories[_selectedCategoryIndex]['name']} Listings",
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -239,12 +240,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 padding: const EdgeInsets.only(bottom: 20),
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate(
-                    (context, index) => PropertyListItem(
-                      property: _filteredProperties[index],
+                        (context, index) => PropertyListItem(
+                      listing: _filteredListings[index],
                       theme: theme,
                       isDark: isDark,
                     ),
-                    childCount: _filteredProperties.length,
+                    childCount: _filteredListings.length,
                   ),
                 ),
               ),
@@ -256,10 +257,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildSectionTitle(
-    ThemeData theme,
-    String title,
-    VoidCallback onSeeAll,
-  ) {
+      ThemeData theme,
+      String title,
+      VoidCallback onSeeAll,
+      ) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 12, 10),
       child: Row(
