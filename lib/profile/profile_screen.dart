@@ -110,7 +110,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _isLoading = false;
         _hasError = true;
         _errorMsg =
-            "Failed to load profile. Please check your internet connection.";
+        "Failed to load profile. Please check your internet connection.";
       });
     }
   }
@@ -203,19 +203,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               )
             else if (_user == null)
-              SizedBox(
-                height: MediaQuery.of(context).size.height - kToolbarHeight,
-                child: _buildGuestView(isDark),
-              )
-            else ...[
-              ProfileHeader(user: _user!),
-              if (_userAgency != null) _buildAgencyStatusBanner(isDark),
-              const SizedBox(height: 25),
-              // _buildMetricsRow(isDark),
-              const SizedBox(height: 25),
-              _buildActionSection(loc, _user!.type, isDark),
-              const SizedBox(height: 40),
-            ],
+                SizedBox(
+                  height: MediaQuery.of(context).size.height - kToolbarHeight,
+                  child: _buildGuestView(isDark),
+                )
+              else ...[
+                  ProfileHeader(user: _user!),
+                  if (_userAgency != null) _buildAgencyStatusBanner(isDark),
+                  const SizedBox(height: 25),
+                  _buildMetricsRow(isDark),
+                  const SizedBox(height: 25),
+                  _buildActionSection(loc, _user!.type, isDark),
+                  const SizedBox(height: 40),
+                ],
           ],
         ),
       ),
@@ -310,44 +310,47 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // Widget _buildMetricsRow(bool isDark) {
-  //   return Padding(
-  //     padding: const EdgeInsets.symmetric(horizontal: 20),
-  //     child: Row(
-  //       children: [
-  //         _buildMetricCard(
-  //           ListingService.myListingsCount,
-  //           'Listings',
-  //           Icons.apartment_rounded,
-  //           isDark,
-  //           () => Navigator.push(
-  //             context,
-  //             MaterialPageRoute(builder: (_) => const MyListingsScreen()),
-  //           ),
-  //         ),
-  //         const SizedBox(width: 12),
-  //         _buildMetricCard(
-  //           FavoriteService.favoriteIdsCount,
-  //           'Favorites',
-  //           Icons.favorite_rounded,
-  //           isDark,
-  //           () => Navigator.push(
-  //             context,
-  //             MaterialPageRoute(builder: (_) => const FavouritesScreen()),
-  //           ),
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
+  Widget _buildMetricsRow(bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Row(
+        children: [
+          _buildMetricCard(
+            notifier: ListingService.myListingsCount,
+            label: 'My Properties',
+            subLabel: _user?.type == 'agent' ? "Check Status" : "View Ads",
+            icon: Icons.holiday_village_rounded,
+            isDark: isDark,
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const MyListingsScreen()),
+            ),
+          ),
+          const SizedBox(width: 12),
+          _buildMetricCard(
+            notifier: FavoriteService.favoriteIdsCount,
+            label: 'Favorites',
+            subLabel: "Saved Items",
+            icon: Icons.favorite_rounded,
+            isDark: isDark,
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const FavouritesScreen()),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-  Widget _buildMetricCard(
-    ValueNotifier<int> notifier,
-    String label,
-    IconData icon,
-    bool isDark,
-    VoidCallback onTap,
-  ) {
+  Widget _buildMetricCard({
+    required ValueNotifier<int> notifier,
+    required String label,
+    required String subLabel,
+    required IconData icon,
+    required bool isDark,
+    required VoidCallback onTap,
+  }) {
     return Expanded(
       child: InkWell(
         onTap: () {
@@ -372,9 +375,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 Icon(
                   icon,
-                  color: isDark
-                      ? AppColors.accentYellow
-                      : AppColors.primaryNavy,
+                  color: isDark ? AppColors.accentYellow : AppColors.primaryNavy,
                   size: 24,
                 ),
                 const SizedBox(height: 10),
@@ -394,6 +395,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
+                const SizedBox(height: 2),
+                Text(
+                  subLabel,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: isDark ? Colors.white38 : Colors.grey[600],
+                  ),
+                ),
               ],
             ),
           ),
@@ -403,10 +412,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildActionSection(
-    AppLocalizations loc,
-    String userType,
-    bool isDark,
-  ) {
+      AppLocalizations loc,
+      String userType,
+      bool isDark,
+      ) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
       decoration: BoxDecoration(
@@ -426,7 +435,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             loc.accountSettings,
             Icons.manage_accounts_outlined,
             isDark,
-            () => Navigator.push(
+                () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const AccountSettingsScreen()),
             ),
@@ -435,7 +444,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             'Post Property Ad',
             Icons.add_circle_outline_rounded,
             isDark,
-            () => Navigator.push(
+                () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const AddListingScreen()),
             ),
@@ -447,29 +456,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
               isDark,
               _handleAgencyNavigation,
             ),
-          // _buildSettingsTile(
-          //   'My Listings',
-          //   Icons.format_list_bulleted_rounded,
-          //   isDark,
-          //   () => Navigator.push(
-          //     context,
-          //     MaterialPageRoute(builder: (_) => const MyListingsScreen()),
-          //   ),
-          // ),
           _buildSettingsTile(
             'About Us',
             Icons.info_outline_rounded,
             isDark,
-            () => ProfileController.launchURL(
+                () => ProfileController.launchURL(
               'https://mera-ashiana.com/about',
-              (msg) {},
+                  (msg) {},
             ),
           ),
           _buildSettingsTile(
             loc.logout,
             Icons.logout_rounded,
             isDark,
-            () => AuthHelper.showLogoutDialog(context),
+                () => AuthHelper.showLogoutDialog(context),
             isDestructive: true,
           ),
         ],
@@ -478,12 +478,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildSettingsTile(
-    String title,
-    IconData icon,
-    bool isDark,
-    VoidCallback onTap, {
-    bool isDestructive = false,
-  }) {
+      String title,
+      IconData icon,
+      bool isDark,
+      VoidCallback onTap, {
+        bool isDestructive = false,
+      }) {
     final color = isDestructive
         ? AppColors.errorRed
         : (isDark ? AppColors.accentYellow : AppColors.primaryNavy);

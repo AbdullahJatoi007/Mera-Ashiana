@@ -1,9 +1,13 @@
 import 'dart:io';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mera_ashiana/l10n/app_localizations.dart';
 import 'package:mera_ashiana/theme/app_colors.dart';
+import 'package:mera_ashiana/core/api_client.dart';
+
+import '../core/api_client.dart'; // ✅ Ensure correct path
 
 class AddListingScreen extends StatefulWidget {
   const AddListingScreen({super.key});
@@ -30,12 +34,28 @@ class _AddListingScreenState extends State<AddListingScreen> {
   final _bedsController = TextEditingController();
   final _bathsController = TextEditingController();
 
+  @override
+  void dispose() {
+    // ✅ Added dispose to prevent memory leaks
+    _titleController.dispose();
+    _priceController.dispose();
+    _locationController.dispose();
+    _descController.dispose();
+    _phoneController.dispose();
+    _emailController.dispose();
+    _areaController.dispose();
+    _bedsController.dispose();
+    _bathsController.dispose();
+    super.dispose();
+  }
+
   void _submitData(AppLocalizations loc) async {
     if (!_formKey.currentState!.validate()) return;
+
     if (_selectedImages.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(loc.photoError), // Localized Error
+          content: Text(loc.photoError),
           backgroundColor: AppColors.errorRed,
         ),
       );
@@ -43,207 +63,221 @@ class _AddListingScreenState extends State<AddListingScreen> {
     }
 
     setState(() => _isSubmitting = true);
-    // Submission logic here...
-    setState(() => _isSubmitting = false);
+
+    try {
+      // ✅ Prepare Images for Multi-part upload
+      List<MultipartFile> imageFiles = [];
+      for (var file in _selectedImages) {
+        imageFiles.add(await MultipartFile.fromFile(file.path));
+      }
+
+      // ✅ Prepare Form Data
+      final formData = FormData.fromMap({
+        "title": _titleController.text.trim(),
+        "price": _priceController.text.trim(),
+        "location": _locationController.text.trim(),
+        "description": _descController.text.trim(),
+        "phone": _phoneController.text.trim(),
+        "email": _emailController.text.trim(),
+        "area": _areaController.text.trim(),
+        "bedrooms": _bedsController.text.trim(),
+        "bathrooms": _bathsController.text.trim(),
+        "images": imageFiles,
+      });
+
+      // ✅ POST to your backend
+      final response = await ApiClient.dio.post(
+        '/listings/add', // ⬅️ Double check this endpoint path
+        data: formData,
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Listing posted successfully!"),
+              backgroundColor: Colors.green,
+            ),
+          );
+          Navigator.pop(context, true); // Return to Profile with success
+        }
+      }
+    } catch (e) {
+      debugPrint("Submit Error: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Failed to post listing. Please try again."),
+            backgroundColor: AppColors.errorRed,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final colorScheme = theme.colorScheme;
     final Color yellowAccent = const Color(0xFFFFD54F);
-
-    // The "loc" helper
     final loc = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
-          loc.postProperty, // Localized Title
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
+          loc.postProperty,
+          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
-        backgroundColor: isDark ? colorScheme.surface : AppColors.primaryNavy,
+        backgroundColor: isDark ? theme.colorScheme.surface : AppColors.primaryNavy,
         elevation: 0,
         centerTitle: true,
-        iconTheme: IconThemeData(color: isDark ? yellowAccent : Colors.white),
       ),
       body: _isSubmitting
           ? Center(child: CircularProgressIndicator(color: yellowAccent))
           : Form(
-              key: _formKey,
-              child: ListView(
-                padding: const EdgeInsets.all(20),
-                children: [
-                  _buildSectionTitle(loc.propertyPhotos, isDark),
-                  const SizedBox(height: 12),
-                  _buildImagePicker(isDark, yellowAccent, loc),
-                  const SizedBox(height: 24),
-
-                  _buildSectionTitle(loc.generalDetails, isDark),
-                  const SizedBox(height: 12),
-                  _buildModernField(
-                    controller: _titleController,
-                    label: loc.title,
-                    icon: Icons.title_rounded,
-                    errorMsg: loc.requiredError,
-                  ),
-                  const SizedBox(height: 12),
-
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildModernField(
-                          controller: _priceController,
-                          label: loc.price,
-                          icon: Icons.money,
-                          isNumber: true,
-                          errorMsg: loc.requiredError,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildModernField(
-                          controller: _areaController,
-                          label: loc.area,
-                          icon: Icons.square_foot,
-                          errorMsg: loc.requiredError,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildModernField(
-                          controller: _bedsController,
-                          label: loc.beds,
-                          icon: Icons.bed,
-                          isNumber: true,
-                          errorMsg: loc.requiredError,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildModernField(
-                          controller: _bathsController,
-                          label: loc.baths,
-                          icon: Icons.bathtub,
-                          isNumber: true,
-                          errorMsg: loc.requiredError,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  _buildModernField(
-                    controller: _locationController,
-                    label: loc.location,
-                    icon: Icons.location_on_outlined,
-                    errorMsg: loc.requiredError,
-                  ),
-                  const SizedBox(height: 12),
-                  _buildModernField(
-                    controller: _descController,
-                    label: loc.description,
-                    icon: Icons.description_outlined,
-                    maxLines: 3,
-                    errorMsg: loc.requiredError,
-                  ),
-
-                  const SizedBox(height: 24),
-                  _buildSectionTitle(loc.contactInformation, isDark),
-                  const SizedBox(height: 12),
-                  _buildModernField(
-                    controller: _phoneController,
-                    label: loc.phone,
-                    icon: Icons.phone_android,
+        key: _formKey,
+        child: ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            _buildSectionTitle(loc.propertyPhotos, isDark),
+            const SizedBox(height: 12),
+            _buildImagePicker(isDark, yellowAccent, loc),
+            const SizedBox(height: 24),
+            _buildSectionTitle(loc.generalDetails, isDark),
+            const SizedBox(height: 12),
+            _buildModernField(
+              controller: _titleController,
+              label: loc.title,
+              icon: Icons.title_rounded,
+              errorMsg: loc.requiredError,
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildModernField(
+                    controller: _priceController,
+                    label: loc.price,
+                    icon: Icons.money,
                     isNumber: true,
                     errorMsg: loc.requiredError,
                   ),
-                  const SizedBox(height: 12),
-                  _buildModernField(
-                    controller: _emailController,
-                    label: loc.email,
-                    icon: Icons.alternate_email,
-                    isEmail: true,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildModernField(
+                    controller: _areaController,
+                    label: loc.area,
+                    icon: Icons.square_foot,
                     errorMsg: loc.requiredError,
                   ),
-
-                  const SizedBox(height: 32),
-
-                  ElevatedButton(
-                    onPressed: () => _submitData(loc),
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 55),
-                      backgroundColor: yellowAccent,
-                      foregroundColor: AppColors.primaryNavy,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                    ),
-                    child: Text(
-                      loc.submitAd.toUpperCase(),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.1,
-                      ),
-                    ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildModernField(
+                    controller: _bedsController,
+                    label: loc.beds,
+                    icon: Icons.bed,
+                    isNumber: true,
+                    errorMsg: loc.requiredError,
                   ),
-                  const SizedBox(height: 20),
-                ],
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildModernField(
+                    controller: _bathsController,
+                    label: loc.baths,
+                    icon: Icons.bathtub,
+                    isNumber: true,
+                    errorMsg: loc.requiredError,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            _buildModernField(
+              controller: _locationController,
+              label: loc.location,
+              icon: Icons.location_on_outlined,
+              errorMsg: loc.requiredError,
+            ),
+            const SizedBox(height: 12),
+            _buildModernField(
+              controller: _descController,
+              label: loc.description,
+              icon: Icons.description_outlined,
+              maxLines: 3,
+              errorMsg: loc.requiredError,
+            ),
+            const SizedBox(height: 24),
+            _buildSectionTitle(loc.contactInformation, isDark),
+            const SizedBox(height: 12),
+            _buildModernField(
+              controller: _phoneController,
+              label: loc.phone,
+              icon: Icons.phone_android,
+              isNumber: true,
+              errorMsg: loc.requiredError,
+            ),
+            const SizedBox(height: 12),
+            _buildModernField(
+              controller: _emailController,
+              label: loc.email,
+              icon: Icons.alternate_email,
+              isEmail: true,
+              errorMsg: loc.requiredError,
+            ),
+            const SizedBox(height: 32),
+            ElevatedButton(
+              onPressed: () => _submitData(loc),
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size(double.infinity, 55),
+                backgroundColor: yellowAccent,
+                foregroundColor: AppColors.primaryNavy,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+              ),
+              child: Text(
+                loc.submitAd.toUpperCase(),
+                style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.1),
               ),
             ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
     );
   }
 
-  // --- Helper Methods ---
-
+  // --- Helper Methods remain the same as your current file ---
   Widget _buildSectionTitle(String title, bool isDark) {
-    return Text(
-      title,
-      style: TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.bold,
-        color: isDark ? Colors.white : AppColors.primaryNavy,
-      ),
-    );
+    return Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.primaryNavy));
   }
 
   Widget _buildModernField({
     required TextEditingController controller,
     required String label,
     required IconData icon,
-    required String errorMsg, // Pass the translation
+    required String errorMsg,
     bool isNumber = false,
     bool isEmail = false,
     int maxLines = 1,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return TextFormField(
       controller: controller,
-      keyboardType: isNumber
-          ? TextInputType.number
-          : (isEmail ? TextInputType.emailAddress : TextInputType.text),
+      keyboardType: isNumber ? TextInputType.number : (isEmail ? TextInputType.emailAddress : TextInputType.text),
       maxLines: maxLines,
-      style: TextStyle(
-        fontSize: 14,
-        color: isDark ? Colors.white : Colors.black87,
-      ),
+      style: TextStyle(fontSize: 14, color: isDark ? Colors.white : Colors.black87),
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(
-          icon,
-          color: isDark ? const Color(0xFFFFD54F) : AppColors.primaryNavy,
-          size: 20,
-        ),
+        prefixIcon: Icon(icon, color: isDark ? const Color(0xFFFFD54F) : AppColors.primaryNavy, size: 20),
         filled: true,
         fillColor: isDark ? const Color(0xFF1E1E1E) : AppColors.background,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -264,34 +298,22 @@ class _AddListingScreenState extends State<AddListingScreen> {
               onTap: () async {
                 final pics = await _picker.pickMultiImage();
                 if (pics.isNotEmpty) {
-                  setState(
-                    () => _selectedImages.addAll(pics.map((e) => File(e.path))),
-                  );
+                  setState(() => _selectedImages.addAll(pics.map((e) => File(e.path))));
                 }
               },
               child: Container(
                 width: 100,
                 decoration: BoxDecoration(
-                  color: isDark
-                      ? const Color(0xFF1E1E1E)
-                      : AppColors.background,
+                  color: isDark ? const Color(0xFF1E1E1E) : AppColors.background,
                   borderRadius: BorderRadius.circular(15),
-                  border: Border.all(
-                    color: isDark ? Colors.white10 : AppColors.borderGrey,
-                  ),
+                  border: Border.all(color: isDark ? Colors.white10 : AppColors.borderGrey),
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(Icons.add_photo_alternate_outlined, color: accent),
                     const SizedBox(height: 4),
-                    Text(
-                      loc.add,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isDark ? Colors.white70 : AppColors.primaryNavy,
-                      ),
-                    ),
+                    Text(loc.add, style: TextStyle(fontSize: 12, color: isDark ? Colors.white70 : AppColors.primaryNavy)),
                   ],
                 ),
               ),
@@ -299,14 +321,24 @@ class _AddListingScreenState extends State<AddListingScreen> {
           }
           return Padding(
             padding: const EdgeInsets.only(right: 12.0),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(15),
-              child: Image.file(
-                _selectedImages[i],
-                width: 100,
-                height: 100,
-                fit: BoxFit.cover,
-              ),
+            child: Stack( // ✅ Added Stack to allow removing images
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(15),
+                  child: Image.file(_selectedImages[i], width: 100, height: 100, fit: BoxFit.cover),
+                ),
+                Positioned(
+                  top: 5,
+                  right: 5,
+                  child: GestureDetector(
+                    onTap: () => setState(() => _selectedImages.removeAt(i)),
+                    child: Container(
+                      decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                      child: const Icon(Icons.close, color: Colors.white, size: 18),
+                    ),
+                  ),
+                ),
+              ],
             ),
           );
         },
