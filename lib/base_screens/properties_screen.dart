@@ -37,9 +37,6 @@ class PropertiesScreen extends StatelessWidget {
             return Center(child: CircularProgressIndicator(color: AppColors.accentYellow));
           }
 
-          if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
-            return _buildEmptyState(isDark, context);
-          }
 
           final list = snapshot.data!;
 
@@ -68,19 +65,6 @@ class PropertiesScreen extends StatelessWidget {
     if (!connected) return [];
     // UPDATED: Cast to the correct Listing type
     return isFilteredView ? Future.value(listings) : PropertyService.fetchProperties();
-  }
-
-  Widget _buildEmptyState(bool isDark, BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.house_siding_rounded, size: 80, color: isDark ? AppDarkColors.textSecondary : AppColors.primaryNavy.withOpacity(0.1)),
-          const SizedBox(height: 16),
-          const Text("No properties found."),
-        ],
-      ),
-    );
   }
 
   Widget _buildProjectCard(BuildContext context, Listing listing, bool isDark) {
