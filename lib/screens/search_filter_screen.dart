@@ -10,6 +10,7 @@ class SearchFilterScreen extends StatefulWidget {
 }
 
 class _SearchFilterScreenState extends State<SearchFilterScreen> {
+  // Initial values
   String _purpose = "Buy";
   String _selectedType = "House";
   String _selectedCity = "Karachi";
@@ -23,12 +24,13 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
     "Rawalpindi",
     "Peshawar",
   ];
+
   final List<String> _propertyTypes = [
     "House",
     "Flat",
     "Plot",
-    "Shop",
-    "Office",
+    "Commercial",
+    "Other",
   ];
 
   @override
@@ -64,14 +66,20 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
-          TextButton(
-            onPressed: _resetFilters,
-            child: Text(
-              "Reset",
-              style: TextStyle(
-                color: textColor,
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
+          // ✅ Reset Button Fix: Improved touch area and clear callback
+          Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: TextButton(
+              onPressed: () {
+                _resetFilters();
+              },
+              child: Text(
+                "Reset",
+                style: TextStyle(
+                  color: textColor,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),
@@ -85,31 +93,26 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  const SizedBox(height: 10),
                   _buildSectionTitle(theme, "Location"),
                   _buildCitySearchField(theme, textColor, primaryNavy),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
                   _buildCityChips(theme, accentYellow, textColor),
-
                   Divider(
-                    height: 32,
+                    height: 40,
                     thickness: 0.5,
                     color: isDark ? Colors.grey[800] : Colors.grey[300],
                   ),
-
                   _buildSectionTitle(theme, "Property Purpose"),
                   _buildPurposeToggle(theme, accentYellow, textColor),
-
-                  const SizedBox(height: 20),
-
+                  const SizedBox(height: 24),
                   _buildSectionTitle(theme, "Property Type"),
                   _buildTypeGrid(theme, accentYellow, textColor),
-
                   Divider(
-                    height: 32,
+                    height: 40,
                     thickness: 0.5,
                     color: isDark ? Colors.grey[800] : Colors.grey[300],
                   ),
-
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -119,19 +122,17 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
                         style: TextStyle(
                           color: textColor,
                           fontWeight: FontWeight.bold,
-                          fontSize: 13,
+                          fontSize: 14,
                         ),
                       ),
                     ],
                   ),
+                  const SizedBox(height: 8),
                   _buildPriceRangeChips(theme, accentYellow, textColor),
-
-                  const SizedBox(height: 12),
-
+                  const SizedBox(height: 24),
                   _buildSectionTitle(theme, "Bedrooms"),
                   _buildBedSelection(theme, accentYellow, textColor),
-
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 30),
                 ],
               ),
             ),
@@ -154,11 +155,11 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
 
   Widget _buildSectionTitle(ThemeData theme, String title) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: 10),
       child: Text(
         title,
         style: TextStyle(
-          fontSize: 14,
+          fontSize: 15,
           fontWeight: FontWeight.w700,
           color: theme.colorScheme.onSurface,
         ),
@@ -172,13 +173,13 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
     Color primaryNavy,
   ) {
     return SizedBox(
-      height: 40,
+      height: 45,
       child: TextField(
         style: TextStyle(color: textColor),
         decoration: InputDecoration(
           hintText: "Search area (e.g. DHA Phase 6)",
           hintStyle: TextStyle(fontSize: 13, color: textColor.withOpacity(0.4)),
-          prefixIcon: Icon(Icons.search, color: textColor, size: 18),
+          prefixIcon: Icon(Icons.search, color: textColor, size: 20),
           filled: true,
           fillColor: theme.colorScheme.surface,
           contentPadding: EdgeInsets.zero,
@@ -193,7 +194,7 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
 
   Widget _buildCityChips(ThemeData theme, Color accentYellow, Color textColor) {
     return SizedBox(
-      height: 35,
+      height: 38,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: _cities.length,
@@ -201,7 +202,7 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
           final city = _cities[index];
           final isSelected = _selectedCity == city;
           return Padding(
-            padding: const EdgeInsets.only(right: 6),
+            padding: const EdgeInsets.only(right: 8),
             child: ChoiceChip(
               label: Text(city),
               selected: isSelected,
@@ -210,7 +211,7 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
               backgroundColor: theme.colorScheme.surface,
               labelStyle: TextStyle(
                 color: isSelected ? Colors.black : textColor,
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
               shape: RoundedRectangleBorder(
@@ -230,11 +231,11 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
     Color textColor,
   ) {
     return Container(
-      height: 40,
-      padding: const EdgeInsets.all(3),
+      height: 45,
+      padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
         children: ["Buy", "Rent"].map((label) {
@@ -246,7 +247,7 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
                 duration: const Duration(milliseconds: 200),
                 decoration: BoxDecoration(
                   color: isSelected ? accentYellow : Colors.transparent,
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 alignment: Alignment.center,
                 child: Text(
@@ -254,7 +255,7 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
                   style: TextStyle(
                     color: isSelected ? Colors.black : textColor,
                     fontWeight: FontWeight.bold,
-                    fontSize: 13,
+                    fontSize: 14,
                   ),
                 ),
               ),
@@ -267,17 +268,17 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
 
   Widget _buildTypeGrid(ThemeData theme, Color accentYellow, Color textColor) {
     return Wrap(
-      spacing: 8,
-      runSpacing: 8,
+      spacing: 10,
+      runSpacing: 10,
       children: _propertyTypes.map((type) {
         final isSelected = _selectedType == type;
         return GestureDetector(
           onTap: () => setState(() => _selectedType = type),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
               color: isSelected ? accentYellow : theme.colorScheme.surface,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(10),
               border: Border.all(
                 color: isSelected
                     ? accentYellow
@@ -289,7 +290,7 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
               style: TextStyle(
                 color: isSelected ? Colors.black : textColor,
                 fontWeight: FontWeight.w600,
-                fontSize: 12,
+                fontSize: 13,
               ),
             ),
           ),
@@ -298,7 +299,6 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
     );
   }
 
-  // Replace _buildPriceSlider with this
   Widget _buildPriceRangeChips(
     ThemeData theme,
     Color accentYellow,
@@ -312,10 +312,9 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
       [50, 100],
       [100, 500],
     ];
-
     return Wrap(
-      spacing: 8,
-      runSpacing: 8,
+      spacing: 10,
+      runSpacing: 10,
       children: ranges.map((range) {
         final isSelected =
             _priceRange.start.round() == range[0] &&
@@ -328,7 +327,7 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
             ),
           ),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
               color: isSelected ? accentYellow : theme.colorScheme.surface,
               borderRadius: BorderRadius.circular(12),
@@ -364,14 +363,15 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
             _selectedBeds.toString() == e.toString() ||
             (_selectedBeds == 5 && e == "5+");
         return GestureDetector(
-          onTap: () =>
-              setState(() => _selectedBeds = e == "5+" ? 5 : (e as int)),
+          onTap: () => setState(
+            () => _selectedBeds = e == "5+" ? 5 : (e is int ? e : 5),
+          ),
           child: Container(
-            width: 55,
-            height: 40,
+            width: 60,
+            height: 45,
             decoration: BoxDecoration(
               color: isSelected ? accentYellow : theme.colorScheme.surface,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(10),
               border: Border.all(
                 color: isSelected
                     ? accentYellow
@@ -384,6 +384,7 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
               style: TextStyle(
                 color: isSelected ? Colors.black : textColor,
                 fontWeight: FontWeight.bold,
+                fontSize: 14,
               ),
             ),
           ),
@@ -397,19 +398,30 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 30),
       child: SizedBox(
         width: double.infinity,
-        height: 50,
+        height: 52,
         child: ElevatedButton(
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            String apiPurpose = _purpose == "Buy" ? "sale" : "rent";
+            Navigator.pop(context, {
+              "purpose": apiPurpose,
+              "type": _selectedType.toLowerCase(),
+              "city": _selectedCity,
+              "min_price": _priceRange.start * 1000000,
+              "max_price": _priceRange.end * 1000000,
+              "beds": _selectedBeds,
+            });
+          },
           style: ElevatedButton.styleFrom(
             backgroundColor: primaryNavy,
             foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
+            elevation: 2,
           ),
           child: const Text(
             "Apply Filters",
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
         ),
       ),

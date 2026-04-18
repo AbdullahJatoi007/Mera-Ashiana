@@ -18,7 +18,12 @@ class RecentlyAddedHorizontal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final recent = listings.reversed.take(6).toList();
+    // FIX: If the API sends newest items first, we take the top 6.
+    // Removed .reversed to ensure "Recently Added" actually shows newest first.
+    final recent = listings.take(6).toList();
+
+    // Prevent rendering an empty space if no listings exist
+    if (recent.isEmpty) return const SizedBox.shrink();
 
     return SizedBox(
       height: 160,
@@ -33,17 +38,14 @@ class RecentlyAddedHorizontal extends StatelessWidget {
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) =>
-                    ProjectDetailsScreen(propertyId: listing.id),
+                builder: (_) => ProjectDetailsScreen(propertyId: listing.id),
               ),
             ),
             child: Container(
-              width: 140,
+              width: 150, // Slightly wider for better text fit as requested
               margin: const EdgeInsets.only(right: 12, bottom: 4),
               decoration: BoxDecoration(
-                color: isDark
-                    ? AppDarkColors.surface
-                    : AppColors.white,
+                color: isDark ? AppDarkColors.surface : AppColors.white,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: theme.dividerColor.withOpacity(0.1),
@@ -65,17 +67,16 @@ class RecentlyAddedHorizontal extends StatelessWidget {
                       top: Radius.circular(16),
                     ),
                     child: Image.network(
-                      listing.images.isNotEmpty
-                          ? listing.images[0]
-                          : '',
+                      listing.images.isNotEmpty ? listing.images[0] : '',
                       height: 90,
-                      width: 140,
+                      width: 150, // Updated to match container width
                       fit: BoxFit.cover,
                       errorBuilder: (c, e, s) => Container(
                         height: 90,
-                        color: Colors.grey[300],
+                        width: 150,
+                        color: isDark ? Colors.white10 : Colors.grey[200],
                         child: const Icon(
-                          Icons.home,
+                          Icons.home_work_outlined,
                           color: Colors.grey,
                         ),
                       ),

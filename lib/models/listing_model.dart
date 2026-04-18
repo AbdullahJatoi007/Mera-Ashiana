@@ -38,50 +38,49 @@ class Listing {
   });
 
   factory Listing.fromJson(Map<String, dynamic> json) {
-    // 1. Improved User Data Extraction
     String? authorName;
     if (json['user'] != null) {
-      // Check for common Prisma/Backend keys
       authorName =
           json['user']['username'] ??
           json['user']['full_name'] ??
           json['user']['name'];
     } else if (json['agent'] != null) {
       authorName = json['agent']['username'] ?? json['agent']['name'];
-    } else if (json['username'] != null) {
-      // In case the backend flattened the response
-      authorName = json['username'].toString();
     }
 
-    // 2. Image Parsing Logic
     final rawImages = json['listing_images'];
     List<String> parsedImages = [];
-
     if (rawImages is List) {
       parsedImages = rawImages
           .map((img) {
             final path = img['file_path']?.toString().trim() ?? '';
-            if (path.isEmpty) return '';
             return path.startsWith('http') ? path : '$_imageBaseUrl$path';
           })
           .where((p) => p.isNotEmpty)
           .toList();
     }
 
-    // 3. Robust Property Parsing
     return Listing(
       id: json['id'] ?? 0,
       title: json['title'] ?? '',
       description: json['description'] ?? '',
       price: double.tryParse(json['price']?.toString() ?? '0.0') ?? 0.0,
       location: json['location'] ?? '',
-      type: json['type']?.toString() ?? 'house',
+      type: json['type']?.toString().toLowerCase() ?? 'house',
       city: json['city'],
-      status: json['status']?.toString() ?? 'sale',
+      status: (json['purpose'] ?? json['status'] ?? 'sale')
+          .toString()
+          .toLowerCase(),
       images: parsedImages,
       area: json['area']?.toString(),
-      bedrooms: int.tryParse(json['bedrooms']?.toString() ?? '0') ?? 0,
-      bathrooms: int.tryParse(json['bathrooms']?.toString() ?? '0') ?? 0,
+      bedrooms:
+          int.tryParse((json['bedrooms'] ?? json['beds'] ?? '0').toString()) ??
+          0,
+      bathrooms:
+          int.tryParse(
+            (json['bathrooms'] ?? json['baths'] ?? '0').toString(),
+          ) ??
+          0,
       contactPhone: json['contact_phone']?.toString(),
       contactWhatsapp: json['contact_whatsapp']?.toString(),
       isFeatured: json['is_featured'] == true || json['is_featured'] == 1,

@@ -21,16 +21,14 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  String _selectedOption = 'BUY';
+  String _selectedOption = 'BUY'; // Matches 'sale' in API
   int _selectedCategoryIndex = 0;
   final ScrollController _scrollController = ScrollController();
 
   bool _isLoading = true;
   bool _hasError = false;
-
   List<Listing> _listings = [];
 
-  // Names match the listings_type enum in your Prisma schema
   final List<Map<String, dynamic>> _categories = [
     {'name': 'All', 'icon': Icons.grid_view_rounded},
     {'name': 'House', 'icon': Icons.home_rounded},
@@ -51,19 +49,37 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
+  // --- UI Logic & Filtering ---
+
   List<Listing> get _filteredListings {
+    // 1. Filter by Purpose (Matching website: /properties?purpose=rent or sale)
     List<Listing> baseFiltered = _listings.where((l) {
-      // Logic to match 'sale' or 'rent' enum from DB
-      String status = _selectedOption == 'BUY' ? 'sale' : 'rent';
-      return l.status.toLowerCase() == status;
+      String targetPurpose = _selectedOption == 'BUY' ? 'sale' : 'rent';
+      // Lowercase comparison prevents string mismatch errors
+      return (l.status ?? '').toLowerCase() == targetPurpose;
     }).toList();
 
+    // 2. Filter by Category
     if (_selectedCategoryIndex == 0) return baseFiltered;
 
     String categoryName = _categories[_selectedCategoryIndex]['name'] as String;
     return baseFiltered.where((l) {
-      return l.type.toLowerCase() == categoryName.toLowerCase();
+      return (l.type ?? '').toLowerCase() == categoryName.toLowerCase();
     }).toList();
+  }
+
+  void _updateSearchOption(String value) {
+    if (_selectedOption == value) return;
+    setState(() => _selectedOption = value);
+
+    // Smooth scroll to top when changing filters
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutQuad,
+      );
+    }
   }
 
   Future<void> _fetchProperties({bool isRefresh = false}) async {
@@ -83,24 +99,6 @@ class _HomeScreenState extends State<HomeScreen> {
         _hasError = true;
         _isLoading = false;
       });
-      debugPrint('HomeScreen error: $e');
-    }
-  }
-
-  void _handleSnap(double maxSnapOffset) {
-    if (!_scrollController.hasClients) return;
-    double currentOffset = _scrollController.offset;
-    if (currentOffset > 0 && currentOffset < maxSnapOffset) {
-      double target = (currentOffset < maxSnapOffset / 2) ? 0 : maxSnapOffset;
-      Future.microtask(() {
-        if (_scrollController.hasClients) {
-          _scrollController.animateTo(
-            target,
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.easeOutCubic,
-          );
-        }
-      });
     }
   }
 
@@ -110,11 +108,13 @@ class _HomeScreenState extends State<HomeScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final double statusBarHeight = MediaQuery.of(context).padding.top;
-    const double maxSnapOffset = 110.0;
 
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(
+      return Scaffold(
+        backgroundColor: isDark
+            ? AppDarkColors.background
+            : AppColors.background,
+        body: const Center(
           child: CircularProgressIndicator(color: AppColors.accentYellow),
         ),
       );
@@ -126,20 +126,22 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.error_outline,
-                size: 48,
-                color: isDark ? AppDarkColors.errorRed : AppColors.errorRed,
-              ),
+              const Icon(Icons.wifi_off_rounded, size: 64, color: Colors.grey),
               const SizedBox(height: 16),
               const Text(
-                "Unable to load properties.\nPlease check your connection.",
-                textAlign: TextAlign.center,
+                "Check your connection and try again",
+                style: TextStyle(fontSize: 16),
               ),
               const SizedBox(height: 12),
               ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.accentYellow,
+                ),
                 onPressed: () => _fetchProperties(),
-                child: const Text("Try Again"),
+                child: const Text(
+                  "Retry",
+                  style: TextStyle(color: Colors.black),
+                ),
               ),
             ],
           ),
@@ -152,27 +154,23 @@ class _HomeScreenState extends State<HomeScreen> {
       body: RefreshIndicator(
         color: AppColors.accentYellow,
         onRefresh: () async => await _fetchProperties(isRefresh: true),
-        child: NotificationListener<ScrollNotification>(
-          onNotification: (notification) {
-            if (notification is UserScrollNotification &&
-                notification.direction == ScrollDirection.idle) {
-              _handleSnap(maxSnapOffset);
-            }
-            return false;
-          },
-          child: CustomScrollView(
-            controller: _scrollController,
-            physics: const BouncingScrollPhysics(
-              parent: AlwaysScrollableScrollPhysics(),
+        child: CustomScrollView(
+          controller: _scrollController,
+          physics: const BouncingScrollPhysics(
+            parent: AlwaysScrollableScrollPhysics(),
+          ),
+          slivers: [
+            // Top Section with Buy/Rent Toggle
+            HomeTopSection(
+              selectedOption: _selectedOption,
+              statusBarHeight: statusBarHeight,
+              onOptionSelected: _updateSearchOption,
             ),
-            slivers: [
-              HomeTopSection(
-                selectedOption: _selectedOption,
-                statusBarHeight: statusBarHeight,
-                onOptionSelected: (value) =>
-                    setState(() => _selectedOption = value),
-              ),
-              SliverToBoxAdapter(
+
+            // Horizontal Category Chips
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 8.0),
                 child: CategoryList(
                   categories: _categories,
                   selectedIndex: _selectedCategoryIndex,
@@ -180,101 +178,114 @@ class _HomeScreenState extends State<HomeScreen> {
                       setState(() => _selectedCategoryIndex = index),
                 ),
               ),
-              // Featured Section - Updated for Boolean logic
-              SliverToBoxAdapter(
-                child: _buildSectionTitle(theme, loc.exploreProjects, () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => PropertiesScreen(
-                        listings: _listings
-                            .where((l) => l.isFeatured)
-                            .toList(),
-                        title: loc.exploreProjects,
-                      ),
-                    ),
-                  );
-                }),
-              ),
-              SliverToBoxAdapter(
-                child: FeaturedProjects(
-                  listings: _listings.where((l) => l.isFeatured).toList(),
-                  theme: theme,
-                ),
-              ),
-              // Recently Added
-              SliverToBoxAdapter(
-                child: _buildSectionTitle(theme, "Recently Added", () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => PropertiesScreen(
-                        listings: _listings,
-                        title: "Recently Added",
-                      ),
-                    ),
-                  );
-                }),
-              ),
-              SliverToBoxAdapter(
-                child: RecentlyAddedHorizontal(
-                  listings: _listings,
-                  theme: theme,
-                  isDark: isDark,
-                ),
-              ),
-              // Main List
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 25, 12, 10),
-                  child: Text(
-                    "${_categories[_selectedCategoryIndex]['name']} Listings",
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+            ),
+
+            // Recently Added Section (Top Priority)
+            SliverToBoxAdapter(
+              child: _buildSectionTitle(theme, "Recently Added", () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => PropertiesScreen(
+                      listings: _listings,
+                      title: "Recently Added",
                     ),
                   ),
-                ),
+                );
+              }),
+            ),
+            SliverToBoxAdapter(
+              child: RecentlyAddedHorizontal(
+                listings: _listings,
+                theme: theme,
+                isDark: isDark,
               ),
-              SliverPadding(
-                padding: const EdgeInsets.only(bottom: 20),
-                sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate(
+            ),
+
+            // Main Listings Header
+            SliverToBoxAdapter(
+              child: _buildSectionTitle(
+                theme,
+                "${_categories[_selectedCategoryIndex]['name']} Listings",
+                () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => PropertiesScreen(
+                        listings: _filteredListings,
+                        title:
+                            "${_categories[_selectedCategoryIndex]['name']} Properties",
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+
+            // The Vertical List
+            SliverPadding(
+              padding: const EdgeInsets.only(bottom: 30),
+              sliver: _filteredListings.isEmpty
+                  ? const SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: Center(
+                        child: Text("No properties found in this category."),
+                      ),
+                    )
+                  : SliverList(
+                      delegate: SliverChildBuilderDelegate(
                         (context, index) => PropertyListItem(
-                      listing: _filteredListings[index],
-                      theme: theme,
-                      isDark: isDark,
+                          listing: _filteredListings[index],
+                          theme: theme,
+                          isDark: isDark,
+                        ),
+                        childCount: _filteredListings.length,
+                      ),
                     ),
-                    childCount: _filteredListings.length,
-                  ),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
+  // Polished Section Header Helper
   Widget _buildSectionTitle(
-      ThemeData theme,
-      String title,
-      VoidCallback onSeeAll,
-      ) {
+    ThemeData theme,
+    String title,
+    VoidCallback onSeeAll,
+  ) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 12, 10),
+      padding: const EdgeInsets.fromLTRB(20, 25, 12, 10),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
             title,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.5,
+            ),
           ),
           TextButton(
             onPressed: onSeeAll,
-            child: Text(
-              "See All",
-              style: TextStyle(color: theme.colorScheme.secondary),
+            style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+            child: Row(
+              children: [
+                Text(
+                  "See All",
+                  style: TextStyle(
+                    color: theme.colorScheme.secondary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: 18,
+                  color: theme.colorScheme.secondary,
+                ),
+              ],
             ),
           ),
         ],

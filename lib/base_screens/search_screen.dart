@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:mera_ashiana/l10n/app_localizations.dart';
 import 'package:mera_ashiana/screens/search_filter_screen.dart';
+import 'package:mera_ashiana/models/listing_model.dart';
+import 'package:mera_ashiana/services/property_service.dart';
+import 'package:mera_ashiana/base_screens/widgets/property_list_item.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -11,12 +14,33 @@ class SearchScreen extends StatefulWidget {
 
 class _SearchScreenState extends State<SearchScreen> {
   bool _hasSearchResults = false;
+  bool _isSearching = false;
   String _selectedQuickFilter = "All";
+  List<Listing> _searchResults = [];
+
+  Future<void> _performSearch(Map<String, dynamic> filters) async {
+    setState(() {
+      _isSearching = true;
+      _hasSearchResults = true;
+    });
+
+    try {
+      final results = await PropertyService.fetchProperties(filters: filters);
+      setState(() {
+        _searchResults = results;
+        _isSearching = false;
+      });
+    } catch (e) {
+      setState(() => _isSearching = false);
+      debugPrint("Search Error: $e");
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     var loc = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -24,8 +48,10 @@ class _SearchScreenState extends State<SearchScreen> {
         children: [
           _buildCompactHeader(loc, theme),
           Expanded(
-            child: _hasSearchResults
-                ? _buildResultsList(theme)
+            child: _isSearching
+                ? const Center(child: CircularProgressIndicator())
+                : _hasSearchResults
+                ? _buildResultsList(theme, isDark)
                 : _buildInitialState(theme),
           ),
         ],
@@ -43,7 +69,6 @@ class _SearchScreenState extends State<SearchScreen> {
       ),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        // Fix: Use surface instead of AppColors.white
         borderRadius: const BorderRadius.only(
           bottomLeft: Radius.circular(20),
           bottomRight: Radius.circular(20),
@@ -66,8 +91,11 @@ class _SearchScreenState extends State<SearchScreen> {
                 child: SizedBox(
                   height: 44,
                   child: TextField(
-                    onSubmitted: (v) =>
-                        setState(() => _hasSearchResults = true),
+                    onSubmitted: (v) {
+                      if (v.isNotEmpty) {
+                        _performSearch({"query": v});
+                      }
+                    },
                     style: TextStyle(color: theme.colorScheme.onSurface),
                     decoration: InputDecoration(
                       hintText: "Area, City or Project...",
@@ -105,11 +133,14 @@ class _SearchScreenState extends State<SearchScreen> {
   Widget _buildFilterButton(ThemeData theme) {
     return GestureDetector(
       onTap: () async {
-        await Navigator.push(
+        final Map<String, dynamic>? filters = await Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => const SearchFilterScreen()),
         );
-        setState(() => _hasSearchResults = true);
+
+        if (filters != null) {
+          _performSearch(filters);
+        }
       },
       child: Container(
         height: 44,
@@ -123,17 +154,39 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
+  // ✅ MERGED: Updated Quick Filter logic
   Widget _buildQuickFilterRow(ThemeData theme) {
-    final filters = ["All", "Houses", "Flats", "Plots", "Rent"];
+    final List<Map<String, String>> filters = [
+      {'label': 'All', 'value': 'all'},
+      {'label': 'House', 'value': 'house'},
+      {'label': 'Apartment/Flat', 'value': 'flat'},
+      {'label': 'Plot', 'value': 'plot'},
+      {'label': 'Commercial', 'value': 'commercial'},
+      {'label': 'Other', 'value': 'other'},
+    ];
+
     return SizedBox(
-      height: 32,
+      height: 35,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         itemCount: filters.length,
         itemBuilder: (context, i) {
-          bool isSelected = _selectedQuickFilter == filters[i];
+          final filter = filters[i];
+          bool isSelected = _selectedQuickFilter == filter['label'];
+
           return GestureDetector(
-            onTap: () => setState(() => _selectedQuickFilter = filters[i]),
+            onTap: () {
+              setState(() => _selectedQuickFilter = filter['label']!);
+
+              // Construct parameters dynamically
+              Map<String, dynamic> searchParams = {};
+              if (filter['value'] != 'all') {
+                searchParams['type'] = filter['value'];
+              }
+
+              _performSearch(searchParams);
+            },
             child: Container(
               margin: const EdgeInsets.only(right: 8),
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -141,7 +194,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 color: isSelected
                     ? theme.colorScheme.primary
                     : theme.colorScheme.surface,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(10),
                 border: Border.all(
                   color: isSelected
                       ? theme.colorScheme.primary
@@ -150,13 +203,13 @@ class _SearchScreenState extends State<SearchScreen> {
               ),
               alignment: Alignment.center,
               child: Text(
-                filters[i],
+                filter['label']!,
                 style: TextStyle(
                   color: isSelected
                       ? Colors.white
                       : theme.colorScheme.onSurface,
                   fontSize: 12,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                 ),
               ),
             ),
@@ -166,135 +219,29 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  Widget _buildPropertyCard(ThemeData theme, Map<String, String> data) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface, // Fix card color
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Image part stays largely same, but badges use theme
-          Stack(
-            children: [
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(15),
-                ),
-                child: Image.network(
-                  data['image']!,
-                  height: 160,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                ),
-              ),
-              Positioned(
-                top: 10,
-                left: 10,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.secondary,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    "FOR SALE",
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.onSecondary,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "PKR ${data['price']}",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: theme.colorScheme.primary,
-                  ),
-                ),
-                Text(
-                  data['title']!,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Row(
-                  children: [
-                    const Icon(Icons.location_on, size: 12, color: Colors.grey),
-                    const SizedBox(width: 4),
-                    Text(
-                      data['location']!,
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
-                  ],
-                ),
-                Divider(height: 20, color: theme.dividerColor.withOpacity(0.1)),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _specItem(
-                      theme,
-                      Icons.king_bed_outlined,
-                      "${data['beds']} Beds",
-                    ),
-                    _specItem(
-                      theme,
-                      Icons.bathtub_outlined,
-                      "${data['baths']} Baths",
-                    ),
-                    _specItem(theme, Icons.square_foot, data['size']!),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _specItem(ThemeData theme, IconData icon, String label) {
-    return Row(
-      children: [
-        Icon(icon, size: 16, color: theme.colorScheme.primary.withOpacity(0.7)),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 11,
-            color: theme.colorScheme.onSurface.withOpacity(0.7),
-          ),
+  Widget _buildResultsList(ThemeData theme, bool isDark) {
+    if (_searchResults.isEmpty) {
+      return Center(
+        child: Text(
+          "No properties found matching your filters.",
+          style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6)),
         ),
-      ],
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: _searchResults.length,
+      itemBuilder: (context, index) {
+        return PropertyListItem(
+          listing: _searchResults[index],
+          theme: theme,
+          isDark: isDark,
+        );
+      },
     );
   }
 
-  // Helper methods for Initial State...
   Widget _buildInitialState(ThemeData theme) {
     return ListView(
       padding: const EdgeInsets.all(20),
@@ -329,6 +276,7 @@ class _SearchScreenState extends State<SearchScreen> {
     ),
     trailing: const Icon(Icons.north_west, size: 14),
     contentPadding: EdgeInsets.zero,
+    onTap: () => _performSearch({"query": t}),
   );
 
   Widget _buildPopularGrid(ThemeData theme) {
@@ -337,28 +285,31 @@ class _SearchScreenState extends State<SearchScreen> {
       runSpacing: 8,
       children: ["Bahria", "DHA", "Clifton", "Gulshan"]
           .map(
-            (e) => Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surface,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: theme.dividerColor.withOpacity(0.2)),
-              ),
-              child: Text(
-                e,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: theme.colorScheme.onSurface,
+            (e) => GestureDetector(
+              onTap: () => _performSearch({"city": e}),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surface,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: theme.dividerColor.withOpacity(0.2),
+                  ),
+                ),
+                child: Text(
+                  e,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: theme.colorScheme.onSurface,
+                  ),
                 ),
               ),
             ),
           )
           .toList(),
     );
-  }
-
-  Widget _buildResultsList(ThemeData theme) {
-    // Note: You would pass the theme into the card builder here
-    return const Center(child: Text("Results here..."));
   }
 }
