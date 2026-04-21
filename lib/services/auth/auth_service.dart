@@ -32,24 +32,28 @@ class AuthService {
       data: {'email': email.trim().toLowerCase(), 'otp': otp},
     );
 
-    // Note: Ensure the key 'accessToken' matches your backend response exactly
-    final token = res.data['accessToken'] ?? res.data['token'];
-    if (token != null) {
-      await SecureStorageService.write(key: 'access_token', value: token);
+    final accessToken = res.data['accessToken'] ?? res.data['token'];
+    if (accessToken != null) {
+      await SecureStorageService.write(key: 'access_token', value: accessToken);
+    }
+
+    final refreshToken = res.data['refreshToken'];
+    if (refreshToken != null) {
+      await SecureStorageService.write(key: 'refresh_token', value: refreshToken);
     }
   }
 
   // ───────────── LOGOUT ─────────────
   static Future<void> logout() async {
     try {
-      // Uses Endpoints.logout -> "$apiBase/auth/session/logout"
-      await ApiClient.post(Endpoints.logout);
+      final refreshToken = await SecureStorageService.read(key: 'refresh_token');
+      await ApiClient.delete(Endpoints.logout, data: {'refreshToken': refreshToken});
     } catch (_) {
       // Silent fail on backend logout to ensure local wipe still happens
     }
 
-    // Always clear local storage regardless of backend response
     await SecureStorageService.delete(key: 'access_token');
+    await SecureStorageService.delete(key: 'refresh_token');
   }
 
   // ───────────── LOGIN ─────────────
@@ -62,20 +66,14 @@ class AuthService {
       data: {'email': email.trim().toLowerCase(), 'password': password},
     );
 
-    // 1. Save Access Token
-    final token = res.data['accessToken'] ?? res.data['token'];
-    if (token != null) {
-      await SecureStorageService.write(key: 'access_token', value: token);
+    final accessToken = res.data['accessToken'] ?? res.data['token'];
+    if (accessToken != null) {
+      await SecureStorageService.write(key: 'access_token', value: accessToken);
     }
 
-    // 2. Save Refresh Cookie (Crucial for the refresh logic)
-    final cookies = res.headers['set-cookie'];
-    if (cookies != null && cookies.isNotEmpty) {
-      // We store the whole cookie string to send back later
-      await SecureStorageService.write(
-        key: 'refresh_cookie',
-        value: cookies.first,
-      );
+    final refreshToken = res.data['refreshToken'];
+    if (refreshToken != null) {
+      await SecureStorageService.write(key: 'refresh_token', value: refreshToken);
     }
   }
 }

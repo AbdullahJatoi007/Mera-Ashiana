@@ -58,18 +58,21 @@ class ApiClient {
 
   static Future<bool> _refreshToken() async {
     try {
+      final storedRefreshToken = await SecureStorageService.read(key: 'refresh_token');
+      if (storedRefreshToken == null) return false;
+
       final response = await Dio().post(
-        "${Endpoints.apiBase}/auth/session/refresh",
-        options: Options(
-          headers: {
-            'Cookie': await SecureStorageService.read(key: 'refresh_cookie') ?? '',
-          },
-        ),
+        Endpoints.refreshToken,
+        data: {'refreshToken': storedRefreshToken},
       );
 
-      final newToken = response.data['accessToken'];
-      if (newToken != null) {
-        await SecureStorageService.write(key: 'access_token', value: newToken);
+      final newAccessToken = response.data['accessToken'];
+      final newRefreshToken = response.data['refreshToken'];
+      if (newAccessToken != null) {
+        await SecureStorageService.write(key: 'access_token', value: newAccessToken);
+        if (newRefreshToken != null) {
+          await SecureStorageService.write(key: 'refresh_token', value: newRefreshToken);
+        }
         return true;
       }
     } catch (e) {

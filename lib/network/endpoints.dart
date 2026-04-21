@@ -2,21 +2,24 @@ class Endpoints {
   static const String _base = "https://api-staging.mera-ashiana.com";
   static const String apiBase = "$_base/api";
 
-  // ───────── AUTH (MATCH BACKEND) ─────────
+  // ───────── AUTH (MOBILE — tokens returned in JSON body) ─────────
   static const String sendOtp =
-      "$apiBase/auth/identity/register/send-otp";
+      "$apiBase/auth/mobile/identity/register/send-otp";
 
   static const String register =
-      "$apiBase/auth/identity/register";
+      "$apiBase/auth/mobile/identity/register";
 
   static const String login =
-      "$apiBase/auth/identity/login";
+      "$apiBase/auth/mobile/identity/login";
 
   static const String googleAuth =
-      "$apiBase/auth/identity/google";
+      "$apiBase/auth/mobile/identity/google";
 
   static const String logout =
-      "$apiBase/auth/session/logout";
+      "$apiBase/auth/mobile/session/logout";
+
+  static const String refreshToken =
+      "$apiBase/auth/mobile/session/refresh";
 
   // ───────── PROFILE ─────────
   static const String profile = "$apiBase/auth/profile";
