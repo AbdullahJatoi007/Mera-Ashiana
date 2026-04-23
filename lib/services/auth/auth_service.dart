@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:mera_ashiana/core/api_client.dart';
 import 'package:mera_ashiana/network/endpoints.dart';
 import 'package:mera_ashiana/services/auth/secure_storage_service.dart';
@@ -39,15 +40,31 @@ class AuthService {
 
     final refreshToken = res.data['refreshToken'];
     if (refreshToken != null) {
-      await SecureStorageService.write(key: 'refresh_token', value: refreshToken);
+      await SecureStorageService.write(
+        key: 'refresh_token',
+        value: refreshToken,
+      );
     }
   }
 
   // ───────────── LOGOUT ─────────────
+
   static Future<void> logout() async {
     try {
-      final refreshToken = await SecureStorageService.read(key: 'refresh_token');
-      await ApiClient.delete(Endpoints.logout, data: {'refreshToken': refreshToken});
+      final refreshToken = await SecureStorageService.read(
+        key: 'refresh_token',
+      );
+      final accessToken = await SecureStorageService.read(key: 'access_token');
+
+      // 🚨 FIX: Use a raw Dio instance!
+      // This bypasses the ApiClient interceptor queue and prevents deadly infinite loops during logout.
+      if (refreshToken != null) {
+        await Dio().delete(
+          Endpoints.logout,
+          data: {'refreshToken': refreshToken},
+          options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
+        );
+      }
     } catch (_) {
       // Silent fail on backend logout to ensure local wipe still happens
     }
@@ -73,7 +90,10 @@ class AuthService {
 
     final refreshToken = res.data['refreshToken'];
     if (refreshToken != null) {
-      await SecureStorageService.write(key: 'refresh_token', value: refreshToken);
+      await SecureStorageService.write(
+        key: 'refresh_token',
+        value: refreshToken,
+      );
     }
   }
 }

@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mera_ashiana/l10n/app_localizations.dart';
-import 'package:mera_ashiana/screens/base/main_scaffold.dart';
-import 'package:mera_ashiana/services/auth/auth_service.dart';
-
+import 'package:mera_ashiana/services/auth_state.dart';
+import 'package:mera_ashiana/services/logout_service.dart';
 
 class AuthHelper {
   static void showLogoutDialog(BuildContext context) {
@@ -11,8 +10,9 @@ class AuthHelper {
 
     showDialog(
       context: context,
-      barrierDismissible: false, // Start false to be safe
-      builder: (context) => StatefulBuilder(
+      // Prevents closing the dialog by tapping outside once the process starts
+      barrierDismissible: !isLoggingOut,
+      builder: (dialogContext) => StatefulBuilder(
         builder: (context, setState) {
           return AlertDialog(
             shape: RoundedRectangleBorder(
@@ -29,14 +29,17 @@ class AuthHelper {
                       CircularProgressIndicator(),
                       SizedBox(height: 16),
                       Text("Logging out safely..."),
+                      // Consider adding this to l10n
                     ],
                   )
-                : const Text("Are you sure you want to log out?"),
+                : const Text(
+                    "Are you sure you want to log out of your account?",
+                  ),
             actions: isLoggingOut
-                ? []
+                ? [] // Hide buttons during the async process
                 : [
                     TextButton(
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: () => Navigator.pop(dialogContext),
                       child: Text(
                         "Cancel",
                         style: TextStyle(color: Colors.grey.shade600),
@@ -46,19 +49,21 @@ class AuthHelper {
                       onPressed: () async {
                         setState(() => isLoggingOut = true);
 
-                        // 1. Perform Wipe using the merged service
-                        await AuthService.logout();
+                        try {
+                          // 1. Perform the heavy lifting (clearing prefs, cache, etc.)
+                          await LogoutService.logout();
 
-                        if (!context.mounted) return;
-
-                        // 2. Clear navigation stack and go to Home
-                        Navigator.pushAndRemoveUntil(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const MainScaffold(),
-                          ),
-                          (route) => false,
-                        );
+                          // 2. Update global state
+                          // This should naturally trigger your UI to redirect
+                          AuthState.isLoggedIn.value = false;
+                        } catch (e) {
+                          // Optional: Handle errors (e.g., show a Toast)
+                        } finally {
+                          // 3. Dismiss dialog safely
+                          if (context.mounted) {
+                            Navigator.pop(context);
+                          }
+                        }
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red.shade50,

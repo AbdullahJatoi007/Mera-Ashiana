@@ -81,7 +81,14 @@ class _AuthenticationBottomSheetState extends State<AuthenticationBottomSheet> {
               child: isRegister
                   ? RegisterForm(
                       key: const ValueKey("register"),
-                      onSuccess: widget.onLoginSuccess,
+                      onSuccess: () {
+                        // FIX: Close the bottom sheet first
+                        if (Navigator.canPop(context)) {
+                          Navigator.pop(context);
+                        }
+                        // Then trigger the success callback
+                        widget.onLoginSuccess();
+                      },
                       onSwitch: () {
                         HapticFeedback.lightImpact();
                         setState(() => isRegister = false);
@@ -89,7 +96,14 @@ class _AuthenticationBottomSheetState extends State<AuthenticationBottomSheet> {
                     )
                   : LoginForm(
                       key: const ValueKey("login"),
-                      onSuccess: widget.onLoginSuccess,
+                      onSuccess: () {
+                        // FIX: Close the bottom sheet first
+                        if (Navigator.canPop(context)) {
+                          Navigator.pop(context);
+                        }
+                        // Then trigger the success callback
+                        widget.onLoginSuccess();
+                      },
                       onSwitch: () {
                         HapticFeedback.lightImpact();
                         setState(() => isRegister = true);
