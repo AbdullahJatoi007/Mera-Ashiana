@@ -263,4 +263,13 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get registrationSuccess => 'ایجنسی کامیابی کے ساتھ رجسٹر ہو گئی';
+
+  @override
+  String get loginRequired => 'لاگ ان ضروری ہے';
+
+  @override
+  String get pleaseLoginToContinue => 'جاری رکھنے کے لیے لاگ ان کریں';
+
+  @override
+  String get login => 'لاگ ان';
 }

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:mera_ashiana/screens/search_filter_screen.dart';
 
 class HomeTopSection extends StatelessWidget {
   const HomeTopSection({
@@ -18,13 +17,17 @@ class HomeTopSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // REDUCED HEIGHT: Total 170px + Status bar
-    final double minHeaderHeight = 60.0 + statusBarHeight;
-    final double maxHeaderHeight = 170.0 + statusBarHeight;
+    // Max height: status bar + content area
+    final double maxHeaderHeight = 95.0 + statusBarHeight;
+
+    // KEY FIX: minExtent = statusBarHeight (not 0.0)
+    // This ensures the header fully collapses to just the status bar area,
+    // never overlapping the AppBar below it, and never getting stuck mid-state.
+    final double minHeaderHeight = statusBarHeight;
 
     return SliverPersistentHeader(
       pinned: true,
-      delegate: HomeHeaderDelegate(
+      delegate: _HomeHeaderDelegate(
         minHeight: minHeaderHeight,
         maxHeight: maxHeaderHeight,
         statusBarHeight: statusBarHeight,
@@ -37,8 +40,8 @@ class HomeTopSection extends StatelessWidget {
   }
 }
 
-class HomeHeaderDelegate extends SliverPersistentHeaderDelegate {
-  HomeHeaderDelegate({
+class _HomeHeaderDelegate extends SliverPersistentHeaderDelegate {
+  _HomeHeaderDelegate({
     required this.minHeight,
     required this.maxHeight,
     required this.statusBarHeight,
@@ -68,74 +71,99 @@ class HomeHeaderDelegate extends SliverPersistentHeaderDelegate {
     double shrinkOffset,
     bool overlapsContent,
   ) {
-    final double diff = maxExtent - minExtent;
-    final double progress = (shrinkOffset / diff).clamp(0.0, 1.0);
+    final double collapsibleRange = (maxExtent - minExtent).clamp(
+      1.0,
+      double.infinity,
+    );
+    // Progress goes 0.0 (fully open) → 1.0 (fully collapsed)
+    final double progress = (shrinkOffset / collapsibleRange).clamp(0.0, 1.0);
 
-    // Snappy fade-out: Content vanishes by the time 30% is scrolled
-    final double contentOpacity = (1.0 - (progress * 3.5)).clamp(0.0, 1.0);
+    // Content fades out as user scrolls up — starts fading at 0%, fully gone at 65%
+    final double contentOpacity = (1.0 - (progress / 0.65)).clamp(0.0, 1.0);
 
-    return Container(
-      color: primaryColor,
-      child: Stack(
-        children: [
-          // Background with subtle rounded corners
-          Container(
-            decoration: BoxDecoration(
-              color: primaryColor,
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(24 * (1 - progress)),
-                bottomRight: Radius.circular(24 * (1 - progress)),
-              ),
-            ),
-          ),
+    // Slide up slightly as content fades
+    final double translateY = progress * -16.0;
 
-          // Collapsing Content (Ultra Slim)
-          if (contentOpacity > 0.01)
-            Positioned(
-              top: statusBarHeight + 10,
-              left: 20,
-              right: 20,
-              child: Opacity(
-                opacity: contentOpacity,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Find your home',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    _SlimToggle(
-                      selectedOption: selectedOption,
-                      onOptionSelected: onOptionSelected,
-                      buttonColor: buttonColor,
-                      primaryColor: primaryColor,
-                    ),
-                  ],
+    // Border radius flattens as header collapses
+    final double radius = 24.0 * (1.0 - progress);
+
+    return ClipRect(
+      // Prevents any painting outside the header bounds — critical for preventing
+      // content bleed into the area below (Mera Ashiana widget / category chips)
+      child: SizedBox.expand(
+        child: Stack(
+          clipBehavior: Clip.hardEdge,
+          children: [
+            // Solid base — prevents white flash during animation
+            Positioned.fill(child: ColoredBox(color: primaryColor)),
+
+            // Decorative container with dynamic border radius
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: primaryColor,
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(radius),
+                    bottomRight: Radius.circular(radius),
+                  ),
                 ),
               ),
             ),
 
-          // Search Bar (Docked at the bottom)
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
-              child: _SlimSearchBar(iconColor: primaryColor),
-            ),
-          ),
-        ],
+            // Collapsible content — only renders when partially visible
+            if (contentOpacity > 0)
+              Positioned(
+                top: statusBarHeight + 8.0,
+                left: 20.0,
+                right: 20.0,
+                // Clip to available height so content never bleeds down when transitioning
+                bottom: 0,
+                child: OverflowBox(
+                  alignment: Alignment.topLeft,
+                  maxHeight: 95.0,
+                  child: Opacity(
+                    opacity: contentOpacity,
+                    child: Transform.translate(
+                      offset: Offset(0, translateY),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            'Find your home',
+                            style: TextStyle(
+                              fontSize: 19,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          _SlimToggle(
+                            selectedOption: selectedOption,
+                            onOptionSelected: onOptionSelected,
+                            buttonColor: buttonColor,
+                            primaryColor: primaryColor,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
 
   @override
-  bool shouldRebuild(covariant HomeHeaderDelegate old) =>
-      old.selectedOption != selectedOption;
+  bool shouldRebuild(covariant _HomeHeaderDelegate oldDelegate) {
+    return oldDelegate.selectedOption != selectedOption ||
+        oldDelegate.maxHeight != maxHeight ||
+        oldDelegate.minHeight != minHeight ||
+        oldDelegate.statusBarHeight != statusBarHeight;
+  }
 }
 
 class _SlimToggle extends StatelessWidget {
@@ -154,7 +182,7 @@ class _SlimToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 38, // Fixed height for a tighter look
+      height: 38,
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.08),
@@ -171,63 +199,27 @@ class _SlimToggle extends StatelessWidget {
   }
 
   Widget _buildItem(String label) {
-    bool isSel = selectedOption == label;
+    final bool isSelected = selectedOption == label;
     return Expanded(
       child: GestureDetector(
         onTap: () => onOptionSelected(label),
-        child: Container(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
           decoration: BoxDecoration(
-            color: isSel ? buttonColor : Colors.transparent,
+            color: isSelected ? buttonColor : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
           ),
           alignment: Alignment.center,
-          child: Text(
-            label,
+          child: AnimatedDefaultTextStyle(
+            duration: const Duration(milliseconds: 180),
             style: TextStyle(
-              color: isSel ? primaryColor : Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
+              color: isSelected ? primaryColor : Colors.white,
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
             ),
+            child: Text(label),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SlimSearchBar extends StatelessWidget {
-  const _SlimSearchBar({required this.iconColor});
-
-  final Color iconColor;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        // Navigate to the search filter screen
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const SearchFilterScreen()),
-        );
-      },
-      child: Container(
-        height: 42, // Slim search bar
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        child: Row(
-          children: [
-            Icon(Icons.search, color: iconColor, size: 18),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Search properties...',
-                style: TextStyle(color: Colors.grey.shade400, fontSize: 13),
-              ),
-            ),
-          ],
         ),
       ),
     );

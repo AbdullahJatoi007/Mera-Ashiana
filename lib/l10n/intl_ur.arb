@@ -83,5 +83,8 @@
   "officeAddress": "دفتر کا پتہ",
   "registerAgency": "ایجنسی رجسٹر کریں",
   "invalidEmail": "درست ای میل درج کریں",
-  "registrationSuccess": "ایجنسی کامیابی کے ساتھ رجسٹر ہو گئی"
+  "registrationSuccess": "ایجنسی کامیابی کے ساتھ رجسٹر ہو گئی",
+  "loginRequired": "لاگ ان ضروری ہے",
+  "pleaseLoginToContinue": "جاری رکھنے کے لیے لاگ ان کریں",
+  "login": "لاگ ان"
 }

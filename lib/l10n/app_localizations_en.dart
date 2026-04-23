@@ -263,4 +263,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get registrationSuccess => 'Agency registered successfully';
+
+  @override
+  String get loginRequired => 'Login Required';
+
+  @override
+  String get pleaseLoginToContinue => 'Please login to continue';
+
+  @override
+  String get login => 'Login';
 }

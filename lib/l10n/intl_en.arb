@@ -83,7 +83,10 @@
   "officeAddress": "Office Address",
   "registerAgency": "REGISTER AGENCY",
   "invalidEmail": "Enter a valid email",
-  "registrationSuccess": "Agency registered successfully"
+  "registrationSuccess": "Agency registered successfully",
+  "loginRequired": "Login Required",
+  "pleaseLoginToContinue": "Please login to continue",
+  "login": "Login"
 
 
 }
