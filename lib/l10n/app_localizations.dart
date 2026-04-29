@@ -218,12 +218,6 @@ abstract class AppLocalizations {
   /// **'Messages'**
   String get messages;
 
-  /// No description provided for @helpSupport.
-  ///
-  /// In en, this message translates to:
-  /// **'Help & Support'**
-  String get helpSupport;
-
   /// No description provided for @aboutUs.
   ///
   /// In en, this message translates to:

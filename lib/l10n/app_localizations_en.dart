@@ -70,9 +70,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get messages => 'Messages';
 
   @override
-  String get helpSupport => 'Help & Support';
-
-  @override
   String get aboutUs => 'About Us';
 
   @override

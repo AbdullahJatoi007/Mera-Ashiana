@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 class DrawerFooter extends StatelessWidget {
@@ -8,17 +9,21 @@ class DrawerFooter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(20.0),
+      // Ensure the container is wide enough
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
       decoration: BoxDecoration(
+        color: Colors.transparent, // Or match drawer background
         border: Border(top: BorderSide(color: Colors.grey.shade200)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start, // Align text to start
         children: <Widget>[
           InkWell(
             onTap: onLogout,
-            child: Row(
-              children: const [
+            child: const Row(
+              children: [
                 Icon(Icons.logout_rounded, color: Colors.redAccent, size: 20),
                 SizedBox(width: 12),
                 Text(
@@ -32,16 +37,14 @@ class DrawerFooter extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 12),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              'Version 1.0.3',
-              style: TextStyle(
-                color: Colors.grey.shade500,
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-              ),
+          const SizedBox(height: 16),
+          // Increased font size slightly and used a more visible color
+          Text(
+            'Version 1.0.3',
+            style: TextStyle(
+              color: Colors.grey.shade600,
+              fontSize: 12, // Increased from 11
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],

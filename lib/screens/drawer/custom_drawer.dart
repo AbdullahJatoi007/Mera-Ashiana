@@ -5,7 +5,7 @@ import 'package:mera_ashiana/screens/account_settings_screen.dart';
 import 'package:mera_ashiana/screens/drawer/widgets/drawer_header.dart';
 import 'package:mera_ashiana/screens/blogs_screen.dart';
 import 'package:mera_ashiana/base_screens/favourite_screen.dart';
-import 'package:mera_ashiana/main.dart';
+import 'package:mera_ashiana/main.dart'; // Ensure appThemeMode and appLocale are imported
 import 'package:mera_ashiana/services/auth_state.dart';
 import 'package:mera_ashiana/theme/app_colors.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -13,14 +13,10 @@ import 'package:url_launcher/url_launcher.dart';
 class CustomDrawer extends StatelessWidget {
   const CustomDrawer({super.key});
 
-  // 🌐 URL launcher
   void _launchURL(String url) async {
     final Uri uri = Uri.parse(url);
-
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
-      debugPrint("Could not launch $url");
     }
   }
 
@@ -31,9 +27,7 @@ class CustomDrawer extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
 
     return Drawer(
-      // 🌙 FIXED DARK MODE BACKGROUND
       backgroundColor: isDark ? const Color(0xFF121212) : AppColors.white,
-
       child: Column(
         children: <Widget>[
           const CustomDrawerHeader(),
@@ -42,7 +36,6 @@ class CustomDrawer extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.symmetric(vertical: 12),
               children: <Widget>[
-                // 🏠 Home
                 _buildMenuItem(
                   context,
                   loc.home,
@@ -51,7 +44,6 @@ class CustomDrawer extends StatelessWidget {
                   isDark: isDark,
                 ),
 
-                // ❤️ Favorites (AUTH ONLY)
                 ValueListenableBuilder<bool>(
                   valueListenable: AuthState.isLoggedIn,
                   builder: (context, isLoggedIn, _) {
@@ -61,7 +53,6 @@ class CustomDrawer extends StatelessWidget {
                       Icons.favorite_border_rounded,
                       () {
                         Navigator.pop(context);
-
                         if (isLoggedIn) {
                           Navigator.push(
                             context,
@@ -70,9 +61,8 @@ class CustomDrawer extends StatelessWidget {
                             ),
                           );
                         } else {
-                          // silently ignore OR show snackbar if you want
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
+                            const SnackBar(
                               content: Text("Please login to access favorites"),
                             ),
                           );
@@ -83,7 +73,6 @@ class CustomDrawer extends StatelessWidget {
                   },
                 ),
 
-                // 📰 Blogs
                 _buildMenuItem(
                   context,
                   loc.blogs,
@@ -100,30 +89,53 @@ class CustomDrawer extends StatelessWidget {
 
                 _buildDivider(isDark),
 
-                // ⚙️ Account Settings (ONLY if logged in)
-                ValueListenableBuilder<bool>(
-                  valueListenable: AuthState.isLoggedIn,
-                  builder: (context, isLoggedIn, _) {
-                    if (!isLoggedIn) {
-                      return const SizedBox.shrink();
-                    }
-
-                    return _buildMenuItem(
-                      context,
-                      loc.accountSettings,
-                      Icons.settings_outlined,
-                      () {
-                        Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const AccountSettingsScreen(),
+                // 🌙 DARK MODE TOGGLE
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
+                  ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? const Color(0xFF1E1E1E)
+                          : AppColors.background.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: ValueListenableBuilder<ThemeMode>(
+                      valueListenable: appThemeMode,
+                      builder: (context, currentMode, _) {
+                        return ListTile(
+                          leading: Icon(
+                            isDark ? Icons.dark_mode : Icons.light_mode,
+                            color: isDark
+                                ? const Color(0xFFFFD54F)
+                                : Colors.orangeAccent,
+                            size: 22,
+                          ),
+                          title: Text(
+                            loc.darkMode,
+                            style: TextStyle(
+                              color: isDark
+                                  ? Colors.white70
+                                  : AppColors.textDark,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                          trailing: Switch.adaptive(
+                            value: isDark,
+                            activeColor: const Color(0xFFFFD54F),
+                            onChanged: (v) {
+                              appThemeMode.value = v
+                                  ? ThemeMode.dark
+                                  : ThemeMode.light;
+                            },
                           ),
                         );
                       },
-                      isDark: isDark,
-                    );
-                  },
+                    ),
+                  ),
                 ),
 
                 // 🌐 Language Selector
@@ -173,9 +185,7 @@ class CustomDrawer extends StatelessWidget {
                           DropdownMenuItem(value: 'ur', child: Text(loc.urdu)),
                         ],
                         onChanged: (value) {
-                          if (value != null) {
-                            appLocale.value = Locale(value);
-                          }
+                          if (value != null) appLocale.value = Locale(value);
                         },
                       ),
                     ),
@@ -184,16 +194,14 @@ class CustomDrawer extends StatelessWidget {
 
                 _buildDivider(isDark),
 
-                // ❓ Help
                 _buildMenuItem(
                   context,
-                  loc.helpSupport,
-                  Icons.help_outline_rounded,
+                  "Contact Us",
+                  Icons.headset_mic_outlined,
                   () => _launchURL('https://mera-ashiana.com/contact'),
                   isDark: isDark,
                 ),
 
-                // ℹ️ About
                 _buildMenuItem(
                   context,
                   loc.aboutUs,
@@ -205,41 +213,22 @@ class CustomDrawer extends StatelessWidget {
             ),
           ),
 
-          // 🚪 Logout (ONLY when logged in)
-          ValueListenableBuilder<bool>(
-            valueListenable: AuthState.isLoggedIn,
-            builder: (context, isLoggedIn, _) {
-              if (!isLoggedIn) return const SizedBox.shrink();
-
-              return Container(
-                margin: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.errorRed.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: _buildMenuItem(
-                  context,
-                  loc.logout,
-                  Icons.logout_rounded,
-                  () {
-                    Navigator.pop(context);
-                    AuthHelper.showLogoutDialog(context);
-                  },
-                  iconColor: AppColors.errorRed,
-                  textColor: AppColors.errorRed,
-                  isDark: isDark,
-                ),
-              );
-            },
+          // 🔢 VERSION INFO
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            child: Text(
+              'Version 1.0.3',
+              style: TextStyle(
+                color: isDark ? Colors.white38 : AppColors.textGrey,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
-
-          const SizedBox(height: 10),
         ],
       ),
     );
   }
-
-  // ─────────────────────────────────────────────
 
   Widget _buildDivider(bool isDark) {
     return Padding(
@@ -262,7 +251,6 @@ class CustomDrawer extends StatelessWidget {
   }) {
     final Color finalIconColor =
         iconColor ?? (isDark ? AppColors.accentYellow : AppColors.primaryNavy);
-
     final Color finalTextColor =
         textColor ?? (isDark ? Colors.white70 : AppColors.textDark);
 

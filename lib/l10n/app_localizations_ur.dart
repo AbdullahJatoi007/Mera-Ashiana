@@ -70,9 +70,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String get messages => 'پیغامات';
 
   @override
-  String get helpSupport => 'مدد اور تعاون';
-
-  @override
   String get aboutUs => 'رازداری کی پالیسی';
 
   @override
