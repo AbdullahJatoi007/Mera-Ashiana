@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:mera_ashiana/features/auth/auth_controller.dart';
 import 'package:mera_ashiana/helpers/validation_helper.dart';
 import 'package:mera_ashiana/theme/app_colors.dart';
+import '../../theme/app_colors_dark.dart';
 import '../widgets/auth_text_field.dart';
 
 class LoginForm extends StatefulWidget {
@@ -32,8 +33,10 @@ class _LoginFormState extends State<LoginForm> {
     super.dispose();
   }
 
-  void _handleLogin() {
+  void _handleLogin() async {
     FocusScope.of(context).unfocus();
+    await Future.delayed(const Duration(milliseconds: 150));
+
     if (!_formKey.currentState!.validate()) {
       HapticFeedback.mediumImpact();
       return;
@@ -61,7 +64,8 @@ class _LoginFormState extends State<LoginForm> {
             controller: emailController,
             keyboardType: TextInputType.emailAddress,
             textInputAction: TextInputAction.next,
-            onFieldSubmitted: (_) => FocusScope.of(context).requestFocus(_passwordFocus),
+            onFieldSubmitted: (_) =>
+                FocusScope.of(context).requestFocus(_passwordFocus),
             validator: ValidationHelper.validateEmail,
           ),
           const SizedBox(height: 16),
@@ -80,7 +84,7 @@ class _LoginFormState extends State<LoginForm> {
           _buildButton(
             label: "LOGIN",
             onPressed: _handleLogin,
-            color: AppColors.accentYellow,
+            color: isDark ? AppDarkColors.accentYellow : AppColors.accentYellow,
             textColor: AppColors.primaryNavy,
           ),
           const SizedBox(height: 20),
@@ -96,7 +100,9 @@ class _LoginFormState extends State<LoginForm> {
             child: Text(
               "Don't have an account? Register Now",
               style: TextStyle(
-                color: isDark ? AppColors.accentYellow : AppColors.primaryNavy,
+                color: isDark
+                    ? AppDarkColors.accentYellow
+                    : AppColors.primaryNavy,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -106,7 +112,12 @@ class _LoginFormState extends State<LoginForm> {
     );
   }
 
-  Widget _buildButton({required String label, required VoidCallback onPressed, required Color color, required Color textColor}) {
+  Widget _buildButton({
+    required String label,
+    required VoidCallback onPressed,
+    required Color color,
+    required Color textColor,
+  }) {
     return SizedBox(
       width: double.infinity,
       height: 55,
@@ -115,10 +126,15 @@ class _LoginFormState extends State<LoginForm> {
           backgroundColor: color,
           foregroundColor: textColor,
           elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
         ),
         onPressed: onPressed,
-        child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        child: Text(
+          label,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
       ),
     );
   }
@@ -130,7 +146,13 @@ class _LoginFormState extends State<LoginForm> {
         Expanded(child: Divider(color: color)),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text("OR", style: TextStyle(color: isDark ? Colors.white60 : AppColors.textGrey, fontSize: 12)),
+          child: Text(
+            "OR",
+            style: TextStyle(
+              color: isDark ? Colors.white60 : AppColors.textGrey,
+              fontSize: 12,
+            ),
+          ),
         ),
         Expanded(child: Divider(color: color)),
       ],
@@ -138,18 +160,47 @@ class _LoginFormState extends State<LoginForm> {
   }
 
   Widget _buildGoogleButton(bool isDark) {
+    final Color contentColor = isDark
+        ? AppDarkColors.accentYellow
+        : AppColors.primaryNavy;
+    final Color borderColor = isDark
+        ? AppDarkColors.accentYellow.withOpacity(0.5)
+        : AppColors.borderGrey;
+
     return SizedBox(
       width: double.infinity,
       height: 55,
       child: OutlinedButton.icon(
-        onPressed: _isGoogleLoading ? null : () => AuthController.google(context, widget.onSuccess, (l) => setState(() => _isGoogleLoading = l)),
+        onPressed: _isGoogleLoading
+            ? null
+            : () => AuthController.google(
+                context,
+                widget.onSuccess,
+                (l) => setState(() => _isGoogleLoading = l),
+              ),
         icon: _isGoogleLoading
-            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-            : const Icon(Icons.g_mobiledata, size: 32),
-        label: const Text("Continue with Google"),
+            ? SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: contentColor,
+                ),
+              )
+            : Icon(Icons.g_mobiledata, size: 32, color: contentColor),
+        label: Text(
+          "Continue with Google",
+          style: TextStyle(
+            color: isDark ? Colors.white : AppColors.textDark,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         style: OutlinedButton.styleFrom(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-          side: BorderSide(color: isDark ? Colors.white24 : AppColors.borderGrey),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+          side: BorderSide(color: borderColor),
+          foregroundColor: contentColor,
         ),
       ),
     );

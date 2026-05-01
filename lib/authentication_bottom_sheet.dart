@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:mera_ashiana/features/screens/login_form.dart';
 import 'package:mera_ashiana/features/screens/register_form.dart';
 import 'package:mera_ashiana/theme/app_colors.dart';
+import 'package:mera_ashiana/theme/app_colors_dark.dart';
 
 class AuthenticationBottomSheet extends StatefulWidget {
   final VoidCallback onLoginSuccess;
@@ -19,10 +20,21 @@ class _AuthenticationBottomSheetState extends State<AuthenticationBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
+    // 1. Get the keyboard height
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    final Color iconColor = isDark
+        ? AppDarkColors.accentYellow
+        : AppColors.primaryNavy;
+    final Color iconBgColor = isDark
+        ? AppDarkColors.accentYellow.withOpacity(0.15)
+        : AppColors.primaryNavy.withOpacity(0.05);
+    final Color handleColor = isDark ? Colors.white24 : AppColors.borderGrey;
+
     return Container(
+      // 2. We use 'padding' carefully.
+      // Including bottomInset here ensures the whole UI moves up when the keyboard opens.
       padding: EdgeInsets.only(
         left: 24,
         right: 24,
@@ -30,41 +42,37 @@ class _AuthenticationBottomSheetState extends State<AuthenticationBottomSheet> {
         bottom: bottomInset + 24,
       ),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E1E1E) : AppColors.white,
+        color: isDark ? AppDarkColors.surface : AppColors.white,
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(30),
           topRight: Radius.circular(30),
         ),
       ),
       child: SingleChildScrollView(
+        // 3. This allows the sheet to grow if the form is long
+        physics: const BouncingScrollPhysics(),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Drag handle
             Container(
               width: 50,
               height: 5,
               decoration: BoxDecoration(
-                color: AppColors.borderGrey,
+                color: handleColor,
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
-
             const SizedBox(height: 25),
-
-            // Avatar icon
             CircleAvatar(
               radius: 35,
-              backgroundColor: AppColors.primaryNavy.withOpacity(.05),
+              backgroundColor: iconBgColor,
               child: Icon(
                 isRegister ? Icons.person_add_rounded : Icons.person_rounded,
-                color: AppColors.primaryNavy,
+                color: iconColor,
                 size: 35,
               ),
             ),
-
             const SizedBox(height: 20),
-
             Text(
               isRegister ? "Create Account" : "Sign In",
               style: TextStyle(
@@ -73,20 +81,14 @@ class _AuthenticationBottomSheetState extends State<AuthenticationBottomSheet> {
                 color: isDark ? Colors.white : AppColors.textDark,
               ),
             ),
-
             const SizedBox(height: 30),
-
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 250),
               child: isRegister
                   ? RegisterForm(
                       key: const ValueKey("register"),
                       onSuccess: () {
-                        // FIX: Close the bottom sheet first
-                        if (Navigator.canPop(context)) {
-                          Navigator.pop(context);
-                        }
-                        // Then trigger the success callback
+                        if (Navigator.canPop(context)) Navigator.pop(context);
                         widget.onLoginSuccess();
                       },
                       onSwitch: () {
@@ -97,11 +99,7 @@ class _AuthenticationBottomSheetState extends State<AuthenticationBottomSheet> {
                   : LoginForm(
                       key: const ValueKey("login"),
                       onSuccess: () {
-                        // FIX: Close the bottom sheet first
-                        if (Navigator.canPop(context)) {
-                          Navigator.pop(context);
-                        }
-                        // Then trigger the success callback
+                        if (Navigator.canPop(context)) Navigator.pop(context);
                         widget.onLoginSuccess();
                       },
                       onSwitch: () {

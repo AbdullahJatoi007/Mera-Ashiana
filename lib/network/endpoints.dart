@@ -2,6 +2,9 @@ class Endpoints {
   static const String _base = "https://api-staging.mera-ashiana.com";
   static const String apiBase = "$_base/api";
 
+  // ✨ Add this for images/static files
+  static String get baseUrl => _base;
+
   // ───────── AUTH (MOBILE — tokens returned in JSON body) ─────────
   static const String sendOtp =
       "$apiBase/auth/mobile/identity/register/send-otp";

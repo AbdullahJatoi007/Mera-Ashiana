@@ -154,6 +154,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Status Badge (Sale/Rent)
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
@@ -170,11 +171,17 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
           ),
         ),
         const SizedBox(height: 12),
+
+        // Title with overflow protection
         Text(
           p.title,
+          maxLines: 2, // Allows title to wrap to a second line if needed
+          overflow: TextOverflow.ellipsis,
           style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
+
+        // Location Row
         Row(
           children: [
             const Icon(
@@ -183,15 +190,22 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
               color: AppColors.accentYellow,
             ),
             const SizedBox(width: 4),
-            Text(
-              p.location,
-              style: TextStyle(
-                color: isDark ? Colors.grey[400] : Colors.grey[600],
+            // ✨ FIX: Expanded prevents the "20 pixels overflow" on long addresses
+            Expanded(
+              child: Text(
+                p.location,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: isDark ? Colors.grey[400] : Colors.grey[600],
+                ),
               ),
             ),
           ],
         ),
         const SizedBox(height: 16),
+
+        // Price
         Text(
           "PKR ${p.price.toStringAsFixed(0)}",
           style: const TextStyle(
@@ -205,28 +219,47 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
   }
 
   Widget _buildPropertySummary(Listing p, bool isDark) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        // Wrapping each in Expanded prevents the "20 pixels overflow" error
-        Expanded(child: _infoItem(Icons.king_bed_outlined, "${p.bedrooms} Beds")),
-        Expanded(child: _infoItem(Icons.bathtub_outlined, "${p.bathrooms} Baths")),
-        Expanded(child: _infoItem(Icons.square_foot_outlined, p.area ?? "N/A")),
-        Expanded(child: _infoItem(Icons.home_work_outlined, p.type)),
-      ],
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Using Flexible ensures items shrink if they run out of room
+          Flexible(
+            child: _infoItem(Icons.king_bed_outlined, "${p.bedrooms} Beds"),
+          ),
+          Flexible(
+            child: _infoItem(Icons.bathtub_outlined, "${p.bathrooms} Baths"),
+          ),
+          Flexible(
+            child: _infoItem(Icons.square_foot_outlined, p.area ?? "N/A"),
+          ),
+          Flexible(child: _infoItem(Icons.home_work_outlined, p.type)),
+        ],
+      ),
     );
   }
 
   Widget _infoItem(IconData icon, String label) {
-    return Column(
-      children: [
-        Icon(icon, color: AppColors.accentYellow),
-        const SizedBox(height: 6),
-        Text(
-          label,
-          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-        ),
-      ],
+    return Container(
+      width: double.infinity, // Allows Column to center within the Flexible
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: AppColors.accentYellow, size: 22),
+          const SizedBox(height: 6),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            maxLines: 1, // Prevents text from pushing the row wider
+            overflow: TextOverflow.ellipsis, // Adds "..." if text is too long
+            style: const TextStyle(
+              fontSize: 11, // Slightly smaller font helps on small screens
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
     );
   }
 

@@ -5,7 +5,6 @@ import 'package:mera_ashiana/l10n/app_localizations.dart';
 import 'package:mera_ashiana/screens/splash_screen.dart';
 import 'package:mera_ashiana/theme/app_theme.dart';
 import 'package:mera_ashiana/services/auth_state.dart';
-import 'package:mera_ashiana/core/api_client.dart';
 
 // Global navigation key for 401 redirects and global context access
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -15,24 +14,13 @@ final ValueNotifier<Locale> appLocale = ValueNotifier(const Locale('en'));
 final ValueNotifier<ThemeMode> appThemeMode = ValueNotifier(ThemeMode.system);
 
 void main() async {
-  // 1. Ensures Flutter framework is fully initialized before async calls
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 2. ✅ ApiClient.init() removed as it is now self-initializing
-
-  // 3. Initialize AuthState (Check if user is logged in via local storage/cookies)
-  // Ensure that AuthState.initialize() handles its own ApiClient dependency internally
+  // Initialize AuthState (Check if user is logged in)
   await AuthState.initialize();
 
-  // 4. System UI Configuration (Edge-to-Edge for modern Android/iOS look)
+  // Initial System UI Configuration
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      systemNavigationBarColor: Colors.transparent,
-      systemNavigationBarIconBrightness: Brightness.dark,
-    ),
-  );
 
   runApp(const MyApp());
 }
@@ -48,14 +36,34 @@ class MyApp extends StatelessWidget {
         return ValueListenableBuilder<ThemeMode>(
           valueListenable: appThemeMode,
           builder: (context, currentThemeMode, _) {
-            return MaterialApp(
-              // Required for redirects from background services/interceptors
-              navigatorKey: navigatorKey,
+            // --- DYNAMIC SYSTEM UI OVERLAY ---
+            // Determine if the current active theme is dark
+            final bool isDarkMode =
+                currentThemeMode == ThemeMode.dark ||
+                (currentThemeMode == ThemeMode.system &&
+                    MediaQuery.platformBrightnessOf(context) ==
+                        Brightness.dark);
 
+            // Update System UI Icons (White in dark mode, Black in light mode)
+            SystemChrome.setSystemUIOverlayStyle(
+              SystemUiOverlayStyle(
+                statusBarColor: Colors.transparent,
+                systemNavigationBarColor: Colors.transparent,
+                // Icons turn light (white) if in dark mode, and dark (black) if in light mode
+                systemNavigationBarIconBrightness: isDarkMode
+                    ? Brightness.light
+                    : Brightness.dark,
+                statusBarIconBrightness: isDarkMode
+                    ? Brightness.light
+                    : Brightness.dark,
+              ),
+            );
+
+            return MaterialApp(
+              navigatorKey: navigatorKey,
               title: 'Mera Ashiana',
               debugShowCheckedModeBanner: false,
 
-              // Localization setup
               locale: currentLocale,
               supportedLocales: const [Locale('en'), Locale('ur')],
               localizationsDelegates: const [
@@ -65,8 +73,8 @@ class MyApp extends StatelessWidget {
                 GlobalCupertinoLocalizations.delegate,
               ],
 
-              // Theme Configuration with Predictive Back support for Android 14+
               themeAnimationDuration: Duration.zero,
+              // Fast theme switching
               theme: AppTheme.lightTheme.copyWith(
                 pageTransitionsTheme: const PageTransitionsTheme(
                   builders: {
@@ -85,7 +93,6 @@ class MyApp extends StatelessWidget {
               ),
               themeMode: currentThemeMode,
 
-              // Entry Point
               home: const SplashScreen(),
             );
           },

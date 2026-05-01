@@ -18,6 +18,7 @@ class Listing {
 
   static const String _imageBaseUrl = "https://api-staging.mera-ashiana.com/";
 
+
   Listing({
     required this.id,
     required this.title,

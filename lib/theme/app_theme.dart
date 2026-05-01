@@ -3,13 +3,18 @@ import 'app_colors.dart';
 import 'app_colors_dark.dart';
 
 class AppTheme {
-  // ✅ FIX #3: Make themes static final (cached instances)
-  // This prevents Flutter from creating new ThemeData objects on every rebuild
   static final ThemeData lightTheme = ThemeData(
-    useMaterial3: true, // ✅ FIX #4: Enable Material 3 for better performance
+    useMaterial3: true,
     brightness: Brightness.light,
     scaffoldBackgroundColor: AppColors.background,
     primaryColor: AppColors.primaryNavy,
+
+    // ✨ FIX: Set cursor and selection colors for Light Mode
+    textSelectionTheme: const TextSelectionThemeData(
+      cursorColor: AppColors.primaryNavy,
+      selectionHandleColor: AppColors.primaryNavy,
+      selectionColor: Color(0x330A1D37), // 20% opacity Navy
+    ),
 
     appBarTheme: const AppBarTheme(
       backgroundColor: AppColors.primaryNavy,
@@ -37,10 +42,17 @@ class AppTheme {
   );
 
   static final ThemeData darkTheme = ThemeData(
-    useMaterial3: true, // ✅ FIX #4: Enable Material 3 for better performance
+    useMaterial3: true,
     brightness: Brightness.dark,
     scaffoldBackgroundColor: AppDarkColors.background,
     primaryColor: AppDarkColors.primaryNavy,
+
+    // ✨ FIX: Set cursor and selection colors for Dark Mode
+    textSelectionTheme: const TextSelectionThemeData(
+      cursorColor: AppDarkColors.accentYellow, // Visible Yellow cursor
+      selectionHandleColor: AppDarkColors.accentYellow, // Visible Yellow handle
+      selectionColor: Color(0x33FFD54F), // 20% opacity Yellow
+    ),
 
     appBarTheme: const AppBarTheme(
       backgroundColor: AppDarkColors.surface,
