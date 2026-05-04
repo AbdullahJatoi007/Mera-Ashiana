@@ -205,7 +205,7 @@ class _HomeScreenState extends State<HomeScreen> {
             left: 0,
             right: 0,
             height: statusBarHeight + 100,
-            child: Container(color: HomeTopSection.primaryNavy),
+            child: Container(color: scaffoldBg),
           ),
 
           NotificationListener<ScrollNotification>(

@@ -19,10 +19,6 @@ class HomeTopSection extends StatelessWidget {
   Widget build(BuildContext context) {
     // Max height: status bar + content area
     final double maxHeaderHeight = 95.0 + statusBarHeight;
-
-    // KEY FIX: minExtent = statusBarHeight (not 0.0)
-    // This ensures the header fully collapses to just the status bar area,
-    // never overlapping the AppBar below it, and never getting stuck mid-state.
     final double minHeaderHeight = statusBarHeight;
 
     return SliverPersistentHeader(
@@ -75,48 +71,61 @@ class _HomeHeaderDelegate extends SliverPersistentHeaderDelegate {
       1.0,
       double.infinity,
     );
-    // Progress goes 0.0 (fully open) → 1.0 (fully collapsed)
+
+    // Progress: 0.0 (open) → 1.0 (collapsed)
     final double progress = (shrinkOffset / collapsibleRange).clamp(0.0, 1.0);
 
-    // Content fades out as user scrolls up — starts fading at 0%, fully gone at 65%
+    // Background opacity for the lower content area only
+    final double bgOpacity = (1.0 - progress).clamp(0.0, 1.0);
+
+    // Content fades out completely by 65% scroll
     final double contentOpacity = (1.0 - (progress / 0.65)).clamp(0.0, 1.0);
 
-    // Slide up slightly as content fades
     final double translateY = progress * -16.0;
-
-    // Border radius flattens as header collapses
     final double radius = 24.0 * (1.0 - progress);
 
     return ClipRect(
-      // Prevents any painting outside the header bounds — critical for preventing
-      // content bleed into the area below (Mera Ashiana widget / category chips)
       child: SizedBox.expand(
         child: Stack(
           clipBehavior: Clip.hardEdge,
           children: [
-            // Solid base — prevents white flash during animation
-            Positioned.fill(child: ColoredBox(color: primaryColor)),
+            // FIX 1: Solid background for Status Bar area
+            // Ye hamesha solid rahega taake icons/time ke peeche white background na aaye
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: statusBarHeight,
+              child: ColoredBox(color: primaryColor),
+            ),
 
-            // Decorative container with dynamic border radius
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: primaryColor,
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(radius),
-                    bottomRight: Radius.circular(radius),
+            // FIX 2: Fading background for the main content area
+            // Ye statusBarHeight ke niche se start hota hai aur collapse hone par fade ho jata hai
+            Positioned(
+              top: statusBarHeight,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Opacity(
+                opacity: bgOpacity,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: primaryColor,
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(radius),
+                      bottomRight: Radius.circular(radius),
+                    ),
                   ),
                 ),
               ),
             ),
 
-            // Collapsible content — only renders when partially visible
+            // Collapsible content (Text & Toggle)
             if (contentOpacity > 0)
               Positioned(
                 top: statusBarHeight + 8.0,
                 left: 20.0,
                 right: 20.0,
-                // Clip to available height so content never bleeds down when transitioning
                 bottom: 0,
                 child: OverflowBox(
                   alignment: Alignment.topLeft,
