@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:mera_ashiana/l10n/app_localizations.dart';
-import 'package:mera_ashiana/theme/app_theme.dart';
-import 'package:mera_ashiana/services/auth_state.dart';
-
-// ROUTING
-import 'package:mera_ashiana/routes/app_routes.dart';
-import 'package:mera_ashiana/routes/app_pages.dart';
+import 'package:mera_ashiana/core/l10n/app_localizations.dart';
+import 'package:mera_ashiana/core/theme/app_theme.dart';
+import 'package:mera_ashiana/features/auth/auth_state.dart';
+import 'core/routes/app_pages.dart';
+import 'core/routes/app_routes.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 

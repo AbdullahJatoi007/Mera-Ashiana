@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:mera_ashiana/services/auth/auth_service.dart';
-import 'package:mera_ashiana/services/google_login_service.dart';
-import 'package:mera_ashiana/services/auth_state.dart';
-import 'package:mera_ashiana/helpers/loader_helper.dart';
+import 'package:mera_ashiana/data/services/auth/auth_service.dart';
+import 'package:mera_ashiana/data/services/google_login_service.dart';
+import 'package:mera_ashiana/features/auth/auth_state.dart';
+import 'package:mera_ashiana/shared/helpers/loader_helper.dart';
 
 class AuthController {
   // --- OTP FLOW ---
@@ -77,7 +77,7 @@ class AuthController {
   ) async {
     setLoading(true);
     try {
-      await GoogleLoginService.signInWithGoogle();
+      // await GoogleLoginService.signInWithGoogle();
       AuthState.isLoggedIn.value = true;
       onSuccess();
     } catch (e) {

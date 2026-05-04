@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:mera_ashiana/features/screens/login_form.dart';
-import 'package:mera_ashiana/features/screens/register_form.dart';
-import 'package:mera_ashiana/theme/app_colors.dart';
-import 'package:mera_ashiana/theme/app_colors_dark.dart';
-import 'routes/app_routes.dart';
+import 'package:mera_ashiana/core/theme/app_colors.dart';
+import 'package:mera_ashiana/core/theme/app_colors_dark.dart';
+import 'core/routes/app_routes.dart';
+import 'features/auth/screens/login_form.dart';
+import 'features/auth/screens/register_form.dart';
 
 class AuthenticationBottomSheet extends StatefulWidget {
   final VoidCallback onLoginSuccess;
