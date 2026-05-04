@@ -2,24 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:mera_ashiana/l10n/app_localizations.dart';
-import 'package:mera_ashiana/screens/splash_screen.dart';
 import 'package:mera_ashiana/theme/app_theme.dart';
 import 'package:mera_ashiana/services/auth_state.dart';
 
-// Global navigation key for 401 redirects and global context access
+// ROUTING
+import 'package:mera_ashiana/routes/app_routes.dart';
+import 'package:mera_ashiana/routes/app_pages.dart';
+
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
-// Global Notifiers for Locale and Theme
 final ValueNotifier<Locale> appLocale = ValueNotifier(const Locale('en'));
+
 final ValueNotifier<ThemeMode> appThemeMode = ValueNotifier(ThemeMode.system);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize AuthState (Check if user is logged in)
   await AuthState.initialize();
 
-  // Initial System UI Configuration
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
   runApp(const MyApp());
@@ -36,20 +36,16 @@ class MyApp extends StatelessWidget {
         return ValueListenableBuilder<ThemeMode>(
           valueListenable: appThemeMode,
           builder: (context, currentThemeMode, _) {
-            // --- DYNAMIC SYSTEM UI OVERLAY ---
-            // Determine if the current active theme is dark
             final bool isDarkMode =
                 currentThemeMode == ThemeMode.dark ||
                 (currentThemeMode == ThemeMode.system &&
                     MediaQuery.platformBrightnessOf(context) ==
                         Brightness.dark);
 
-            // Update System UI Icons (White in dark mode, Black in light mode)
             SystemChrome.setSystemUIOverlayStyle(
               SystemUiOverlayStyle(
                 statusBarColor: Colors.transparent,
                 systemNavigationBarColor: Colors.transparent,
-                // Icons turn light (white) if in dark mode, and dark (black) if in light mode
                 systemNavigationBarIconBrightness: isDarkMode
                     ? Brightness.light
                     : Brightness.dark,
@@ -74,26 +70,15 @@ class MyApp extends StatelessWidget {
               ],
 
               themeAnimationDuration: Duration.zero,
-              // Fast theme switching
-              theme: AppTheme.lightTheme.copyWith(
-                pageTransitionsTheme: const PageTransitionsTheme(
-                  builders: {
-                    TargetPlatform.android:
-                        PredictiveBackPageTransitionsBuilder(),
-                  },
-                ),
-              ),
-              darkTheme: AppTheme.darkTheme.copyWith(
-                pageTransitionsTheme: const PageTransitionsTheme(
-                  builders: {
-                    TargetPlatform.android:
-                        PredictiveBackPageTransitionsBuilder(),
-                  },
-                ),
-              ),
+
+              theme: AppTheme.lightTheme,
+              darkTheme: AppTheme.darkTheme,
               themeMode: currentThemeMode,
 
-              home: const SplashScreen(),
+              initialRoute: AppRoutes.splash,
+
+              // ✅ CLEAN ROUTING (ONLY ONE SYSTEM)
+              routes: AppPages.routes,
             );
           },
         );

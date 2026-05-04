@@ -4,6 +4,7 @@ import 'package:mera_ashiana/features/screens/login_form.dart';
 import 'package:mera_ashiana/features/screens/register_form.dart';
 import 'package:mera_ashiana/theme/app_colors.dart';
 import 'package:mera_ashiana/theme/app_colors_dark.dart';
+import 'routes/app_routes.dart';
 
 class AuthenticationBottomSheet extends StatefulWidget {
   final VoidCallback onLoginSuccess;
@@ -18,9 +19,22 @@ class AuthenticationBottomSheet extends StatefulWidget {
 class _AuthenticationBottomSheetState extends State<AuthenticationBottomSheet> {
   bool isRegister = false;
 
+  /// Handles the successful login/registration event
+  void _handleAuthSuccess() {
+    // 1. Close the bottom sheet
+    if (Navigator.canPop(context)) {
+      Navigator.pop(context);
+    }
+
+    // 2. Execute the callback to refresh the calling screen (Home or Profile)
+    widget.onLoginSuccess();
+
+    // Optional: Provide haptic feedback for success
+    HapticFeedback.heavyImpact();
+  }
+
   @override
   Widget build(BuildContext context) {
-    // 1. Get the keyboard height
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -33,8 +47,6 @@ class _AuthenticationBottomSheetState extends State<AuthenticationBottomSheet> {
     final Color handleColor = isDark ? Colors.white24 : AppColors.borderGrey;
 
     return Container(
-      // 2. We use 'padding' carefully.
-      // Including bottomInset here ensures the whole UI moves up when the keyboard opens.
       padding: EdgeInsets.only(
         left: 24,
         right: 24,
@@ -49,11 +61,11 @@ class _AuthenticationBottomSheetState extends State<AuthenticationBottomSheet> {
         ),
       ),
       child: SingleChildScrollView(
-        // 3. This allows the sheet to grow if the form is long
         physics: const BouncingScrollPhysics(),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Drag Handle
             Container(
               width: 50,
               height: 5,
@@ -63,6 +75,7 @@ class _AuthenticationBottomSheetState extends State<AuthenticationBottomSheet> {
               ),
             ),
             const SizedBox(height: 25),
+
             CircleAvatar(
               radius: 35,
               backgroundColor: iconBgColor,
@@ -72,7 +85,9 @@ class _AuthenticationBottomSheetState extends State<AuthenticationBottomSheet> {
                 size: 35,
               ),
             ),
+
             const SizedBox(height: 20),
+
             Text(
               isRegister ? "Create Account" : "Sign In",
               style: TextStyle(
@@ -81,16 +96,15 @@ class _AuthenticationBottomSheetState extends State<AuthenticationBottomSheet> {
                 color: isDark ? Colors.white : AppColors.textDark,
               ),
             ),
+
             const SizedBox(height: 30),
+
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 250),
               child: isRegister
                   ? RegisterForm(
                       key: const ValueKey("register"),
-                      onSuccess: () {
-                        if (Navigator.canPop(context)) Navigator.pop(context);
-                        widget.onLoginSuccess();
-                      },
+                      onSuccess: _handleAuthSuccess,
                       onSwitch: () {
                         HapticFeedback.lightImpact();
                         setState(() => isRegister = false);
@@ -98,10 +112,7 @@ class _AuthenticationBottomSheetState extends State<AuthenticationBottomSheet> {
                     )
                   : LoginForm(
                       key: const ValueKey("login"),
-                      onSuccess: () {
-                        if (Navigator.canPop(context)) Navigator.pop(context);
-                        widget.onLoginSuccess();
-                      },
+                      onSuccess: _handleAuthSuccess,
                       onSwitch: () {
                         HapticFeedback.lightImpact();
                         setState(() => isRegister = true);

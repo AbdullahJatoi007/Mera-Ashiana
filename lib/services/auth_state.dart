@@ -10,4 +10,7 @@ class AuthState {
   }
 
   static Future<void> initialize() => checkLoginStatus();
+
+  // 🔥 ADD THIS (SAFE, NO LOGIC CHANGE)
+  static bool get isUserLoggedIn => isLoggedIn.value;
 }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-
-import 'package:mera_ashiana/screens/base/main_scaffold.dart';
+import 'package:mera_ashiana/routes/app_routes.dart';
 import 'package:mera_ashiana/services/auth_state.dart';
+import 'package:mera_ashiana/theme/app_colors.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -18,14 +18,11 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
-
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     );
-
     _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
-
     _controller.forward();
     _initializeApp();
   }
@@ -37,7 +34,7 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _initializeApp() async {
-    // Check session and wait for branding (3 seconds total)
+    // Check login status in background, but don't force login screen
     await Future.wait([
       AuthState.checkLoginStatus(),
       Future.delayed(const Duration(seconds: 3)),
@@ -45,31 +42,16 @@ class _SplashScreenState extends State<SplashScreen>
 
     if (!mounted) return;
 
-    // Smooth Fade transition to the Main Dashboard
-    Navigator.pushReplacement(
-      context,
-      PageRouteBuilder(
-        transitionDuration: const Duration(milliseconds: 1000),
-        pageBuilder: (context, animation, secondaryAnimation) =>
-            const MainScaffold(),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(opacity: animation, child: child);
-        },
-      ),
-    );
+    // Fixed: Always navigate to main so user sees the Home Screen first
+    Navigator.pushReplacementNamed(context, AppRoutes.main);
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    // Brand Colors
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     const Color primaryNavy = Color(0xFF0A1D37);
-    const Color accentYellow = Color(0xFFFFC400);
 
     return Scaffold(
-      // Use Navy background in dark mode for a more "Elite" feel
       backgroundColor: isDark ? primaryNavy : Colors.white,
       body: Center(
         child: FadeTransition(
@@ -77,7 +59,6 @@ class _SplashScreenState extends State<SplashScreen>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Logo Container
               Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(25),
@@ -95,27 +76,23 @@ class _SplashScreenState extends State<SplashScreen>
                   borderRadius: BorderRadius.circular(25),
                   child: Image.asset(
                     'assets/images/mera_ashiana_logo.jpeg',
-                    width: 160, // Slightly smaller for better proportions
+                    width: 160,
                     height: 160,
                     fit: BoxFit.cover,
                   ),
                 ),
               ),
               const SizedBox(height: 40),
-
-              // App Name
               const Text(
                 "MERA ASHIANA",
                 style: TextStyle(
-                  color: accentYellow, // Brand Yellow
+                  color: AppColors.accentYellow,
                   fontSize: 26,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 5.0,
                 ),
               ),
               const SizedBox(height: 10),
-
-              // Tagline
               Text(
                 "Find Your Dream Home",
                 style: TextStyle(
@@ -125,19 +102,14 @@ class _SplashScreenState extends State<SplashScreen>
                   fontWeight: FontWeight.w500,
                 ),
               ),
-
               const SizedBox(height: 60),
-
-              // Animated Loading Indicator
-              SizedBox(
+              const SizedBox(
                 width: 25,
                 height: 25,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
                   valueColor: AlwaysStoppedAnimation<Color>(
-                    isDark
-                        ? accentYellow.withOpacity(0.4)
-                        : primaryNavy.withOpacity(0.2),
+                    AppColors.accentYellow,
                   ),
                 ),
               ),

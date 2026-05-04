@@ -3,8 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:mera_ashiana/features/auth/auth_controller.dart';
 import 'package:mera_ashiana/helpers/validation_helper.dart';
 import 'package:mera_ashiana/theme/app_colors.dart';
+import '../../routes/app_routes.dart';
 import '../../theme/app_colors_dark.dart';
 import '../widgets/auth_text_field.dart';
+import 'package:mera_ashiana/features/screens/forgot_password_screen.dart';
 
 class LoginForm extends StatefulWidget {
   final VoidCallback onSwitch;
@@ -80,7 +82,36 @@ class _LoginFormState extends State<LoginForm> {
             toggle: () => setState(() => _obscurePassword = !_obscurePassword),
             validator: ValidationHelper.validatePassword,
           ),
-          const SizedBox(height: 25),
+          const SizedBox(height: 10),
+          // Inside LoginForm build method...
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: () {
+                HapticFeedback.lightImpact();
+
+                // FIXED: Use the constant from AppRoutes
+                Navigator.pushNamed(context, AppRoutes.forgotPassword);
+              },
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.zero,
+                minimumSize: const Size(0, 30),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: Text(
+                "Forgot Password?",
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: isDark
+                      ? AppDarkColors.accentYellow
+                      : AppColors.primaryNavy,
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 10),
           _buildButton(
             label: "LOGIN",
             onPressed: _handleLogin,
