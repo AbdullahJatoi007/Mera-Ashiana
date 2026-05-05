@@ -17,6 +17,7 @@ import 'package:mera_ashiana/features/agency/agency_registration_screen.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/models/agency_model.dart';
 import '../../../data/models/user_model.dart';
+import '../../../data/services/auth/secure_storage_service.dart';
 import '../../../shared/helpers/auth_helper.dart';
 import '../../../shared/helpers/internet_helper.dart';
 
@@ -83,11 +84,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return;
     }
 
-    if (!AuthState.isLoggedIn.value) {
+    // 🚨 FIX: Check for token presence to distinguish between Guest and Error
+    final token = await SecureStorageService.read(key: 'access_token');
+
+    if (token == null || !AuthState.isLoggedIn.value) {
       setState(() {
         _user = null;
+        _userAgency = null;
         _isLoading = false;
-        _hasError = false;
+        _hasError = false; // No error, just a guest
         _errorMsg = '';
       });
       return;
@@ -109,8 +114,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _user = null;
         _isLoading = false;
         _hasError = true;
-        _errorMsg =
-            "Failed to load profile. Please check your internet connection.";
+        _errorMsg = "Failed to load profile. Please try again.";
       });
     }
   }
@@ -160,48 +164,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               )
             else if (_hasError)
-              SizedBox(
-                height: MediaQuery.of(context).size.height - kToolbarHeight,
-                child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 40),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          Icons.error_outline,
-                          size: 80,
-                          color: Colors.red,
-                        ),
-                        const SizedBox(height: 20),
-                        Text(
-                          _errorMsg,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: AppColors.textGrey,
-                            fontSize: 14,
-                          ),
-                        ),
-                        const SizedBox(height: 30),
-                        ElevatedButton(
-                          onPressed: _loadUser,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.accentYellow,
-                            foregroundColor: AppColors.primaryNavy,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(15),
-                            ),
-                          ),
-                          child: const Text(
-                            "Retry",
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              )
+              _buildErrorView()
             else if (_user == null)
               SizedBox(
                 height: MediaQuery.of(context).size.height - kToolbarHeight,
@@ -223,6 +186,44 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   // ==================== UI Widgets ====================
+
+  Widget _buildErrorView() {
+    return SizedBox(
+      height: MediaQuery.of(context).size.height - kToolbarHeight,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 40),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 80, color: Colors.red),
+              const SizedBox(height: 20),
+              Text(
+                _errorMsg,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: AppColors.textGrey, fontSize: 14),
+              ),
+              const SizedBox(height: 30),
+              ElevatedButton(
+                onPressed: _loadUser,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.accentYellow,
+                  foregroundColor: AppColors.primaryNavy,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                ),
+                child: const Text(
+                  "Retry",
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   Widget _buildGuestView(bool isDark) {
     return Center(

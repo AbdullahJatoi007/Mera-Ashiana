@@ -27,6 +27,8 @@ class Endpoints {
   // ───────── PROFILE ─────────
   static const String profile = "$apiBase/auth/profile";
   static const String updateProfile = "$apiBase/auth/profile/update";
+  // DELETE ACCOUNT (same endpoint, different method)
+  static const String deleteAccount = "$apiBase/auth/profile";
 
   // ───────── LISTINGS ─────────
   static const String listings = "$apiBase/listings";

@@ -3,47 +3,50 @@ import 'package:flutter/material.dart';
 
 class DrawerFooter extends StatelessWidget {
   final VoidCallback onLogout;
+  final bool isGuest;
 
-  const DrawerFooter({super.key, required this.onLogout});
+  const DrawerFooter({super.key, required this.onLogout, this.isGuest = false});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      // Ensure the container is wide enough
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
       decoration: BoxDecoration(
-        color: Colors.transparent, // Or match drawer background
+        color: Colors.transparent,
         border: Border(top: BorderSide(color: Colors.grey.shade200)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start, // Align text to start
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          InkWell(
-            onTap: onLogout,
-            child: const Row(
-              children: [
-                Icon(Icons.logout_rounded, color: Colors.redAccent, size: 20),
-                SizedBox(width: 12),
-                Text(
-                  'Logout',
-                  style: TextStyle(
-                    color: Colors.redAccent,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
+          // 🔥 SHOW LOGOUT ONLY IF NOT GUEST
+          if (!isGuest)
+            InkWell(
+              onTap: onLogout,
+              child: const Row(
+                children: [
+                  Icon(Icons.logout_rounded, color: Colors.redAccent, size: 20),
+                  SizedBox(width: 12),
+                  Text(
+                    'Logout',
+                    style: TextStyle(
+                      color: Colors.redAccent,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          // Increased font size slightly and used a more visible color
+
+          if (!isGuest) const SizedBox(height: 16),
+
           Text(
             'Version 1.0.3',
             style: TextStyle(
               color: Colors.grey.shade600,
-              fontSize: 12, // Increased from 11
+              fontSize: 12,
               fontWeight: FontWeight.w600,
             ),
           ),

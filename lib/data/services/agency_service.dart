@@ -10,8 +10,6 @@ import 'profile_service.dart';
 class AgencyService {
   static Future<Agency?> fetchMyAgency() async {
     try {
-      // 🚨 FIX: Added a strict 5-second timeout.
-      // If the backend hangs, Flutter fails fast and loads the UI anyway!
       final response = await ApiClient.get(
         Endpoints.myAgency,
       ).timeout(const Duration(seconds: 5));
@@ -44,7 +42,15 @@ class AgencyService {
     File? logoFile,
   }) async {
     try {
-      final User user = await ProfileService.fetchProfile();
+      final user = await ProfileService.fetchProfile();
+
+      // 🚨 FIX: handle deleted / logged-out user safely
+      if (user == null) {
+        return {
+          "success": false,
+          "message": "User session expired. Please login again.",
+        };
+      }
 
       FormData formData = FormData.fromMap({
         'agency_name': agencyName.trim(),
@@ -63,6 +69,7 @@ class AgencyService {
       });
 
       final response = await ApiClient.post(Endpoints.agency, data: formData);
+
       final result = response.data;
 
       return {
