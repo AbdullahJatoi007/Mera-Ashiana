@@ -11,13 +11,21 @@ class Listing {
   final String? area;
   final int bedrooms;
   final int bathrooms;
+
+  // 👇 CONTACT FIELDS (The "Real" fix for mapping)
   final String? contactPhone;
   final String? contactWhatsapp;
+  final String? contactEmail;
+
   final bool isFeatured;
-  final String? createdBy;
+
+  // 👇 OWNER METADATA
+  final String? createdByName;
+  final String? createdByType; // user | agency
+  final String? createdByPhone;
+  final String? createdByEmail;
 
   static const String _imageBaseUrl = "https://api-staging.mera-ashiana.com/";
-
 
   Listing({
     required this.id,
@@ -34,30 +42,54 @@ class Listing {
     this.bathrooms = 0,
     this.contactPhone,
     this.contactWhatsapp,
+    this.contactEmail,
     required this.isFeatured,
-    this.createdBy,
+    this.createdByName,
+    this.createdByType,
+    this.createdByPhone,
+    this.createdByEmail,
   });
 
   factory Listing.fromJson(Map<String, dynamic> json) {
-    String? authorName;
-    if (json['user'] != null) {
-      authorName =
-          json['user']['username'] ??
-          json['user']['full_name'] ??
-          json['user']['name'];
-    } else if (json['agent'] != null) {
-      authorName = json['agent']['username'] ?? json['agent']['name'];
+    /// =========================
+    /// 👤 OWNER METADATA LOGIC
+    /// =========================
+    String? name;
+    String? ownerType;
+    String? ownerPhone;
+    String? ownerEmail;
+
+    // Check for User association
+    if (json['users'] != null) {
+      final u = json['users'];
+      name = u['username'] ?? u['name'];
+      ownerPhone = u['phone'];
+      ownerEmail = u['email'];
+      ownerType = "user";
+    }
+    // Check for Agency association
+    else if (json['agencies'] != null) {
+      final a = json['agencies'];
+      name = a['agency_name'];
+      ownerPhone = a['phone'];
+      ownerEmail = a['email'];
+      ownerType = "agency";
     }
 
+    /// =========================
+    /// 🖼 IMAGES PARSING
+    /// =========================
     final rawImages = json['listing_images'];
     List<String> parsedImages = [];
+
     if (rawImages is List) {
       parsedImages = rawImages
           .map((img) {
             final path = img['file_path']?.toString().trim() ?? '';
+            if (path.isEmpty) return '';
             return path.startsWith('http') ? path : '$_imageBaseUrl$path';
           })
-          .where((p) => p.isNotEmpty)
+          .where((e) => e.isNotEmpty)
           .toList();
     }
 
@@ -65,27 +97,30 @@ class Listing {
       id: json['id'] ?? 0,
       title: json['title'] ?? '',
       description: json['description'] ?? '',
-      price: double.tryParse(json['price']?.toString() ?? '0.0') ?? 0.0,
+      price: double.tryParse(json['price']?.toString() ?? '0') ?? 0,
       location: json['location'] ?? '',
       type: json['type']?.toString().toLowerCase() ?? 'house',
       city: json['city'],
-      status: (json['purpose'] ?? json['status'] ?? 'sale')
+      status: (json['status'] ?? json['purpose'] ?? 'sale')
           .toString()
           .toLowerCase(),
       images: parsedImages,
       area: json['area']?.toString(),
-      bedrooms:
-          int.tryParse((json['bedrooms'] ?? json['beds'] ?? '0').toString()) ??
-          0,
-      bathrooms:
-          int.tryParse(
-            (json['bathrooms'] ?? json['baths'] ?? '0').toString(),
-          ) ??
-          0,
+      bedrooms: int.tryParse('${json['bedrooms'] ?? 0}') ?? 0,
+      bathrooms: int.tryParse('${json['bathrooms'] ?? 0}') ?? 0,
+
+      // 🔧 THE REAL FIX: Direct mapping from backend keys
       contactPhone: json['contact_phone']?.toString(),
       contactWhatsapp: json['contact_whatsapp']?.toString(),
+      contactEmail: json['contact_email']?.toString(),
+
       isFeatured: json['is_featured'] == true || json['is_featured'] == 1,
-      createdBy: authorName,
+
+      // Metadata for UI (e.g., "Listed by [Name]")
+      createdByName: name,
+      createdByType: ownerType,
+      createdByPhone: ownerPhone,
+      createdByEmail: ownerEmail,
     );
   }
 }

@@ -44,6 +44,8 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
     super.dispose();
   }
 
+  // ==================== Logic Methods ====================
+
   Future<void> fetchPropertyDetails() async {
     try {
       final String path = widget.propertyId != null
@@ -80,15 +82,65 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
     }
   }
 
+  void _contactAgentCall() async {
+    // 🔧 FIX: Using contactPhone from the listing
+    final phone = listing?.contactPhone ?? "";
+    if (phone.isEmpty) return;
+
+    final uri = Uri.parse("tel:$phone");
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    }
+  }
+
+  void _contactAgentWhatsApp() async {
+    // 🔧 FIX: Using contactWhatsapp from the listing
+    final whatsapp = listing?.contactWhatsapp ?? "";
+    if (whatsapp.isEmpty) return;
+
+    // Clean the string (remove spaces/dashes) for a valid WhatsApp link
+    final cleanWhatsapp = whatsapp.replaceAll(RegExp(r'[^0-9+]'), '');
+    final uri = Uri.parse("https://wa.me/$cleanWhatsapp");
+
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  void _contactAgentEmail() async {
+    // 🔧 FIX: Using contactEmail from the listing
+    final email = listing?.contactEmail ?? "";
+    if (email.isEmpty) return;
+
+    final uri = Uri.parse("mailto:$email");
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    }
+  }
+
+  Future<void> _handleFavoriteToggle() async {
+    if (isToggling || listing == null) return;
+    HapticFeedback.mediumImpact();
+    setState(() => isToggling = true);
+    try {
+      await FavoriteService.toggleFavorite(listing!.id, listingData: listing);
+    } finally {
+      if (mounted) setState(() => isToggling = false);
+    }
+  }
+
+  // ==================== UI Widgets ====================
+
   @override
   Widget build(BuildContext context) {
-    if (isLoading)
+    if (isLoading) {
       return const Scaffold(
         body: Center(
           child: CircularProgressIndicator(color: AppColors.accentYellow),
         ),
       );
-    if (hasError || listing == null)
+    }
+    if (hasError || listing == null) {
       return Scaffold(
         body: Center(
           child: ElevatedButton(
@@ -97,6 +149,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
           ),
         ),
       );
+    }
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final property = listing!;
@@ -150,11 +203,118 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
     );
   }
 
+  Widget _contactChip(String label, IconData icon, Color color) {
+    return InkWell(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        if (label == "Call")
+          _contactAgentCall();
+        else if (label == "WhatsApp")
+          _contactAgentWhatsApp();
+        else if (label == "Email")
+          _contactAgentEmail();
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withOpacity(0.4)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 18, color: color),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAgentCard(Listing p, bool isDark) {
+    final name = p.createdByName ?? "Unknown Owner";
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.grey[900] : Colors.grey[100],
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 28,
+                backgroundColor: AppColors.primaryNavy,
+                child: Text(
+                  name.isNotEmpty ? name[0].toUpperCase() : "?",
+                  style: const TextStyle(color: Colors.white),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "Listed By",
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                    Text(
+                      name,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      p.createdByType == "agency" ? "Agency" : "Verified User",
+                      style: const TextStyle(
+                        color: AppColors.accentYellow,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (p.createdByPhone != null || p.createdByEmail != null)
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                if (p.contactPhone != null && p.contactPhone!.isNotEmpty)
+                  _contactChip("Call", Icons.call, Colors.blue),
+
+                if (p.contactWhatsapp != null && p.contactWhatsapp!.isNotEmpty)
+                  _contactChip("WhatsApp", Icons.chat, Colors.green),
+
+                if (p.contactEmail != null && p.contactEmail!.isNotEmpty)
+                  _contactChip("Email", Icons.email, Colors.orange),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildHeaderSection(Listing p, bool isDark) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Status Badge (Sale/Rent)
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
@@ -171,17 +331,13 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
           ),
         ),
         const SizedBox(height: 12),
-
-        // Title with overflow protection
         Text(
           p.title,
-          maxLines: 2, // Allows title to wrap to a second line if needed
+          maxLines: 2,
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
-
-        // Location Row
         Row(
           children: [
             const Icon(
@@ -190,7 +346,6 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
               color: AppColors.accentYellow,
             ),
             const SizedBox(width: 4),
-            // ✨ FIX: Expanded prevents the "20 pixels overflow" on long addresses
             Expanded(
               child: Text(
                 p.location,
@@ -204,8 +359,6 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
           ],
         ),
         const SizedBox(height: 16),
-
-        // Price
         Text(
           "PKR ${p.price.toStringAsFixed(0)}",
           style: const TextStyle(
@@ -219,99 +372,38 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
   }
 
   Widget _buildPropertySummary(Listing p, bool isDark) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          // Using Flexible ensures items shrink if they run out of room
-          Flexible(
-            child: _infoItem(Icons.king_bed_outlined, "${p.bedrooms} Beds"),
-          ),
-          Flexible(
-            child: _infoItem(Icons.bathtub_outlined, "${p.bathrooms} Baths"),
-          ),
-          Flexible(
-            child: _infoItem(Icons.square_foot_outlined, p.area ?? "N/A"),
-          ),
-          Flexible(child: _infoItem(Icons.home_work_outlined, p.type)),
-        ],
-      ),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Flexible(
+          child: _infoItem(Icons.king_bed_outlined, "${p.bedrooms} Beds"),
+        ),
+        Flexible(
+          child: _infoItem(Icons.bathtub_outlined, "${p.bathrooms} Baths"),
+        ),
+        Flexible(child: _infoItem(Icons.square_foot_outlined, p.area ?? "N/A")),
+        Flexible(child: _infoItem(Icons.home_work_outlined, p.type)),
+      ],
     );
   }
 
   Widget _infoItem(IconData icon, String label) {
-    return Container(
-      width: double.infinity, // Allows Column to center within the Flexible
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: AppColors.accentYellow, size: 22),
-          const SizedBox(height: 6),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            maxLines: 1, // Prevents text from pushing the row wider
-            overflow: TextOverflow.ellipsis, // Adds "..." if text is too long
-            style: const TextStyle(
-              fontSize: 11, // Slightly smaller font helps on small screens
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: AppColors.accentYellow, size: 22),
+        const SizedBox(height: 6),
+        Text(
+          label,
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+        ),
+      ],
     );
   }
 
-  Widget _buildAgentCard(Listing p, bool isDark) {
-    // Use the name from the model, falling back to a default if null
-    final String agentName = p.createdBy ?? "Mera Ashiana Agent";
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? Colors.grey[900] : Colors.grey[100],
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 30,
-            backgroundColor: AppColors.primaryNavy,
-            child: Text(
-              agentName[0].toUpperCase(), // Shows first letter of Agent Name
-              style: const TextStyle(color: Colors.white, fontSize: 24),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  "Listed By",
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-                Text(
-                  agentName, // ✅ Dynamic name (e.g., Vijay Malhi)
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                const Text(
-                  "Verified User", // Or "Verified Agency"
-                  style: TextStyle(color: AppColors.accentYellow, fontSize: 12),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Gallery and Action widgets stay similar but with cleaner styling
   Widget _buildImageGallery(List<String> images) {
     return Stack(
       children: [
@@ -342,37 +434,6 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
     );
   }
 
-  Widget _buildBottomAction() {
-    return Positioned(
-      bottom: 0,
-      left: 0,
-      right: 0,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(20, 10, 20, 30),
-        decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10)],
-        ),
-        child: ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primaryNavy,
-            foregroundColor: Colors.white,
-            minimumSize: const Size(double.infinity, 54),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          onPressed: _contactAgent,
-          child: const Text(
-            "CONTACT AGENT",
-            style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // Floating Header with Back Button and Fav
   Widget _buildFloatingHeader() {
     return Positioned(
       top: 0,
@@ -384,7 +445,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              CircleAvatar(
+              const CircleAvatar(
                 backgroundColor: Colors.black26,
                 child: BackButton(color: Colors.white),
               ),
@@ -411,33 +472,33 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
     );
   }
 
-  Future<void> _handleFavoriteToggle() async {
-    if (isToggling || listing == null) return;
-
-    HapticFeedback.mediumImpact();
-
-    setState(() => isToggling = true);
-
-    try {
-      await FavoriteService.toggleFavorite(listing!.id, listingData: listing);
-    } finally {
-      if (mounted) {
-        setState(() => isToggling = false);
-      }
-    }
-  }
-
-  void _contactAgent() async {
-    if (listing == null) return;
-    final whatsapp = listing!.contactWhatsapp ?? "";
-    final phone = listing!.contactPhone ?? "";
-    if (whatsapp.isNotEmpty) {
-      final uri = Uri.parse("https://wa.me/$whatsapp");
-      if (await canLaunchUrl(uri))
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else if (phone.isNotEmpty) {
-      final uri = Uri.parse("tel:$phone");
-      if (await canLaunchUrl(uri)) await launchUrl(uri);
-    }
+  Widget _buildBottomAction() {
+    return Positioned(
+      bottom: 0,
+      left: 0,
+      right: 0,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(20, 10, 20, 30),
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          boxShadow: [const BoxShadow(color: Colors.black12, blurRadius: 10)],
+        ),
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primaryNavy,
+            foregroundColor: Colors.white,
+            minimumSize: const Size(double.infinity, 54),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          onPressed: _contactAgentCall, // Default to call or specialized logic
+          child: const Text(
+            "CONTACT AGENT",
+            style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2),
+          ),
+        ),
+      ),
+    );
   }
 }
