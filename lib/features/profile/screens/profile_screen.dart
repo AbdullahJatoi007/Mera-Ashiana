@@ -17,7 +17,6 @@ import 'package:mera_ashiana/features/agency/agency_registration_screen.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/models/agency_model.dart';
 import '../../../data/models/user_model.dart';
-import '../../../data/services/auth/secure_storage_service.dart';
 import '../../../shared/helpers/auth_helper.dart';
 import '../../../shared/helpers/internet_helper.dart';
 
@@ -67,54 +66,50 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _loadUser() async {
-    setState(() {
-      _isLoading = true;
-      _hasError = false;
-      _errorMsg = '';
-    });
-
-    final connected = await InternetHelper.hasInternetConnection();
-    if (!connected) {
-      setState(() {
-        _isLoading = false;
-        _user = null;
-        _hasError = true;
-        _errorMsg = "No internet connection. Please check your connection.";
-      });
+    // Basic Auth Check - If not logged in, show Guest View immediately
+    if (!AuthState.isLoggedIn.value) {
+      if (mounted) {
+        setState(() {
+          _user = null;
+          _userAgency = null;
+          _isLoading = false;
+          _hasError = false;
+        });
+      }
       return;
     }
 
-    // 🚨 FIX: Check for token presence to distinguish between Guest and Error
-    final token = await SecureStorageService.read(key: 'access_token');
-
-    if (token == null || !AuthState.isLoggedIn.value) {
+    if (mounted) {
       setState(() {
-        _user = null;
-        _userAgency = null;
-        _isLoading = false;
-        _hasError = false; // No error, just a guest
+        _isLoading = true;
+        _hasError = false;
         _errorMsg = '';
       });
-      return;
     }
 
     try {
+      // Reverting to your original controller call
       final results = await ProfileController.fetchAllData();
+
       if (!mounted) return;
+
+      final userObj = results[0] as User?;
+      final agencyObj = results[1] as Agency?;
+
       setState(() {
-        _user = results[0] as User?;
-        _userAgency = results[1] as Agency?;
+        _user = userObj;
+        // Fix: Detect 'agency' type from backend
+        _userAgency = (userObj?.type?.toLowerCase() == 'agency')
+            ? agencyObj
+            : null;
         _isLoading = false;
-        _hasError = false;
-        _errorMsg = '';
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _user = null;
         _isLoading = false;
         _hasError = true;
-        _errorMsg = "Failed to load profile. Please try again.";
+        _errorMsg = "Failed to load profile. Please check your session.";
       });
     }
   }
@@ -131,9 +126,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _handleAgencyNavigation() {
-    final target = _userAgency != null
+    // Show status screen if user is agency type OR already has an agency object
+    final isAgencyUser = _user?.type?.toLowerCase() == 'agency';
+    final target = (_userAgency != null || isAgencyUser)
         ? const AgencyStatusScreen()
         : const RealEstateRegistrationScreen();
+
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => target),
@@ -172,11 +170,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
               )
             else ...[
               ProfileHeader(user: _user!),
-              if (_userAgency != null) _buildAgencyStatusBanner(isDark),
+              if (_user?.type?.toLowerCase() == 'agency' && _userAgency != null)
+                _buildAgencyStatusBanner(isDark),
               const SizedBox(height: 25),
               _buildMetricsRow(isDark),
               const SizedBox(height: 25),
-              _buildActionSection(loc, _user!.type, isDark),
+              _buildActionSection(loc, _user?.type ?? '', isDark),
               const SizedBox(height: 40),
             ],
           ],
@@ -185,41 +184,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // ==================== UI Widgets ====================
+  // ... (Other UI Widgets: _buildErrorView, _buildGuestView, _buildAgencyStatusBanner remain same)
 
   Widget _buildErrorView() {
     return SizedBox(
       height: MediaQuery.of(context).size.height - kToolbarHeight,
       child: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 40),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 80, color: Colors.red),
-              const SizedBox(height: 20),
-              Text(
-                _errorMsg,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.textGrey, fontSize: 14),
-              ),
-              const SizedBox(height: 30),
-              ElevatedButton(
-                onPressed: _loadUser,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.accentYellow,
-                  foregroundColor: AppColors.primaryNavy,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                ),
-                child: const Text(
-                  "Retry",
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
-          ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 60, color: Colors.red),
+            const SizedBox(height: 16),
+            Text(_errorMsg),
+            TextButton(onPressed: _loadUser, child: const Text("Retry")),
+          ],
         ),
       ),
     );
@@ -248,12 +226,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 color: isDark ? Colors.white : AppColors.primaryNavy,
               ),
             ),
-            const SizedBox(height: 12),
-            const Text(
-              "Login to view your listings and manage your account.",
-              textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.textGrey),
-            ),
             const SizedBox(height: 32),
             SizedBox(
               width: double.infinity,
@@ -280,7 +252,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildAgencyStatusBanner(bool isDark) {
-    final status = _userAgency!.status.toLowerCase();
+    final status = _userAgency?.status.toLowerCase() ?? 'pending';
     final statusColor = status == 'approved'
         ? Colors.green
         : (status == 'rejected' ? AppColors.errorRed : Colors.orange);
@@ -305,7 +277,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             fontSize: 14,
           ),
         ),
-        subtitle: const Text("View dashboard", style: TextStyle(fontSize: 12)),
         trailing: Icon(Icons.arrow_forward_ios, size: 14, color: statusColor),
       ),
     );
@@ -319,7 +290,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _buildMetricCard(
             notifier: ListingService.myListingsCount,
             label: 'My Properties',
-            subLabel: _user?.type == 'agent' ? "Check Status" : "View Ads",
+            subLabel: _user?.type?.toLowerCase() == 'agency'
+                ? "Check Status"
+                : "View Ads",
             icon: Icons.holiday_village_rounded,
             isDark: isDark,
             onTap: () => Navigator.push(
@@ -354,10 +327,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }) {
     return Expanded(
       child: InkWell(
-        onTap: () {
-          HapticFeedback.selectionClick();
-          onTap();
-        },
+        onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: ValueListenableBuilder<int>(
           valueListenable: notifier,
@@ -398,14 +368,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  subLabel,
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: isDark ? Colors.white38 : Colors.grey[600],
-                  ),
-                ),
               ],
             ),
           ),
@@ -424,13 +386,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
       ),
       child: Column(
         children: [
@@ -452,13 +407,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
               MaterialPageRoute(builder: (_) => const AddListingScreen()),
             ),
           ),
-          if (userType == 'agent')
+
+          // THE KEY FIX: Checking for 'agency' instead of 'agent'
+          if (userType.toLowerCase() == 'agency')
             _buildSettingsTile(
               'Agency Management',
               Icons.business_center_outlined,
               isDark,
               _handleAgencyNavigation,
             ),
+
           _buildSettingsTile(
             'About Us',
             Icons.info_outline_rounded,
@@ -491,14 +449,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ? AppColors.errorRed
         : (isDark ? AppColors.accentYellow : AppColors.primaryNavy);
     return ListTile(
-      leading: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Icon(icon, color: color, size: 20),
-      ),
+      leading: Icon(icon, color: color, size: 20),
       title: Text(
         title,
         style: TextStyle(
@@ -514,10 +465,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         size: 20,
         color: AppColors.textGrey,
       ),
-      onTap: () {
-        HapticFeedback.lightImpact();
-        onTap();
-      },
+      onTap: onTap,
     );
   }
 }

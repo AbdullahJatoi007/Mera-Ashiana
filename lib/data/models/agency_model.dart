@@ -33,7 +33,7 @@ class Agency {
       email: json['email'] ?? '',
       address: json['address'],
       status: json['status'] ?? 'pending',
-      userId: json['user_id'] ?? 0,
+      userId: json['user_id'] ?? 0,  // safely defaults to 0 when missing
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
           : null,

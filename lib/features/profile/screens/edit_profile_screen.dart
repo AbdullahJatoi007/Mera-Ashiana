@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:mera_ashiana/core/theme/app_colors.dart';
+import '../../../core/theme/app_colors_dark.dart';
 import '../../../shared/helpers/image_picker_helper.dart';
 import '../../../shared/helpers/loader_helper.dart';
 import '../../../shared/helpers/validation_helper.dart';
@@ -28,7 +29,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _emailController = TextEditingController();
 
   File? _profileImage;
-  String? _savedImagePath; // To keep track of the locally saved image path
+  bool _isSaving = false; // Added to manage button state internally if needed
 
   @override
   void initState() {
@@ -48,20 +49,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final name = await _storage.read(key: 'user_name');
     final phone = await _storage.read(key: 'user_phone');
     final email = await _storage.read(key: 'user_email');
-    final imagePath = await _storage.read(
-      key: 'profile_image_path',
-    ); // Load image
+    final imagePath = await _storage.read(key: 'profile_image_path');
 
-    setState(() {
-      _nameController.text = name ?? '';
-      _phoneController.text = phone ?? '';
-      _emailController.text = email ?? '';
-
-      if (imagePath != null && imagePath.isNotEmpty) {
-        _profileImage = File(imagePath);
-        _savedImagePath = imagePath;
-      }
-    });
+    if (mounted) {
+      setState(() {
+        _nameController.text = name ?? '';
+        _phoneController.text = phone ?? '';
+        _emailController.text = email ?? '';
+        if (imagePath != null && imagePath.isNotEmpty) {
+          _profileImage = File(imagePath);
+        }
+      });
+    }
   }
 
   Future<void> _handleImagePick() async {
@@ -74,30 +73,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Future<void> _saveProfile() async {
     if (!_formKey.currentState!.validate()) return;
 
-    FocusScope.of(context).unfocus(); // Close keyboard
+    FocusScope.of(context).unfocus();
     LoaderHelper.instance.showLoader(context, message: "Updating profile...");
 
     try {
-      // 1. UPDATE BACKEND (Uncomment and adjust based on your ApiClient)
-      /*
-      final response = await ApiClient.post(
-        Endpoints.updateProfile,
-        body: {
-          'name': _nameController.text.trim(),
-          'phone': _phoneController.text.trim(),
-          'email': _emailController.text.trim(),
-        },
-      );
-
-      if (response.statusCode != 200) {
-         throw Exception("Failed to update on server");
-      }
-      */
-
-      // Note: If you are uploading the image to the server, you will need a
-      // MultipartRequest here via your ApiClient.
-
-      // 2. UPDATE LOCAL STORAGE (Cache)
+      // Local caching
       await _storage.write(
         key: 'user_name',
         value: _nameController.text.trim(),
@@ -111,7 +91,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         value: _emailController.text.trim(),
       );
 
-      // Save the image path so it persists on app restart
       if (_profileImage != null) {
         await _storage.write(
           key: 'profile_image_path',
@@ -132,109 +111,98 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     } catch (e) {
       if (mounted) {
         LoaderHelper.instance.hideLoader(context);
-        _showError("Failed to save profile. Please try again.");
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Failed to save profile"),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
       }
     }
-  }
-
-  void _showError(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.redAccent),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final yellow = isDark ? AppDarkColors.accentYellow : AppColors.accentYellow;
+    final navy = isDark ? AppDarkColors.primaryNavy : AppColors.primaryNavy;
 
     return Scaffold(
+      backgroundColor: isDark ? AppDarkColors.background : AppColors.background,
       appBar: AppBar(
         title: const Text(
           "Edit Profile",
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
+        backgroundColor: isDark ? AppDarkColors.surface : AppColors.primaryNavy,
         centerTitle: true,
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
         physics: const BouncingScrollPhysics(),
         child: Form(
           key: _formKey,
           child: Column(
             children: [
-              _buildAvatar(),
+              _buildAvatar(isDark, yellow, navy),
               const SizedBox(height: 40),
 
-              // Name Field
-              TextFormField(
+              _buildModernField(
                 controller: _nameController,
-                textInputAction: TextInputAction.next,
-                decoration: InputDecoration(
-                  labelText: "Full Name",
-                  prefixIcon: const Icon(Icons.person_outline),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                validator: (value) => (value == null || value.trim().isEmpty)
-                    ? "Name is required"
-                    : null,
+                label: "Full Name",
+                icon: Icons.person_outline,
+                isDark: isDark,
+                yellow: yellow,
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? "Name is required" : null,
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
-              // Email Field
-              TextFormField(
+              _buildModernField(
                 controller: _emailController,
-                textInputAction: TextInputAction.next,
+                label: "Email Address",
+                icon: Icons.email_outlined,
+                isDark: isDark,
+                yellow: yellow,
                 keyboardType: TextInputType.emailAddress,
-                decoration: InputDecoration(
-                  labelText: "Email Address",
-                  prefixIcon: const Icon(Icons.email_outlined),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
                 validator: ValidationHelper.validateEmail,
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
-              // Phone Field
-              TextFormField(
+              _buildModernField(
                 controller: _phoneController,
-                textInputAction: TextInputAction.done,
+                label: "Phone Number",
+                icon: Icons.phone_outlined,
+                isDark: isDark,
+                yellow: yellow,
                 keyboardType: TextInputType.phone,
-                decoration: InputDecoration(
-                  labelText: "Phone Number",
-                  prefixIcon: const Icon(Icons.phone_outlined),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                validator: (value) => (value == null || value.trim().length < 8)
+                validator: (v) => (v == null || v.trim().length < 8)
                     ? "Invalid phone number"
                     : null,
               ),
+
               const SizedBox(height: 40),
 
-              // Save Button
               SizedBox(
                 width: double.infinity,
                 height: 55,
                 child: ElevatedButton(
                   onPressed: _saveProfile,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.accentYellow,
+                    backgroundColor: yellow,
+                    foregroundColor: navy,
+                    elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(15),
                     ),
-                    elevation: 0,
                   ),
                   child: const Text(
                     "SAVE CHANGES",
                     style: TextStyle(
-                      color: AppColors.primaryNavy,
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
+                      letterSpacing: 1.1,
                     ),
                   ),
                 ),
@@ -246,42 +214,94 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
-  Widget _buildAvatar() {
+  Widget _buildModernField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    required bool isDark,
+    required Color yellow,
+    TextInputType? keyboardType,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      validator: validator,
+      style: TextStyle(
+        fontSize: 15,
+        color: isDark ? Colors.white : AppColors.textDark,
+      ),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(
+          fontSize: 14,
+          color: isDark ? Colors.white60 : Colors.black54,
+        ),
+        prefixIcon: Icon(icon, color: yellow, size: 22),
+        filled: true,
+        fillColor: isDark ? AppDarkColors.surface : Colors.white,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: isDark ? Colors.white10 : AppColors.borderGrey,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: yellow, width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.redAccent),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAvatar(bool isDark, Color yellow, Color navy) {
     return Center(
       child: Stack(
         children: [
           Container(
+            padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(color: AppColors.accentYellow, width: 3),
+              border: Border.all(color: yellow, width: 2),
             ),
             child: CircleAvatar(
-              radius: 60,
-              backgroundColor: Colors.grey.withOpacity(0.2),
+              radius: 55,
+              backgroundColor: isDark
+                  ? AppDarkColors.surface
+                  : Colors.grey.shade200,
               backgroundImage: _profileImage != null
                   ? FileImage(_profileImage!)
                   : null,
               child: _profileImage == null
-                  ? const Icon(Icons.person, size: 60, color: Colors.grey)
+                  ? Icon(
+                      Icons.person,
+                      size: 55,
+                      color: isDark ? Colors.white24 : Colors.grey,
+                    )
                   : null,
             ),
           ),
           Positioned(
-            bottom: 4,
+            bottom: 0,
             right: 4,
             child: GestureDetector(
               onTap: _handleImagePick,
               child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: const BoxDecoration(
-                  color: AppColors.primaryNavy,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: navy,
                   shape: BoxShape.circle,
+                  border: Border.all(color: yellow, width: 1.5),
                 ),
-                child: const Icon(
-                  Icons.camera_alt,
-                  size: 20,
-                  color: AppColors.accentYellow,
-                ),
+                child: Icon(Icons.camera_alt, size: 20, color: yellow),
               ),
             ),
           ),

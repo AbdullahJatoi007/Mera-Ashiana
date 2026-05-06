@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:mera_ashiana/data/models/listing_model.dart';
+import 'package:mera_ashiana/core/theme/app_colors.dart';
 import 'package:mera_ashiana/data/services/agency_service.dart';
 import 'package:mera_ashiana/features/agency/agency_registration_screen.dart';
-
+import '../../core/theme/app_colors_dark.dart';
 import '../../data/models/agency_model.dart';
 
 class AgencyStatusScreen extends StatefulWidget {
@@ -24,35 +24,94 @@ class _AgencyStatusScreenState extends State<AgencyStatusScreen> {
   void _refresh() =>
       setState(() => _agencyFuture = AgencyService.fetchMyAgency());
 
+  void _navigateToRegistration({Agency? agency}) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => RealEstateRegistrationScreen(agency: agency),
+      ),
+    ).then((updated) {
+      if (updated == true) _refresh();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final yellow = isDark ? AppDarkColors.accentYellow : AppColors.accentYellow;
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Agency Management"), centerTitle: true),
+      backgroundColor: isDark ? AppDarkColors.background : Colors.grey[50],
+      appBar: AppBar(
+        title: const Text(
+          'Agency Management',
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+        ),
+        backgroundColor: isDark ? AppDarkColors.surface : AppColors.primaryNavy,
+        centerTitle: true,
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
       body: FutureBuilder<Agency?>(
         future: _agencyFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(child: CircularProgressIndicator(color: yellow));
           }
 
-          // If No Agency exists in DB, show Registration
-          if (!snapshot.hasData || snapshot.data == null) {
-            return _buildEmptyState(context, theme);
-          }
+          final agency = snapshot.data;
+          if (agency == null) return _buildEmptyState(isDark, yellow);
 
-          // If Agency exists, show Status and Details
-          final agency = snapshot.data!;
           return RefreshIndicator(
             onRefresh: () async => _refresh(),
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
-                  _buildStatusCard(agency, theme),
-                  const SizedBox(height: 20),
-                  _buildAgencyDetails(agency, theme),
+                  _buildStatusCard(agency),
+                  const SizedBox(height: 16),
+                  _buildDetailsCard(agency, isDark),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: yellow,
+                            foregroundColor: isDark
+                                ? AppDarkColors.primaryNavy
+                                : Colors.white,
+                          ),
+                          onPressed: () =>
+                              _navigateToRegistration(agency: agency),
+                          child: const Text(
+                            "Edit",
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: isDark
+                                ? AppDarkColors.errorRed
+                                : AppColors.errorRed,
+                          ),
+                          onPressed: () async {
+                            final ok = await AgencyService.deleteAgency();
+                            if (ok) _refresh();
+                          },
+                          child: const Text(
+                            "Delete",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -62,33 +121,63 @@ class _AgencyStatusScreenState extends State<AgencyStatusScreen> {
     );
   }
 
-  Widget _buildStatusCard(Agency agency, ThemeData theme) {
-    final status = agency.status.toLowerCase();
-    Color color = status == 'approved' ? Colors.green : Colors.orange;
-
+  Widget _buildStatusCard(Agency agency) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.5)),
+        color: Colors.blue.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: Colors.blue.withOpacity(0.3)),
       ),
+      child: Center(
+        child: Text(
+          "Status: ${agency.status.toUpperCase()}",
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.blue,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailsCard(Agency agency, bool isDark) {
+    final textColor = isDark ? Colors.white : AppColors.textDark;
+    final surfaceColor = isDark ? AppDarkColors.surface : Colors.white;
+
+    return Card(
+      color: surfaceColor,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       child: Column(
         children: [
-          Icon(
-            status == 'approved' ? Icons.check_circle : Icons.hourglass_empty,
-            color: color,
-            size: 48,
+          ListTile(
+            title: Text(
+              "Name",
+              style: TextStyle(
+                color: isDark ? Colors.white70 : AppColors.textGrey,
+                fontSize: 12,
+              ),
+            ),
+            subtitle: Text(
+              agency.agencyName,
+              style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
+            ),
           ),
-          const SizedBox(height: 12),
-          Text(
-            status == 'pending'
-                ? "UNDER REVIEW"
-                : "STATUS: ${status.toUpperCase()}",
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: color,
+          Divider(
+            height: 1,
+            color: isDark ? AppDarkColors.borderGrey : AppColors.borderGrey,
+          ),
+          ListTile(
+            title: Text(
+              "Email",
+              style: TextStyle(
+                color: isDark ? Colors.white70 : AppColors.textGrey,
+                fontSize: 12,
+              ),
+            ),
+            subtitle: Text(
+              agency.email,
+              style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
             ),
           ),
         ],
@@ -96,25 +185,38 @@ class _AgencyStatusScreenState extends State<AgencyStatusScreen> {
     );
   }
 
-  Widget _buildEmptyState(BuildContext context, ThemeData theme) {
+  Widget _buildEmptyState(bool isDark, Color yellow) {
     return Center(
-      child: ElevatedButton(
-        onPressed: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => const RealEstateRegistrationScreen(),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.business_center_outlined,
+            size: 64,
+            color: isDark ? Colors.white24 : Colors.grey,
           ),
-        ).then((_) => _refresh()), // Refresh after registration
-        child: const Text("Register My Agency"),
-      ),
-    );
-  }
-
-  Widget _buildAgencyDetails(Agency agency, ThemeData theme) {
-    return Card(
-      child: ListTile(
-        title: Text(agency.agencyName),
-        subtitle: Text(agency.email),
+          const SizedBox(height: 16),
+          Text(
+            "No agency found",
+            style: TextStyle(
+              color: isDark ? Colors.white70 : AppColors.textGrey,
+            ),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: yellow,
+              foregroundColor: isDark
+                  ? AppDarkColors.primaryNavy
+                  : Colors.white,
+            ),
+            onPressed: () => _navigateToRegistration(),
+            child: const Text(
+              "Register Now",
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
       ),
     );
   }

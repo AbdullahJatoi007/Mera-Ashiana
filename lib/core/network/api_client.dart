@@ -133,4 +133,10 @@ class ApiClient {
     dynamic data,
     Map<String, dynamic>? queryParameters,
   }) => dio.delete(path, data: data, queryParameters: queryParameters);
+  static Future<Response> patch(
+      String path, {
+        dynamic data,
+        Map<String, dynamic>? queryParameters,
+      }) => dio.patch(path, data: data, queryParameters: queryParameters);
+
 }

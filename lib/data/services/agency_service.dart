@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/endpoints.dart';
 import '../models/agency_model.dart';
-import '../models/user_model.dart';
 import 'profile_service.dart';
 
 class AgencyService {
@@ -12,23 +11,20 @@ class AgencyService {
     try {
       final response = await ApiClient.get(
         Endpoints.myAgency,
-      ).timeout(const Duration(seconds: 5));
-
+      ).timeout(const Duration(seconds: 8));
       final data = response.data;
-
-      if (data['data'] != null) {
-        return Agency.fromJson(data['data']);
-      } else if (data['agency'] != null) {
-        return Agency.fromJson(data['agency']);
-      } else if (data['agencies'] != null &&
-          (data['agencies'] as List).isNotEmpty) {
-        return Agency.fromJson(data['agencies'][0]);
-      }
+      if (data == null) return null;
+      if (data['data'] != null) return Agency.fromJson(data['data']);
+      if (data['agency'] != null) return Agency.fromJson(data['agency']);
+      if (data['id'] != null && data['agency_name'] != null)
+        return Agency.fromJson(data);
+      return null;
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) return null;
+      debugPrint("fetchMyAgency error: $e");
       return null;
     } catch (e) {
-      debugPrint(
-        "Fetch My Agency Error (Likely no agency or backend timeout): $e",
-      );
+      debugPrint("fetchMyAgency unexpected error: $e");
       return null;
     }
   }
@@ -43,20 +39,14 @@ class AgencyService {
   }) async {
     try {
       final user = await ProfileService.fetchProfile();
-
-      // 🚨 FIX: handle deleted / logged-out user safely
-      if (user == null) {
-        return {
-          "success": false,
-          "message": "User session expired. Please login again.",
-        };
-      }
+      if (user == null)
+        return {"success": false, "message": "Session expired."};
 
       FormData formData = FormData.fromMap({
         'agency_name': agencyName.trim(),
         'email': email.trim().toLowerCase(),
         'description': description.trim().isEmpty
-            ? "No description provided"
+            ? "No description"
             : description.trim(),
         'phone': phone.trim(),
         'address': address.trim().isEmpty ? "Not provided" : address.trim(),
@@ -69,12 +59,13 @@ class AgencyService {
       });
 
       final response = await ApiClient.post(Endpoints.agency, data: formData);
-
       final result = response.data;
+
+      debugPrint("=== registerAgency RESPONSE: $result ===");
 
       return {
         "success": true,
-        "message": result['message'] ?? "Agency registered successfully",
+        "message": result['message'] ?? "Registered successfully",
         "agency": result['data'] != null
             ? Agency.fromJson(result['data'])
             : (result['agency'] != null
@@ -82,7 +73,59 @@ class AgencyService {
                   : null),
       };
     } catch (e) {
+      debugPrint("=== registerAgency ERROR: $e ===");
       return {"success": false, "message": e.toString()};
+    }
+  }
+
+  static Future<Map<String, dynamic>> updateAgency({
+    String? agencyName,
+    String? description,
+    String? phone,
+    String? email,
+    String? address,
+    File? logoFile,
+  }) async {
+    try {
+      final formData = FormData.fromMap({
+        if (agencyName != null) 'agency_name': agencyName.trim(),
+        if (description != null) 'description': description.trim(),
+        if (phone != null) 'phone': phone.trim(),
+        if (email != null) 'email': email.trim().toLowerCase(),
+        if (address != null) 'address': address.trim(),
+        if (logoFile != null)
+          'logo': await MultipartFile.fromFile(
+            logoFile.path,
+            filename: logoFile.path.split('/').last,
+          ),
+      });
+
+      final response = await ApiClient.patch(
+        Endpoints.myAgency,
+        data: formData,
+      );
+      final result = response.data;
+
+      debugPrint("=== updateAgency RESPONSE: $result ===");
+
+      return {
+        'success': true,
+        'agency': result['data'] != null
+            ? Agency.fromJson(result['data'])
+            : (result['id'] != null ? Agency.fromJson(result) : null),
+      };
+    } catch (e) {
+      debugPrint("=== updateAgency ERROR: $e ===");
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  static Future<bool> deleteAgency() async {
+    try {
+      await ApiClient.delete(Endpoints.myAgency);
+      return true;
+    } catch (e) {
+      return false;
     }
   }
 }

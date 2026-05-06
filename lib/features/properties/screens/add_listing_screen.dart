@@ -4,10 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:mera_ashiana/core/l10n/app_localizations.dart';
-import 'package:mera_ashiana/core/theme/app_colors.dart';
+import 'package:mera_ashiana/core/theme/app_colors.dart'; // Ensure AppDarkColors is inside here
 import 'package:mera_ashiana/core/network/api_client.dart';
 
-import '../../../core/network/api_client.dart'; // ✅ Ensure correct path
+import '../../../core/theme/app_colors_dark.dart';
 
 class AddListingScreen extends StatefulWidget {
   const AddListingScreen({super.key});
@@ -19,9 +19,8 @@ class AddListingScreen extends StatefulWidget {
 class _AddListingScreenState extends State<AddListingScreen> {
   final _formKey = GlobalKey<FormState>();
   final ImagePicker _picker = ImagePicker();
-
   bool _isSubmitting = false;
-  List<File> _selectedImages = [];
+  final List<File> _selectedImages = [];
 
   // Controllers
   final _titleController = TextEditingController();
@@ -36,22 +35,24 @@ class _AddListingScreenState extends State<AddListingScreen> {
 
   @override
   void dispose() {
-    // ✅ Added dispose to prevent memory leaks
-    _titleController.dispose();
-    _priceController.dispose();
-    _locationController.dispose();
-    _descController.dispose();
-    _phoneController.dispose();
-    _emailController.dispose();
-    _areaController.dispose();
-    _bedsController.dispose();
-    _bathsController.dispose();
+    for (var controller in [
+      _titleController,
+      _priceController,
+      _locationController,
+      _descController,
+      _phoneController,
+      _emailController,
+      _areaController,
+      _bedsController,
+      _bathsController,
+    ]) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
-  void _submitData(AppLocalizations loc) async {
+  Future<void> _submitData(AppLocalizations loc) async {
     if (!_formKey.currentState!.validate()) return;
-
     if (_selectedImages.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -63,15 +64,12 @@ class _AddListingScreenState extends State<AddListingScreen> {
     }
 
     setState(() => _isSubmitting = true);
-
     try {
-      // ✅ Prepare Images for Multi-part upload
       List<MultipartFile> imageFiles = [];
       for (var file in _selectedImages) {
         imageFiles.add(await MultipartFile.fromFile(file.path));
       }
 
-      // ✅ Prepare Form Data
       final formData = FormData.fromMap({
         "title": _titleController.text.trim(),
         "price": _priceController.text.trim(),
@@ -85,9 +83,8 @@ class _AddListingScreenState extends State<AddListingScreen> {
         "images": imageFiles,
       });
 
-      // ✅ POST to your backend
       final response = await ApiClient.dio.post(
-        '/listings/add', // ⬅️ Double check this endpoint path
+        '/listings/add',
         data: formData,
       );
 
@@ -99,15 +96,14 @@ class _AddListingScreenState extends State<AddListingScreen> {
               backgroundColor: Colors.green,
             ),
           );
-          Navigator.pop(context, true); // Return to Profile with success
+          Navigator.pop(context, true);
         }
       }
     } catch (e) {
-      debugPrint("Submit Error: $e");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("Failed to post listing. Please try again."),
+            content: const Text("Failed to post listing."),
             backgroundColor: AppColors.errorRed,
           ),
         );
@@ -121,11 +117,13 @@ class _AddListingScreenState extends State<AddListingScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final Color yellowAccent = const Color(0xFFFFD54F);
+    final Color yellow = isDark
+        ? AppDarkColors.accentYellow
+        : AppColors.accentYellow;
     final loc = AppLocalizations.of(context)!;
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
+      backgroundColor: isDark ? AppDarkColors.background : AppColors.background,
       appBar: AppBar(
         title: Text(
           loc.postProperty,
@@ -134,41 +132,41 @@ class _AddListingScreenState extends State<AddListingScreen> {
             color: Colors.white,
           ),
         ),
-        backgroundColor: isDark
-            ? theme.colorScheme.surface
-            : AppColors.primaryNavy,
-        elevation: 0,
+        backgroundColor: isDark ? AppDarkColors.surface : AppColors.primaryNavy,
         centerTitle: true,
       ),
-      body: _isSubmitting
-          ? Center(child: CircularProgressIndicator(color: yellowAccent))
-          : Form(
-              key: _formKey,
-              child: ListView(
-                padding: const EdgeInsets.all(20),
-                children: [
-                  _buildSectionTitle(loc.propertyPhotos, isDark),
-                  const SizedBox(height: 12),
-                  _buildImagePicker(isDark, yellowAccent, loc),
-                  const SizedBox(height: 24),
-                  _buildSectionTitle(loc.generalDetails, isDark),
-                  const SizedBox(height: 12),
+      body: Stack(
+        children: [
+          Form(
+            key: _formKey,
+            child: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+              children: [
+                _buildImagePicker(isDark, yellow, loc),
+                const SizedBox(height: 20),
+
+                _buildSection(loc.generalDetails, isDark, [
                   _buildModernField(
                     controller: _titleController,
                     label: loc.title,
-                    icon: Icons.title_rounded,
+                    icon: Icons.title,
                     errorMsg: loc.requiredError,
+                    isDark: isDark,
+                    yellow: yellow,
                   ),
                   const SizedBox(height: 12),
+                  // Responsive Row 1: Price and Area
                   Row(
                     children: [
                       Expanded(
                         child: _buildModernField(
                           controller: _priceController,
                           label: loc.price,
-                          icon: Icons.money,
+                          icon: Icons.payments_outlined,
                           isNumber: true,
                           errorMsg: loc.requiredError,
+                          isDark: isDark,
+                          yellow: yellow,
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -176,22 +174,27 @@ class _AddListingScreenState extends State<AddListingScreen> {
                         child: _buildModernField(
                           controller: _areaController,
                           label: loc.area,
-                          icon: Icons.square_foot,
+                          icon: Icons.straighten,
                           errorMsg: loc.requiredError,
+                          isDark: isDark,
+                          yellow: yellow,
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
+                  // Responsive Row 2: Beds and Baths
                   Row(
                     children: [
                       Expanded(
                         child: _buildModernField(
                           controller: _bedsController,
                           label: loc.beds,
-                          icon: Icons.bed,
+                          icon: Icons.king_bed_outlined,
                           isNumber: true,
                           errorMsg: loc.requiredError,
+                          isDark: isDark,
+                          yellow: yellow,
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -199,9 +202,11 @@ class _AddListingScreenState extends State<AddListingScreen> {
                         child: _buildModernField(
                           controller: _bathsController,
                           label: loc.baths,
-                          icon: Icons.bathtub,
+                          icon: Icons.bathtub_outlined,
                           isNumber: true,
                           errorMsg: loc.requiredError,
+                          isDark: isDark,
+                          yellow: yellow,
                         ),
                       ),
                     ],
@@ -210,70 +215,94 @@ class _AddListingScreenState extends State<AddListingScreen> {
                   _buildModernField(
                     controller: _locationController,
                     label: loc.location,
-                    icon: Icons.location_on_outlined,
+                    icon: Icons.place_outlined,
                     errorMsg: loc.requiredError,
+                    isDark: isDark,
+                    yellow: yellow,
                   ),
                   const SizedBox(height: 12),
                   _buildModernField(
                     controller: _descController,
                     label: loc.description,
-                    icon: Icons.description_outlined,
+                    icon: Icons.notes,
                     maxLines: 3,
                     errorMsg: loc.requiredError,
+                    isDark: isDark,
+                    yellow: yellow,
                   ),
-                  const SizedBox(height: 24),
-                  _buildSectionTitle(loc.contactInformation, isDark),
-                  const SizedBox(height: 12),
+                ]),
+
+                const SizedBox(height: 20),
+                _buildSection(loc.contactInformation, isDark, [
                   _buildModernField(
                     controller: _phoneController,
                     label: loc.phone,
-                    icon: Icons.phone_android,
+                    icon: Icons.phone_iphone,
                     isNumber: true,
                     errorMsg: loc.requiredError,
+                    isDark: isDark,
+                    yellow: yellow,
                   ),
                   const SizedBox(height: 12),
                   _buildModernField(
                     controller: _emailController,
                     label: loc.email,
-                    icon: Icons.alternate_email,
+                    icon: Icons.email_outlined,
                     isEmail: true,
                     errorMsg: loc.requiredError,
+                    isDark: isDark,
+                    yellow: yellow,
                   ),
-                  const SizedBox(height: 32),
-                  ElevatedButton(
-                    onPressed: () => _submitData(loc),
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 55),
-                      backgroundColor: yellowAccent,
-                      foregroundColor: AppColors.primaryNavy,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                    ),
-                    child: Text(
-                      loc.submitAd.toUpperCase(),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.1,
-                      ),
+                ]),
+
+                const SizedBox(height: 32),
+                ElevatedButton(
+                  onPressed: _isSubmitting ? null : () => _submitData(loc),
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 50),
+                    backgroundColor: yellow,
+                    foregroundColor: AppColors.primaryNavy,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  const SizedBox(height: 20),
-                ],
-              ),
+                  child: _isSubmitting
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Text(
+                          loc.submitAd.toUpperCase(),
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                ),
+                const SizedBox(height: 30),
+              ],
             ),
+          ),
+        ],
+      ),
     );
   }
 
-  // --- Helper Methods remain the same as your current file ---
-  Widget _buildSectionTitle(String title, bool isDark) {
-    return Text(
-      title,
-      style: TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.bold,
-        color: isDark ? Colors.white : AppColors.primaryNavy,
-      ),
+  Widget _buildSection(String title, bool isDark, List<Widget> children) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 8),
+          child: Text(
+            title,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white70 : AppColors.primaryNavy,
+            ),
+          ),
+        ),
+        ...children,
+      ],
     );
   }
 
@@ -282,11 +311,12 @@ class _AddListingScreenState extends State<AddListingScreen> {
     required String label,
     required IconData icon,
     required String errorMsg,
+    required bool isDark,
+    required Color yellow,
     bool isNumber = false,
     bool isEmail = false,
     int maxLines = 1,
   }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return TextFormField(
       controller: controller,
       keyboardType: isNumber
@@ -295,104 +325,131 @@ class _AddListingScreenState extends State<AddListingScreen> {
       maxLines: maxLines,
       style: TextStyle(
         fontSize: 14,
-        color: isDark ? Colors.white : Colors.black87,
+        color: isDark ? Colors.white : AppColors.textDark,
       ),
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(
-          icon,
-          color: isDark ? const Color(0xFFFFD54F) : AppColors.primaryNavy,
-          size: 20,
+        labelStyle: TextStyle(
+          fontSize: 13,
+          color: isDark ? Colors.white60 : Colors.black54,
         ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
+        prefixIcon: Icon(icon, color: yellow, size: 20),
         filled: true,
-        fillColor: isDark ? const Color(0xFF1E1E1E) : AppColors.background,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        fillColor: isDark ? AppDarkColors.surface : Colors.white,
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: isDark ? Colors.white10 : AppColors.borderGrey,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: yellow, width: 1.5),
+        ),
       ),
       validator: (v) => (v == null || v.trim().isEmpty) ? errorMsg : null,
     );
   }
 
   Widget _buildImagePicker(bool isDark, Color accent, AppLocalizations loc) {
-    return SizedBox(
-      height: 100,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: _selectedImages.length + 1,
-        itemBuilder: (context, i) {
-          if (i == _selectedImages.length) {
-            return GestureDetector(
-              onTap: () async {
-                final pics = await _picker.pickMultiImage();
-                if (pics.isNotEmpty) {
-                  setState(
-                    () => _selectedImages.addAll(pics.map((e) => File(e.path))),
-                  );
-                }
-              },
-              child: Container(
-                width: 100,
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? const Color(0xFF1E1E1E)
-                      : AppColors.background,
-                  borderRadius: BorderRadius.circular(15),
-                  border: Border.all(
-                    color: isDark ? Colors.white10 : AppColors.borderGrey,
-                  ),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.add_photo_alternate_outlined, color: accent),
-                    const SizedBox(height: 4),
-                    Text(
-                      loc.add,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isDark ? Colors.white70 : AppColors.primaryNavy,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }
-          return Padding(
-            padding: const EdgeInsets.only(right: 12.0),
-            child: Stack(
-              // ✅ Added Stack to allow removing images
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(15),
-                  child: Image.file(
-                    _selectedImages[i],
-                    width: 100,
-                    height: 100,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-                Positioned(
-                  top: 5,
-                  right: 5,
-                  child: GestureDetector(
-                    onTap: () => setState(() => _selectedImages.removeAt(i)),
-                    child: Container(
-                      decoration: const BoxDecoration(
-                        color: Colors.red,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.close,
-                        color: Colors.white,
-                        size: 18,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 8),
+          child: Text(
+            loc.propertyPhotos,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white70 : AppColors.primaryNavy,
             ),
-          );
-        },
+          ),
+        ),
+        SizedBox(
+          height: 90,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: _selectedImages.length + 1,
+            itemBuilder: (context, i) {
+              if (i == _selectedImages.length) {
+                return _buildAddImageButton(isDark, accent, loc);
+              }
+              return _buildImageThumbnail(i);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAddImageButton(bool isDark, Color accent, AppLocalizations loc) {
+    return GestureDetector(
+      onTap: () async {
+        final pics = await _picker.pickMultiImage();
+        if (pics.isNotEmpty)
+          setState(() => _selectedImages.addAll(pics.map((e) => File(e.path))));
+      },
+      child: Container(
+        width: 90,
+        margin: const EdgeInsets.only(right: 10),
+        decoration: BoxDecoration(
+          color: isDark ? AppDarkColors.surface : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isDark ? Colors.white10 : AppColors.borderGrey,
+          ),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.add_a_photo_outlined, color: accent, size: 24),
+            const SizedBox(height: 4),
+            Text(
+              loc.add,
+              style: TextStyle(
+                fontSize: 11,
+                color: isDark ? Colors.white60 : Colors.black54,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImageThumbnail(int index) {
+    return Container(
+      width: 90,
+      margin: const EdgeInsets.only(right: 10),
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.file(_selectedImages[index], fit: BoxFit.cover),
+            ),
+          ),
+          Positioned(
+            top: 4,
+            right: 4,
+            child: GestureDetector(
+              onTap: () => setState(() => _selectedImages.removeAt(index)),
+              child: Container(
+                padding: const EdgeInsets.all(2),
+                decoration: const BoxDecoration(
+                  color: Colors.black54,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.close, color: Colors.white, size: 14),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
