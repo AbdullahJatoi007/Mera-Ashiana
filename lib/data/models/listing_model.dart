@@ -11,17 +11,16 @@ class Listing {
   final String? area;
   final int bedrooms;
   final int bathrooms;
-
-  // 👇 CONTACT FIELDS (The "Real" fix for mapping)
   final String? contactPhone;
   final String? contactWhatsapp;
   final String? contactEmail;
-
   final bool isFeatured;
 
-  // 👇 OWNER METADATA
+  // 👇 NEW FIELD
+  final String? soldStatus;
+
   final String? createdByName;
-  final String? createdByType; // user | agency
+  final String? createdByType;
   final String? createdByPhone;
   final String? createdByEmail;
 
@@ -44,6 +43,7 @@ class Listing {
     this.contactWhatsapp,
     this.contactEmail,
     required this.isFeatured,
+    this.soldStatus, // Added to constructor
     this.createdByName,
     this.createdByType,
     this.createdByPhone,
@@ -51,24 +51,18 @@ class Listing {
   });
 
   factory Listing.fromJson(Map<String, dynamic> json) {
-    /// =========================
-    /// 👤 OWNER METADATA LOGIC
-    /// =========================
     String? name;
     String? ownerType;
     String? ownerPhone;
     String? ownerEmail;
 
-    // Check for User association
     if (json['users'] != null) {
       final u = json['users'];
       name = u['username'] ?? u['name'];
       ownerPhone = u['phone'];
       ownerEmail = u['email'];
       ownerType = "user";
-    }
-    // Check for Agency association
-    else if (json['agencies'] != null) {
+    } else if (json['agencies'] != null) {
       final a = json['agencies'];
       name = a['agency_name'];
       ownerPhone = a['phone'];
@@ -76,12 +70,8 @@ class Listing {
       ownerType = "agency";
     }
 
-    /// =========================
-    /// 🖼 IMAGES PARSING
-    /// =========================
     final rawImages = json['listing_images'];
     List<String> parsedImages = [];
-
     if (rawImages is List) {
       parsedImages = rawImages
           .map((img) {
@@ -108,15 +98,14 @@ class Listing {
       area: json['area']?.toString(),
       bedrooms: int.tryParse('${json['bedrooms'] ?? 0}') ?? 0,
       bathrooms: int.tryParse('${json['bathrooms'] ?? 0}') ?? 0,
-
-      // 🔧 THE REAL FIX: Direct mapping from backend keys
       contactPhone: json['contact_phone']?.toString(),
       contactWhatsapp: json['contact_whatsapp']?.toString(),
       contactEmail: json['contact_email']?.toString(),
-
       isFeatured: json['is_featured'] == true || json['is_featured'] == 1,
 
-      // Metadata for UI (e.g., "Listed by [Name]")
+      // 👇 MAPPING SOLD STATUS
+      soldStatus: json['sold_status']?.toString() ?? 'available',
+
       createdByName: name,
       createdByType: ownerType,
       createdByPhone: ownerPhone,
