@@ -4,6 +4,7 @@ class User {
   final String email;
   final String type;
   final String? phone;
+  final String? profileImage; // Added field
 
   User({
     required this.id,
@@ -11,15 +12,24 @@ class User {
     required this.email,
     required this.type,
     this.phone,
+    this.profileImage,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
+    const String baseUrl = "https://api-staging.mera-ashiana.com";
+
+    // Backend uses 'profile_pic' in the database/model
+    String? rawPath = json['profile_pic'];
+
     return User(
       id: json['id'],
-      username: json['username'],
-      email: json['email'],
-      type: json['type'],
+      username: json['username'] ?? '',
+      email: json['email'] ?? '',
+      type: json['type'] ?? 'user',
       phone: json['phone'],
+      profileImage: (rawPath != null && rawPath.isNotEmpty)
+          ? "$baseUrl$rawPath"
+          : null,
     );
   }
 }

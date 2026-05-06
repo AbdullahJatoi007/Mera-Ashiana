@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:mera_ashiana/data/models/listing_model.dart';
 import 'package:mera_ashiana/core/theme/app_colors.dart';
-
 import '../../../data/models/user_model.dart';
 
 class ProfileHeader extends StatelessWidget {
@@ -11,6 +9,9 @@ class ProfileHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Check if user has a profile image
+    final hasImage = user.profileImage != null && user.profileImage!.isNotEmpty;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(24, 60, 24, 30),
@@ -23,19 +24,36 @@ class ProfileHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 38,
-            backgroundColor: AppColors.accentYellow,
-            child: Text(
-              user.username.isNotEmpty ? user.username[0].toUpperCase() : 'U',
-              style: const TextStyle(
-                fontSize: 28,
-                color: AppColors.primaryNavy,
-                fontWeight: FontWeight.bold,
-              ),
+          // Profile Image / Avatar
+          Container(
+            padding: const EdgeInsets.all(2), // White border around the image
+            decoration: const BoxDecoration(
+              color: Colors.white24,
+              shape: BoxShape.circle,
+            ),
+            child: CircleAvatar(
+              radius: 38,
+              backgroundColor: AppColors.accentYellow,
+              backgroundImage: hasImage
+                  ? NetworkImage(user.profileImage!)
+                  : null,
+              child: !hasImage
+                  ? Text(
+                      user.username.isNotEmpty
+                          ? user.username[0].toUpperCase()
+                          : 'U',
+                      style: const TextStyle(
+                        fontSize: 28,
+                        color: AppColors.primaryNavy,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    )
+                  : null,
             ),
           ),
           const SizedBox(width: 20),
+
+          // User Info
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -57,6 +75,7 @@ class ProfileHeader extends StatelessWidget {
                     _buildTypeBadge(user.type),
                   ],
                 ),
+                const SizedBox(height: 4),
                 Text(
                   user.email,
                   style: TextStyle(
@@ -64,6 +83,16 @@ class ProfileHeader extends StatelessWidget {
                     color: Colors.white.withOpacity(0.7),
                   ),
                 ),
+                if (user.phone != null && user.phone!.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    user.phone!,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.white.withOpacity(0.5),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

@@ -9,36 +9,38 @@ class Endpoints {
   static const String sendOtp =
       "$apiBase/auth/mobile/identity/register/send-otp";
 
-  static const String register =
-      "$apiBase/auth/mobile/identity/register";
+  static const String register = "$apiBase/auth/mobile/identity/register";
 
-  static const String login =
-      "$apiBase/auth/mobile/identity/login";
+  static const String login = "$apiBase/auth/mobile/identity/login";
 
-  static const String googleAuth =
-      "$apiBase/auth/mobile/identity/google";
+  static const String googleAuth = "$apiBase/auth/mobile/identity/google";
 
-  static const String logout =
-      "$apiBase/auth/mobile/session/logout";
+  static const String logout = "$apiBase/auth/mobile/session/logout";
 
-  static const String refreshToken =
-      "$apiBase/auth/mobile/session/refresh";
+  static const String refreshToken = "$apiBase/auth/mobile/session/refresh";
 
   // ───────── PROFILE ─────────
   static const String profile = "$apiBase/auth/profile";
-  static const String updateProfile = "$apiBase/auth/profile/update";
+
+  // static const String updateProfile = "$apiBase/auth/profile/update";
+  static const String updateProfile = "$apiBase/auth/profile";
+
   // DELETE ACCOUNT (same endpoint, different method)
   static const String deleteAccount = "$apiBase/auth/profile";
+
+  // Under ───────── PROFILE ─────────
+  static const String sendEmailOtp = "$apiBase/auth/profile/email/send-otp";
+  static const String verifyEmailChange = "$apiBase/auth/profile/email/verify";
 
   // ───────── LISTINGS ─────────
   static const String listings = "$apiBase/listings";
   static const String myListings = "$apiBase/listings/me";
 
   static String listing(int id) => "$apiBase/listings/$id";
+
   static String deleteListing(int id) => "$apiBase/listings/$id";
 
-  static String likeListing(int id) =>
-      "$apiBase/listings/$id/like";
+  static String likeListing(int id) => "$apiBase/listings/$id/like";
 
   // ───────── AGENCY ─────────
   static const String agency = "$apiBase/agencies";
@@ -46,5 +48,6 @@ class Endpoints {
 
   // ───────── BLOGS ─────────
   static const String blogs = "$apiBase/blogs";
+
   static String blog(int id) => "$apiBase/blogs/$id";
 }
