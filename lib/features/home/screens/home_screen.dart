@@ -112,9 +112,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _fetchProperties({bool isRefresh = false}) async {
     if (!isRefresh) setState(() => _isLoading = true);
+
     try {
-      final listings = await PropertyService.fetchProperties();
+      final listings = await PropertyService.fetchProperties(
+        page: 1,
+        limit: 30,
+      );
+
       if (!mounted) return;
+
       setState(() {
         _listings = listings;
         _isLoading = false;
@@ -122,13 +128,13 @@ class _HomeScreenState extends State<HomeScreen> {
       });
     } catch (_) {
       if (!mounted) return;
+
       setState(() {
         _hasError = true;
         _isLoading = false;
       });
     }
   }
-
   // ── Build ────────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {

@@ -6,72 +6,103 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_colors_dark.dart';
 import '../../../shared/helpers/internet_helper.dart';
 
-class PropertiesScreen extends StatelessWidget {
+class PropertiesScreen extends StatefulWidget {
   final List<Listing>? listings;
   final String? title;
 
   const PropertiesScreen({super.key, this.listings, this.title});
 
   @override
+  State<PropertiesScreen> createState() => _PropertiesScreenState();
+}
+
+class _PropertiesScreenState extends State<PropertiesScreen> {
+  final ScrollController _controller = ScrollController();
+
+  List<Listing> _listings = [];
+  int _page = 1;
+  bool _isLoading = false;
+  bool _hasMore = true;
+
+  bool get isFilteredView =>
+      widget.listings != null && widget.listings!.isNotEmpty;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadInitial();
+
+    _controller.addListener(() {
+      if (_controller.position.pixels >=
+              _controller.position.maxScrollExtent - 300 &&
+          !_isLoading &&
+          _hasMore) {
+        _loadMore();
+      }
+    });
+  }
+
+  Future<void> _loadInitial() async {
+    _page = 1;
+    _hasMore = true;
+    _listings.clear();
+    await _loadMore();
+  }
+
+  Future<void> _loadMore() async {
+    if (_isLoading) return;
+
+    setState(() => _isLoading = true);
+
+    bool connected = await InternetHelper.hasInternetConnection();
+    if (!connected) return;
+
+    final newItems = await PropertyService.fetchProperties(
+      page: _page,
+      limit: 20,
+    );
+
+    setState(() {
+      _listings.addAll(newItems);
+      _isLoading = false;
+      _page++;
+
+      if (newItems.length < 20) {
+        _hasMore = false;
+      }
+    });
+  }
+
+  Future<void> _refresh() async {
+    await _loadInitial();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final bool isFilteredView = listings != null && listings!.isNotEmpty;
 
     return Scaffold(
       backgroundColor: isDark ? AppDarkColors.background : AppColors.background,
-      // ✅ REMOVED: AppBar removed to prevent double headings
-      body: FutureBuilder<List<Listing>>(
-        future: _fetchProperties(isFilteredView),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(color: AppColors.accentYellow),
+      body: RefreshIndicator(
+        color: AppColors.accentYellow,
+        onRefresh: _refresh,
+        child: ListView.separated(
+          controller: _controller,
+          padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
+          itemCount: _listings.length + (_isLoading ? 1 : 0),
+          separatorBuilder: (_, __) => const SizedBox(height: 24),
+          itemBuilder: (context, index) {
+            if (index < _listings.length) {
+              return _buildProjectCard(context, _listings[index], isDark);
+            }
+
+            return const Padding(
+              padding: EdgeInsets.all(16),
+              child: Center(child: CircularProgressIndicator()),
             );
-          }
-
-          if (snapshot.hasError ||
-              !snapshot.hasData ||
-              snapshot.data!.isEmpty) {
-            return _buildEmptyState(isDark);
-          }
-
-          final list = snapshot.data!;
-
-          return RefreshIndicator(
-            color: AppColors.accentYellow,
-            onRefresh: () async {
-              (context as Element).reassemble();
-            },
-            child: ListView.separated(
-              padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
-              // Added top padding since AppBar is gone
-              itemCount: list.length,
-              separatorBuilder: (context, index) => const SizedBox(height: 24),
-              itemBuilder: (context, index) =>
-                  _buildProjectCard(context, list[index], isDark),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Future<List<Listing>> _fetchProperties(bool isFilteredView) async {
-    bool connected = await InternetHelper.hasInternetConnection();
-    if (!connected) return [];
-    return isFilteredView ? listings! : PropertyService.fetchProperties();
-  }
-
-  Widget _buildEmptyState(bool isDark) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.home_work_outlined, size: 64, color: Colors.grey[400]),
-          const SizedBox(height: 16),
-          const Text("No properties found", style: TextStyle(fontSize: 16)),
-        ],
+          },
+        ),
       ),
     );
   }
@@ -103,85 +134,38 @@ class PropertiesScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Stack(
-                  children: [
-                    Image.network(
-                      listing.images.isNotEmpty ? listing.images[0] : '',
-                      height: 220,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
-                        height: 220,
-                        color: Colors.grey[300],
-                        child: const Icon(Icons.broken_image),
-                      ),
-                    ),
-                    Positioned(
-                      top: 12,
-                      left: 12,
-                      child: _buildBadge(
-                        listing.status.toUpperCase(),
-                        AppColors.primaryNavy,
-                      ),
-                    ),
-                    Positioned(
-                      bottom: 12,
-                      right: 12,
-                      child: _buildBadge(
-                        "PKR ${listing.price.toStringAsFixed(0)}",
-                        AppColors.accentYellow,
-                        textColor: Colors.black,
-                      ),
-                    ),
-                  ],
+                Image.network(
+                  listing.images.isNotEmpty ? listing.images[0] : '',
+                  height: 220,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    height: 220,
+                    color: Colors.grey[300],
+                    child: const Icon(Icons.broken_image),
+                  ),
                 ),
                 Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              listing.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: isDark
-                                    ? AppDarkColors.textPrimary
-                                    : AppColors.primaryNavy,
-                              ),
-                            ),
-                          ),
-                          if (listing.isFeatured)
-                            const Icon(
-                              Icons.verified,
-                              color: Colors.blue,
-                              size: 18,
-                            ),
-                        ],
+                      Text(
+                        listing.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: isDark
+                              ? AppDarkColors.textPrimary
+                              : AppColors.primaryNavy,
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         listing.location,
                         style: TextStyle(color: Colors.grey[500], fontSize: 13),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const Divider(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          _cardSpec(Icons.bed, "${listing.bedrooms} Beds"),
-                          _cardSpec(
-                            Icons.bathtub,
-                            "${listing.bathrooms} Baths",
-                          ),
-                          _cardSpec(Icons.square_foot, listing.area ?? "N/A"),
-                        ],
                       ),
                     ],
                   ),
@@ -191,41 +175,6 @@ class PropertiesScreen extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildBadge(
-    String text,
-    Color color, {
-    Color textColor = Colors.white,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          color: textColor,
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-
-  Widget _cardSpec(IconData icon, String value) {
-    return Row(
-      children: [
-        Icon(icon, size: 16, color: AppColors.accentYellow),
-        const SizedBox(width: 6),
-        Text(
-          value,
-          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-        ),
-      ],
     );
   }
 }

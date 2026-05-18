@@ -3,8 +3,8 @@ import 'package:mera_ashiana/core/l10n/app_localizations.dart';
 import 'package:mera_ashiana/shared/widgets/drawer/widgets/search/search_filter_screen.dart';
 import 'package:mera_ashiana/data/models/listing_model.dart';
 import 'package:mera_ashiana/data/services/property_service.dart';
-
-
+import '../../../../../core/theme/app_colors.dart';
+import '../../../../../core/theme/app_colors_dark.dart';
 import '../../../../../features/properties/widgets/property_list_item.dart';
 
 class SearchScreen extends StatefulWidget {
@@ -15,25 +15,94 @@ class SearchScreen extends StatefulWidget {
 }
 
 class _SearchScreenState extends State<SearchScreen> {
+  final ScrollController _scrollController =
+      ScrollController(); // ✅ Added scroll controller
+
   bool _hasSearchResults = false;
   bool _isSearching = false;
+  bool _isLoadingMore = false; // ✅ Track pagination loading states
+  bool _canLoadMore = true; // ✅ Stop requesting if backend runs out of items
+
   String _selectedQuickFilter = "All";
   List<Listing> _searchResults = [];
+  int _currentPage = 1;
+  Map<String, dynamic> _currentFilters = {}; // ✅ Keep track of active filters
 
-  Future<void> _performSearch(Map<String, dynamic> filters) async {
-    setState(() {
-      _isSearching = true;
-      _hasSearchResults = true;
+  @override
+  void initState() {
+    super.initState();
+    _setupScrollController();
+    _performSearch({}, isInitial: true);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  // ✅ Automatically fetch next page when user scrolls close to the bottom
+  void _setupScrollController() {
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >=
+          _scrollController.position.maxScrollExtent - 200) {
+        if (!_isSearching && !_isLoadingMore && _canLoadMore) {
+          _performSearch(
+            _currentFilters,
+            page: _currentPage + 1,
+            isInitial: false,
+          );
+        }
+      }
     });
+  }
+
+  Future<void> _performSearch(
+    Map<String, dynamic> filters, {
+    int page = 1,
+    bool isInitial = true,
+  }) async {
+    if (isInitial) {
+      setState(() {
+        _isSearching = true;
+        _hasSearchResults = true;
+        _currentPage = page;
+        _currentFilters = filters;
+        _searchResults
+            .clear(); // Reset list on a brand new search configuration
+        _canLoadMore = true;
+      });
+    } else {
+      setState(() {
+        _isLoadingMore = true;
+        _currentPage = page;
+      });
+    }
 
     try {
-      final results = await PropertyService.fetchProperties(filters: filters);
+      final results = await PropertyService.fetchProperties(
+        page: _currentPage,
+        limit: 20, // Retains efficient chunk allocations
+        filters: filters,
+      );
+
       setState(() {
-        _searchResults = results;
+        if (results.isEmpty || results.length < 20) {
+          _canLoadMore =
+              false; // Stop pagination loops if payload size tapers off
+        }
+
+        _searchResults.addAll(
+          results,
+        ); // ✅ Appends instead of replacing old elements
         _isSearching = false;
+        _isLoadingMore = false;
       });
     } catch (e) {
-      setState(() => _isSearching = false);
+      setState(() {
+        _isSearching = false;
+        _isLoadingMore = false;
+      });
       debugPrint("Search Error: $e");
     }
   }
@@ -48,7 +117,7 @@ class _SearchScreenState extends State<SearchScreen> {
       backgroundColor: theme.scaffoldBackgroundColor,
       body: Column(
         children: [
-          _buildCompactHeader(loc, theme),
+          _buildCompactHeader(loc, theme, isDark),
           Expanded(
             child: _isSearching
                 ? const Center(child: CircularProgressIndicator())
@@ -61,7 +130,15 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  Widget _buildCompactHeader(AppLocalizations loc, ThemeData theme) {
+  Widget _buildCompactHeader(
+    AppLocalizations loc,
+    ThemeData theme,
+    bool isDark,
+  ) {
+    final searchIconColor = isDark
+        ? AppDarkColors.accentYellow
+        : theme.colorScheme.primary;
+
     return Container(
       padding: EdgeInsets.fromLTRB(
         16,
@@ -77,9 +154,7 @@ class _SearchScreenState extends State<SearchScreen> {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(
-              theme.brightness == Brightness.dark ? 0.4 : 0.05,
-            ),
+            color: Colors.black.withOpacity(isDark ? 0.4 : 0.05),
             blurRadius: 10,
           ),
         ],
@@ -95,7 +170,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   child: TextField(
                     onSubmitted: (v) {
                       if (v.isNotEmpty) {
-                        _performSearch({"query": v});
+                        _performSearch({"query": v}, isInitial: true);
                       }
                     },
                     style: TextStyle(color: theme.colorScheme.onSurface),
@@ -107,7 +182,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       ),
                       prefixIcon: Icon(
                         Icons.search,
-                        color: theme.colorScheme.primary,
+                        color: searchIconColor,
                         size: 20,
                       ),
                       filled: true,
@@ -126,7 +201,7 @@ class _SearchScreenState extends State<SearchScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          _buildQuickFilterRow(theme),
+          _buildQuickFilterRow(theme, isDark),
         ],
       ),
     );
@@ -141,7 +216,7 @@ class _SearchScreenState extends State<SearchScreen> {
         );
 
         if (filters != null) {
-          _performSearch(filters);
+          _performSearch(filters, isInitial: true);
         }
       },
       child: Container(
@@ -156,8 +231,7 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  // ✅ MERGED: Updated Quick Filter logic
-  Widget _buildQuickFilterRow(ThemeData theme) {
+  Widget _buildQuickFilterRow(ThemeData theme, bool isDark) {
     final List<Map<String, String>> filters = [
       {'label': 'All', 'value': 'all'},
       {'label': 'House', 'value': 'house'},
@@ -166,6 +240,14 @@ class _SearchScreenState extends State<SearchScreen> {
       {'label': 'Commercial', 'value': 'commercial'},
       {'label': 'Other', 'value': 'other'},
     ];
+
+    final activeBg = isDark
+        ? AppDarkColors.accentYellow
+        : AppColors.accentYellow;
+    final unselectedText = isDark ? AppDarkColors.textDark : AppColors.textDark;
+    final borderThemeColor = isDark
+        ? AppDarkColors.borderGrey
+        : AppColors.borderGrey;
 
     return SizedBox(
       height: 35,
@@ -181,35 +263,28 @@ class _SearchScreenState extends State<SearchScreen> {
             onTap: () {
               setState(() => _selectedQuickFilter = filter['label']!);
 
-              // Construct parameters dynamically
               Map<String, dynamic> searchParams = {};
               if (filter['value'] != 'all') {
                 searchParams['type'] = filter['value'];
               }
 
-              _performSearch(searchParams);
+              _performSearch(searchParams, isInitial: true);
             },
             child: Container(
               margin: const EdgeInsets.only(right: 8),
               padding: const EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(
-                color: isSelected
-                    ? theme.colorScheme.primary
-                    : theme.colorScheme.surface,
+                color: isSelected ? activeBg : theme.colorScheme.surface,
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
-                  color: isSelected
-                      ? theme.colorScheme.primary
-                      : theme.dividerColor.withOpacity(0.2),
+                  color: isSelected ? activeBg : borderThemeColor,
                 ),
               ),
               alignment: Alignment.center,
               child: Text(
                 filter['label']!,
                 style: TextStyle(
-                  color: isSelected
-                      ? Colors.white
-                      : theme.colorScheme.onSurface,
+                  color: isSelected ? Colors.white : unselectedText,
                   fontSize: 12,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                 ),
@@ -231,10 +306,18 @@ class _SearchScreenState extends State<SearchScreen> {
       );
     }
 
+    // ✅ Attach scroll controller here and append a loader tile at bottom if retrieving extra chunks
     return ListView.builder(
+      controller: _scrollController,
       padding: const EdgeInsets.all(16),
-      itemCount: _searchResults.length,
+      itemCount: _searchResults.length + (_isLoadingMore ? 1 : 0),
       itemBuilder: (context, index) {
+        if (index == _searchResults.length) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
         return PropertyListItem(
           listing: _searchResults[index],
           theme: theme,
@@ -278,7 +361,7 @@ class _SearchScreenState extends State<SearchScreen> {
     ),
     trailing: const Icon(Icons.north_west, size: 14),
     contentPadding: EdgeInsets.zero,
-    onTap: () => _performSearch({"query": t}),
+    onTap: () => _performSearch({"query": t}, isInitial: true),
   );
 
   Widget _buildPopularGrid(ThemeData theme) {
@@ -288,7 +371,7 @@ class _SearchScreenState extends State<SearchScreen> {
       children: ["Bahria", "DHA", "Clifton", "Gulshan"]
           .map(
             (e) => GestureDetector(
-              onTap: () => _performSearch({"city": e}),
+              onTap: () => _performSearch({"city": e}, isInitial: true),
               child: Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,

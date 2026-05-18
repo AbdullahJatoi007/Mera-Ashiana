@@ -1,24 +1,20 @@
 import '../../core/network/api_client.dart';
 import '../../core/network/endpoints.dart';
 import 'package:flutter/foundation.dart';
-
 import '../models/listing_model.dart';
 
 class PropertyService {
-  /// Fetches properties with optional [filters]
-  /// If filters are provided, they are sent as query parameters (?key=value)
   static Future<List<Listing>> fetchProperties({
+    required int page,
+    int limit = 20,
     Map<String, dynamic>? filters,
   }) async {
     try {
-      // ✅ This now works perfectly with the updated ApiClient.get
       final response = await ApiClient.get(
         Endpoints.listings,
-        queryParameters: filters,
+        queryParameters: {...?filters, "page": page, "limit": limit},
       );
 
-      // Accessing the 'data' key with extra safety checks.
-      // We check if the response is a Map before trying to access the 'data' key.
       final List rawData = response.data is Map
           ? (response.data['data'] ?? [])
           : [];
