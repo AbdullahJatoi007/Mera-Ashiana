@@ -17,7 +17,7 @@ class FavoriteHelpers {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => ProjectDetailsScreen(propertyId: item.id),
+              builder: (_) => ProjectDetailsScreen(listing: item),
             ),
           );
         },

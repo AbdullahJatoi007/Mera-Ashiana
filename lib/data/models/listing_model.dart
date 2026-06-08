@@ -18,6 +18,7 @@ class Listing {
 
   // 👇 NEW FIELD
   final String? soldStatus;
+  final String? slug;
 
   final String? createdByName;
   final String? createdByType;
@@ -34,6 +35,7 @@ class Listing {
     required this.location,
     required this.type,
     this.city,
+    this.slug,
     required this.status,
     required this.images,
     this.area,
@@ -43,7 +45,7 @@ class Listing {
     this.contactWhatsapp,
     this.contactEmail,
     required this.isFeatured,
-    this.soldStatus, // Added to constructor
+    this.soldStatus,
     this.createdByName,
     this.createdByType,
     this.createdByPhone,
@@ -85,6 +87,7 @@ class Listing {
 
     return Listing(
       id: json['id'] ?? 0,
+      slug: json['slug']?.toString(),
       title: json['title'] ?? '',
       description: json['description'] ?? '',
       price: double.tryParse(json['price']?.toString() ?? '0') ?? 0,

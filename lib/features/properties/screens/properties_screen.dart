@@ -128,7 +128,7 @@ class _PropertiesScreenState extends State<PropertiesScreen> {
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => ProjectDetailsScreen(propertyId: listing.id),
+                builder: (_) => ProjectDetailsScreen(listing: listing),
               ),
             ),
             child: Column(

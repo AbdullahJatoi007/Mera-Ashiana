@@ -71,16 +71,26 @@ class AuthController {
   }
 
   static Future<void> google(
-    BuildContext context,
-    VoidCallback onSuccess,
-    Function(bool) setLoading,
-  ) async {
+      BuildContext context,
+      VoidCallback onSuccess,
+      Function(bool) setLoading, {
+        bool isAgent = false,
+      }) async {
     setLoading(true);
     try {
-      // await GoogleLoginService.signInWithGoogle();
+      debugPrint('🟢 [GOOGLE] button tapped — starting sign-in');
+      final ok = await GoogleLoginService.signInWithGoogle(
+        role: isAgent ? 'agency' : 'user',
+      );
+      if (!ok) {
+        debugPrint('🟡 [GOOGLE] returned false (treated as cancel)');
+        return;
+      }
       AuthState.isLoggedIn.value = true;
       onSuccess();
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('❌ [GOOGLE] controller caught: $e');
+      debugPrint('❌ [GOOGLE] $st');
       showError(context, e.toString());
     } finally {
       setLoading(false);
@@ -162,12 +172,9 @@ class _FloatingSnackbarState extends State<_FloatingSnackbar>
 
   @override
   Widget build(BuildContext context) {
-    // UPDATED: Get keyboard height to prevent overlap
     final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
 
     return Positioned(
-      // If keyboard is up, lift it above keyboard + padding.
-      // If keyboard is down, default to 45.
       bottom: keyboardHeight > 0 ? keyboardHeight + 20 : 45,
       left: 20,
       right: 20,

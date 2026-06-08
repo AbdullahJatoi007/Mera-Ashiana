@@ -8,10 +8,12 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/network/endpoints.dart';
 
 class ProjectDetailsScreen extends StatefulWidget {
-  final int? propertyId;
+  // 🔧 Backend detail route is keyed by SLUG (`GET /listings/:slug`),
+  // not by numeric id. Pass a slug, or the full Listing object.
+  final String? slug;
   final Listing? listing;
 
-  const ProjectDetailsScreen({super.key, this.propertyId, this.listing});
+  const ProjectDetailsScreen({super.key, this.slug, this.listing});
 
   @override
   State<ProjectDetailsScreen> createState() => _ProjectDetailsScreenState();
@@ -26,12 +28,29 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
   bool isToggling = false;
   Listing? listing;
 
+  // The slug to fetch full details with — from the explicit slug param,
+  // or falling back to the slug on a passed-in Listing.
+  String? get _effectiveSlug {
+    final s = widget.slug;
+    if (s != null && s.isNotEmpty) return s;
+    final ls = widget.listing?.slug;
+    if (ls != null && ls.isNotEmpty) return ls;
+    return null;
+  }
+
   @override
   void initState() {
     super.initState();
     if (widget.listing != null) {
+      // Paint instantly from the list object so there's no spinner...
       listing = widget.listing;
       isLoading = false;
+      // ...but the LIST endpoint omits the `users` relation, so the passed
+      // object has no "Listed By" name. Enrich from the detail endpoint
+      // in the background (no spinner) to match the website.
+      if (_effectiveSlug != null) {
+        fetchPropertyDetails(showSpinner: false);
+      }
     } else {
       fetchPropertyDetails();
     }
@@ -46,15 +65,19 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
 
   // ==================== Logic Methods ====================
 
-  Future<void> fetchPropertyDetails() async {
+  Future<void> fetchPropertyDetails({bool showSpinner = true}) async {
+    if (showSpinner && !isLoading) setState(() => isLoading = true);
     try {
-      final String path = widget.propertyId != null
-          ? Endpoints.listing(widget.propertyId!)
+      // Request by slug. The detail endpoint looks listings up by slug,
+      // so sending a numeric id resulted in a 404 ("Listing not found.").
+      final slug = _effectiveSlug;
+      final String path = slug != null
+          ? "${Endpoints.listings}/$slug"
           : "${Endpoints.listings}?recent=true";
 
       final response = await ApiClient.get(path);
       final dynamic rawData =
-          (response.data is Map && response.data.containsKey('data'))
+      (response.data is Map && response.data.containsKey('data'))
           ? response.data['data']
           : response.data;
 
@@ -76,14 +99,15 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        hasError = true;
+        // If we already have a placeholder from the list, keep showing it
+        // instead of throwing the user to an error screen.
+        if (listing == null) hasError = true;
         isLoading = false;
       });
     }
   }
 
   void _contactAgentCall() async {
-    // 🔧 FIX: Using contactPhone from the listing
     final phone = listing?.contactPhone ?? "";
     if (phone.isEmpty) return;
 
@@ -94,7 +118,6 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
   }
 
   void _contactAgentWhatsApp() async {
-    // 🔧 FIX: Using contactWhatsapp from the listing
     final whatsapp = listing?.contactWhatsapp ?? "";
     if (whatsapp.isEmpty) return;
 
@@ -108,7 +131,6 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
   }
 
   void _contactAgentEmail() async {
-    // 🔧 FIX: Using contactEmail from the listing
     final email = listing?.contactEmail ?? "";
     if (email.isEmpty) return;
 
@@ -243,6 +265,13 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
 
   Widget _buildAgentCard(Listing p, bool isDark) {
     final name = p.createdByName ?? "Unknown Owner";
+
+    // 🔧 FIX: gate the contact section on the fields the chips actually use
+    // (contact_*), not on createdByPhone/Email which are absent in list data.
+    final hasContact = (p.contactPhone?.isNotEmpty ?? false) ||
+        (p.contactWhatsapp?.isNotEmpty ?? false) ||
+        (p.contactEmail?.isNotEmpty ?? false);
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -291,7 +320,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          if (p.createdByPhone != null || p.createdByEmail != null)
+          if (hasContact)
             Wrap(
               spacing: 10,
               runSpacing: 10,

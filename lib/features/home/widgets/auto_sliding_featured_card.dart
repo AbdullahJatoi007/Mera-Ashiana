@@ -59,7 +59,7 @@ class _AutoSlidingFeaturedCardState extends State<AutoSlidingFeaturedCard> {
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => ProjectDetailsScreen(propertyId: widget.listing.id),
+          builder: (_) => ProjectDetailsScreen(listing: widget.listing),
         ),
       ),
       child: Container(

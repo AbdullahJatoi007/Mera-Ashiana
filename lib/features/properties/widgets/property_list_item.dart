@@ -22,7 +22,7 @@ class PropertyListItem extends StatelessWidget {
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => ProjectDetailsScreen(propertyId: listing.id),
+          builder: (_) => ProjectDetailsScreen(listing: listing),
         ),
       ),
       child: Container(
