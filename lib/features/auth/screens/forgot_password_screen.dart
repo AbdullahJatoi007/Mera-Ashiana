@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../../core/routes/app_routes.dart';
+import 'package:flutter/services.dart';
+import 'package:mera_ashiana/data/services/auth/auth_service.dart';
+import 'package:mera_ashiana/features/auth/auth_controller.dart';
 import '../../../core/theme/app_colors.dart';
+import 'reset_password_screen.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -11,6 +14,45 @@ class ForgotPasswordScreen extends StatefulWidget {
 
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final TextEditingController _emailController = TextEditingController();
+  bool _isLoading = false;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    super.dispose();
+  }
+
+  bool _isValidEmail(String v) =>
+      RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(v);
+
+  Future<void> _sendCode() async {
+    FocusScope.of(context).unfocus();
+    final email = _emailController.text.trim();
+
+    if (!_isValidEmail(email)) {
+      AuthController.showError(context, "Please enter a valid email address.");
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      await AuthService.sendForgotPasswordOtp(email: email);
+      if (!mounted) return;
+      HapticFeedback.lightImpact();
+      // Move to the reset screen, carrying the email forward.
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ResetPasswordScreen(email: email),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      AuthController.showError(context, e.toString());
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -50,6 +92,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               const SizedBox(height: 40),
               TextField(
                 controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _sendCode(),
                 decoration: InputDecoration(
                   labelText: "Email Address",
                   prefixIcon: const Icon(Icons.email_outlined),
@@ -70,10 +115,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 width: double.infinity,
                 height: 55,
                 child: ElevatedButton(
-                  onPressed: () {
-                    // Use the router!
-                    Navigator.pushNamed(context, AppRoutes.resetPassword);
-                  },
+                  onPressed: _isLoading ? null : _sendCode,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.accentYellow,
                     foregroundColor: Colors.black,
@@ -81,9 +123,21 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text(
-                    "Send Reset Link",
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  child: _isLoading
+                      ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.black,
+                    ),
+                  )
+                      : const Text(
+                    "Send Reset Code",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),

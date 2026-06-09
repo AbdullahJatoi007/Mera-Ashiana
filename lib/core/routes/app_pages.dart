@@ -3,7 +3,6 @@ import 'package:mera_ashiana/core/routes/app_routes.dart';
 import 'package:mera_ashiana/shared/widgets/base/splash_screen.dart';
 import 'package:mera_ashiana/authentication_bottom_sheet.dart';
 import '../../features/auth/screens/forgot_password_screen.dart';
-import '../../features/auth/screens/reset_password_screen.dart';
 import '../../shared/widgets/base/main_scaffold.dart';
 
 class AppPages {
@@ -20,7 +19,7 @@ class AppPages {
 
     // Added Missing Routes
     AppRoutes.forgotPassword: (context) => const ForgotPasswordScreen(),
-    AppRoutes.resetPassword: (context) => const ResetPasswordScreen(),
+
 
     AppRoutes.main: (context) => const MainScaffold(),
   };

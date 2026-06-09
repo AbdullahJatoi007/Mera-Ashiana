@@ -19,6 +19,18 @@ class Endpoints {
 
   static const String refreshToken = "$apiBase/auth/mobile/session/refresh";
 
+  // ───────── FORGOT PASSWORD (lives on the WEB identity router) ─────────
+  // ⚠️ These routes are NOT under /mobile/identity. Set _webIdentityBase to
+  // wherever the web identity router is mounted. Defaulting to /auth/identity;
+  // the commented line is the other likely option. A wrong base → 404.
+  static const String _webIdentityBase = "$apiBase/auth/identity";
+  // static const String _webIdentityBase = "$apiBase/auth/web/identity";
+
+  static const String forgotPasswordSendOtp =
+      "$_webIdentityBase/forgot-password/send-otp"; // body: { email }
+  static const String forgotPasswordReset =
+      "$_webIdentityBase/forgot-password/reset"; // body: { email, otp, password }
+
   // ───────── PROFILE ─────────
   static const String profile = "$apiBase/auth/profile";
 

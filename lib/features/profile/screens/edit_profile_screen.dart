@@ -255,8 +255,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               const SizedBox(height: 16),
 
               // Email Field with Update Button
-              Stack(
-                alignment: Alignment.centerRight,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   _buildModernField(
                     controller: _emailController,
@@ -266,17 +266,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     yellow: yellow,
                     enabled: false,
                   ),
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8.0),
-                    child: TextButton(
-                      onPressed: _handleEmailChangeRequest,
-                      child: Text(
-                        "CHANGE",
-                        style: TextStyle(
-                          color: yellow,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                  const SizedBox(height: 6),
+                  TextButton.icon(
+                    onPressed: _handleEmailChangeRequest,
+                    icon: Icon(Icons.edit_outlined, size: 16),
+                    label: const Text("Change Email"),
+                    style: TextButton.styleFrom(
+                      foregroundColor: yellow,
                     ),
                   ),
                 ],

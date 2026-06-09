@@ -10,7 +10,7 @@ class GoogleLoginService {
 
   // ⚠️ MUST equal the backend's GOOGLE_CLIENT_ID — the WEB OAuth client ID.
   static const String _webClientId =
-      'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com';
+      '1036155739982-20djadcgpfr33srf98tm7943r863kum9.apps.googleusercontent.com';
 
   // iOS only (or set via Info.plist). Leave null on Android.
   static const String? _iosClientId = null;
