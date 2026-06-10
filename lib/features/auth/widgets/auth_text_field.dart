@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../core/theme/app_colors.dart';
 
 class AuthTextField extends StatelessWidget {
@@ -13,6 +14,7 @@ class AuthTextField extends StatelessWidget {
   final FocusNode? focusNode;
   final void Function(String)? onFieldSubmitted;
   final int? maxLength;
+  final List<TextInputFormatter>? inputFormatters;
 
   const AuthTextField({
     super.key,
@@ -27,6 +29,7 @@ class AuthTextField extends StatelessWidget {
     this.focusNode,
     this.onFieldSubmitted,
     this.maxLength,
+    this.inputFormatters,
   });
 
   @override
@@ -41,6 +44,8 @@ class AuthTextField extends StatelessWidget {
       textInputAction: textInputAction,
       focusNode: focusNode,
       onFieldSubmitted: onFieldSubmitted,
+      maxLength: maxLength,
+      inputFormatters: inputFormatters,
       cursorColor: AppColors.primaryNavy,
       style: TextStyle(
         color: isDark ? Colors.white : AppColors.textDark,

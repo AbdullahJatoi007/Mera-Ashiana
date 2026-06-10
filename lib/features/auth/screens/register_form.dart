@@ -25,6 +25,7 @@ class _RegisterFormState extends State<RegisterForm> {
   final _formKey = GlobalKey<FormState>();
   final name = TextEditingController();
   final email = TextEditingController();
+  final phone = TextEditingController();
   final pass = TextEditingController();
   final confirm = TextEditingController();
   final otpController = TextEditingController();
@@ -39,6 +40,7 @@ class _RegisterFormState extends State<RegisterForm> {
   void dispose() {
     name.dispose();
     email.dispose();
+    phone.dispose();
     pass.dispose();
     confirm.dispose();
     otpController.dispose();
@@ -63,6 +65,7 @@ class _RegisterFormState extends State<RegisterForm> {
         context,
         name.text.trim(),
         email.text.trim(),
+        phone.text.trim(),
         pass.text,
         agent,
       );
@@ -111,6 +114,26 @@ class _RegisterFormState extends State<RegisterForm> {
           icon: Icons.email_outlined,
           controller: email,
           keyboardType: TextInputType.emailAddress,
+        ),
+        const SizedBox(height: 16),
+        AuthTextField(
+          label: "Phone Number",
+          icon: Icons.phone_outlined,
+          controller: phone,
+          keyboardType: TextInputType.phone,
+          inputFormatters: [
+            // Allow digits, spaces, dashes and a single leading '+'
+            FilteringTextInputFormatter.allow(RegExp(r'[\d\s\-\+]')),
+          ],
+          validator: (value) {
+            final v = (value ?? '').trim();
+            if (v.isEmpty) return 'Phone number is required.';
+            // Mirrors the backend rule: /^\+?[\d\s\-]{6,20}$/
+            if (!RegExp(r'^\+?[\d\s\-]{6,20}$').hasMatch(v)) {
+              return 'Enter a valid phone number.';
+            }
+            return null;
+          },
         ),
         const SizedBox(height: 16),
         AuthTextField(

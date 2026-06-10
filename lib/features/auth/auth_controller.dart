@@ -10,6 +10,7 @@ class AuthController {
     BuildContext context,
     String name,
     String email,
+    String phone,
     String password,
     bool isAgent,
   ) async {
@@ -21,6 +22,7 @@ class AuthController {
       await AuthService.sendOtp(
         username: name,
         email: email,
+        phone: phone,
         password: password,
         type: isAgent ? "agency" : "user",
       );
@@ -71,11 +73,11 @@ class AuthController {
   }
 
   static Future<void> google(
-      BuildContext context,
-      VoidCallback onSuccess,
-      Function(bool) setLoading, {
-        bool isAgent = false,
-      }) async {
+    BuildContext context,
+    VoidCallback onSuccess,
+    Function(bool) setLoading, {
+    bool isAgent = false,
+  }) async {
     setLoading(true);
     try {
       debugPrint('🟢 [GOOGLE] button tapped — starting sign-in');
