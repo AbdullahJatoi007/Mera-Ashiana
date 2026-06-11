@@ -15,6 +15,22 @@ class GoogleLoginService {
   // iOS only (or set via Info.plist). Leave null on Android.
   static const String? _iosClientId = null;
 
+  // Pulls the backend's real error message out of a DioException so the toast
+  // shows e.g. "No account found for this Google address." instead of Dio's
+  // generic multi-line paragraph.
+  static String _serverError(Object e) {
+    if (e is DioException) {
+      final data = e.response?.data;
+      if (data is Map) {
+        return (data['error'] ?? data['message'] ?? 'Google sign-in failed.')
+            .toString();
+      }
+      if (data is String && data.isNotEmpty) return data;
+      return e.message ?? 'Network error. Please try again.';
+    }
+    return e.toString();
+  }
+
   static Future<void> _ensureInit() async {
     if (_initialized) return;
     debugPrint('🟢 [GOOGLE] initialize() serverClientId=$_webClientId');
@@ -26,7 +42,14 @@ class GoogleLoginService {
     debugPrint('🟢 [GOOGLE] initialize() done');
   }
 
-  static Future<bool> signInWithGoogle({String role = 'user'}) async {
+  /// [mode] is optional:
+  ///   - null / 'register' → backend finds-or-creates the account (default).
+  ///   - 'login'           → backend refuses to auto-create and returns 404
+  ///                         "No account found..." if the user doesn't exist.
+  static Future<bool> signInWithGoogle({
+    String role = 'user',
+    String? mode,
+  }) async {
     await _ensureInit();
 
     // 1) Account picker (identity)
@@ -75,14 +98,33 @@ class GoogleLoginService {
 
     // 2b) DEBUG ONLY — inspect the token exactly as the backend will.
     // `aud` MUST equal backend GOOGLE_CLIENT_ID or you'll get a 401 mismatch.
-    await _debugInspectToken(accessToken);
+    // Gated so it never runs (and never adds latency) in release builds.
+    if (kDebugMode) {
+      await _debugInspectToken(accessToken);
+    }
 
     // 3) Hand the access token to the backend
-    debugPrint('🟢 [GOOGLE] POST ${Endpoints.googleAuth}');
-    final res = await ApiClient.post(
-      Endpoints.googleAuth,
-      data: {'access_token': accessToken, 'role': role},
+    debugPrint(
+      '🟢 [GOOGLE] POST ${Endpoints.googleAuth} (mode=${mode ?? '-'})',
     );
+    final Response res;
+    try {
+      res = await ApiClient.post(
+        Endpoints.googleAuth,
+        data: {
+          'access_token': accessToken,
+          'role': role,
+          if (mode != null) 'mode': mode,
+        },
+      );
+    } on DioException catch (e) {
+      debugPrint(
+        '❌ [GOOGLE] backend ${e.response?.statusCode}: ${e.response?.data}',
+      );
+      // Surfaces the backend's real message (e.g. 404 "No account found...",
+      // 401 "audience mismatch") instead of the generic Dio paragraph.
+      throw Exception(_serverError(e));
+    }
     debugPrint('🟢 [GOOGLE] backend ${res.statusCode} ${res.data}');
 
     // 4) Store the app's own session tokens
@@ -99,7 +141,7 @@ class GoogleLoginService {
   }
 
   /// Calls Google's tokeninfo endpoint with a raw Dio (no interceptors) and
-  /// logs what the backend's `aud` check will see. Remove once verified.
+  /// logs what the backend's `aud` check will see. Debug builds only.
   static Future<void> _debugInspectToken(String accessToken) async {
     try {
       final r = await Dio().get(
