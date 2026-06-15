@@ -25,7 +25,7 @@ class Listing {
   final String? createdByPhone;
   final String? createdByEmail;
 
-  static const String _imageBaseUrl = "https://api-staging.mera-ashiana.com/";
+  static const String _imageBaseUrl = "https://api.mera-ashiana.com/";
 
   Listing({
     required this.id,
