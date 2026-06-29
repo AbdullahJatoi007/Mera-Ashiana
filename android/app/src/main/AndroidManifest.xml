@@ -5,7 +5,6 @@
         android:name="android.hardware.camera"
         android:required="false" />
 
-    <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
@@ -15,9 +14,6 @@
         android:label="Mera Ashiana"
         android:usesCleartextTraffic="false">
 
-        <meta-data
-            android:name="com.google.ar.core"
-            android:value="required" />
 
         <activity
             android:name=".MainActivity"
