@@ -107,6 +107,8 @@ class _RegisterFormState extends State<RegisterForm> {
           label: "Full Name",
           icon: Icons.person_outline,
           controller: name,
+          validator: (v) =>
+              v == null || v.trim().isEmpty ? 'Full name is required' : null,
         ),
         const SizedBox(height: 16),
         AuthTextField(
@@ -114,6 +116,7 @@ class _RegisterFormState extends State<RegisterForm> {
           icon: Icons.email_outlined,
           controller: email,
           keyboardType: TextInputType.emailAddress,
+          validator: ValidationHelper.validateEmail,
         ),
         const SizedBox(height: 16),
         AuthTextField(
@@ -121,19 +124,14 @@ class _RegisterFormState extends State<RegisterForm> {
           icon: Icons.phone_outlined,
           controller: phone,
           keyboardType: TextInputType.phone,
+          maxLength: 13,
+          // 🔒 Physically stops typing at 13 characters max (accounts for +92 format)
           inputFormatters: [
-            // Allow digits, spaces, dashes and a single leading '+'
-            FilteringTextInputFormatter.allow(RegExp(r'[\d\s\-\+]')),
+            // Only allow clean digits and a single leading '+' sign
+            FilteringTextInputFormatter.allow(RegExp(r'^\+?\d*')),
           ],
-          validator: (value) {
-            final v = (value ?? '').trim();
-            if (v.isEmpty) return 'Phone number is required.';
-            // Mirrors the backend rule: /^\+?[\d\s\-]{6,20}$/
-            if (!RegExp(r'^\+?[\d\s\-]{6,20}$').hasMatch(v)) {
-              return 'Enter a valid phone number.';
-            }
-            return null;
-          },
+          validator: ValidationHelper
+              .validatePhone, // ⚡ Uses our updated 10-13 limit validation checker
         ),
         const SizedBox(height: 16),
         AuthTextField(
@@ -142,6 +140,7 @@ class _RegisterFormState extends State<RegisterForm> {
           controller: pass,
           obscure: obscurePass,
           toggle: () => setState(() => obscurePass = !obscurePass),
+          validator: ValidationHelper.validatePassword,
         ),
         const SizedBox(height: 16),
         AuthTextField(
@@ -150,6 +149,8 @@ class _RegisterFormState extends State<RegisterForm> {
           controller: confirm,
           obscure: obscureConfirm,
           toggle: () => setState(() => obscureConfirm = !obscureConfirm),
+          validator: (value) =>
+              ValidationHelper.validateConfirmPassword(value, pass.text),
         ),
         const SizedBox(height: 10),
         AuthCheckbox(
@@ -203,6 +204,7 @@ class _RegisterFormState extends State<RegisterForm> {
           controller: otpController,
           keyboardType: TextInputType.number,
           maxLength: 6,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
         ),
         const SizedBox(height: 25),
         _buildSubmitButton("VERIFY & CREATE ACCOUNT", isDark),
