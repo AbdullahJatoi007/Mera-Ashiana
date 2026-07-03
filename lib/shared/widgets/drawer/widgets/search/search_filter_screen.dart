@@ -3,19 +3,22 @@ import 'package:mera_ashiana/core/theme/app_colors.dart';
 import 'package:mera_ashiana/core/theme/app_colors_dark.dart';
 
 class SearchFilterScreen extends StatefulWidget {
-  const SearchFilterScreen({super.key});
+  final Map<String, dynamic>? initialFilters;
+
+  const SearchFilterScreen({super.key, this.initialFilters});
 
   @override
   State<SearchFilterScreen> createState() => _SearchFilterScreenState();
 }
 
 class _SearchFilterScreenState extends State<SearchFilterScreen> {
-  // Initial values
-  String _purpose = "Buy";
-  String _selectedType = "House";
-  String _selectedCity = "Karachi";
-  RangeValues _priceRange = const RangeValues(5, 50);
-  int _selectedBeds = 3;
+  final TextEditingController _locationController = TextEditingController();
+
+  late String _purpose;
+  late String _selectedType;
+  late String _selectedCity;
+  RangeValues? _priceRange; // null = "Any"
+  int? _selectedBeds; // null = "Any"
 
   final List<String> _cities = [
     "Karachi",
@@ -25,13 +28,62 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
     "Peshawar",
   ];
 
+  // "Any" added so users can explicitly clear the type filter from this screen
   final List<String> _propertyTypes = [
+    "Any",
     "House",
     "Flat",
     "Plot",
     "Commercial",
     "Other",
   ];
+
+  final List<List<int>?> _priceRanges = [
+    null, // Any
+    [0, 5],
+    [5, 10],
+    [10, 20],
+    [20, 50],
+    [50, 100],
+    [100, 500],
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeValues();
+  }
+
+  void _initializeValues() {
+    final filters = widget.initialFilters;
+
+    _purpose = (filters?["purpose"] == "rent") ? "Rent" : "Buy";
+
+    final rawType = filters?["type"] as String?;
+    _selectedType = rawType != null
+        ? "${rawType[0].toUpperCase()}${rawType.substring(1)}"
+        : "Any";
+
+    _selectedCity = filters?["city"] as String? ?? "Karachi";
+    _locationController.text = filters?["query"] as String? ?? "";
+
+    final minPrice = filters?["min_price"];
+    final maxPrice = filters?["max_price"];
+    _priceRange = (minPrice != null && maxPrice != null)
+        ? RangeValues(
+            (minPrice / 1000000).toDouble(),
+            (maxPrice / 1000000).toDouble(),
+          )
+        : null;
+
+    _selectedBeds = filters?["beds"] as int?;
+  }
+
+  @override
+  void dispose() {
+    _locationController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -66,13 +118,10 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
-          // ✅ Reset Button Fix: Improved touch area and clear callback
           Padding(
             padding: const EdgeInsets.only(right: 8.0),
             child: TextButton(
-              onPressed: () {
-                _resetFilters();
-              },
+              onPressed: _resetFilters,
               child: Text(
                 "Reset",
                 style: TextStyle(
@@ -95,7 +144,7 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
                 children: [
                   const SizedBox(height: 10),
                   _buildSectionTitle(theme, "Location"),
-                  _buildCitySearchField(theme, textColor, primaryNavy),
+                  _buildCitySearchField(theme, textColor),
                   const SizedBox(height: 12),
                   _buildCityChips(theme, accentYellow, textColor),
                   Divider(
@@ -118,7 +167,9 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
                     children: [
                       _buildSectionTitle(theme, "Price Range"),
                       Text(
-                        "${_priceRange.start.round()}M - ${_priceRange.end.round()}M",
+                        _priceRange == null
+                            ? "Any"
+                            : "${_priceRange!.start.round()}M - ${_priceRange!.end.round()}M",
                         style: TextStyle(
                           color: textColor,
                           fontWeight: FontWeight.bold,
@@ -146,10 +197,11 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
   void _resetFilters() {
     setState(() {
       _purpose = "Buy";
-      _selectedType = "House";
+      _selectedType = "Any";
       _selectedCity = "Karachi";
-      _priceRange = const RangeValues(5, 50);
-      _selectedBeds = 3;
+      _locationController.clear();
+      _priceRange = null;
+      _selectedBeds = null;
     });
   }
 
@@ -167,14 +219,11 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
     );
   }
 
-  Widget _buildCitySearchField(
-    ThemeData theme,
-    Color textColor,
-    Color primaryNavy,
-  ) {
+  Widget _buildCitySearchField(ThemeData theme, Color textColor) {
     return SizedBox(
       height: 45,
       child: TextField(
+        controller: _locationController,
         style: TextStyle(color: textColor),
         decoration: InputDecoration(
           hintText: "Search area (e.g. DHA Phase 6)",
@@ -304,28 +353,21 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
     Color accentYellow,
     Color textColor,
   ) {
-    final ranges = [
-      [0, 5],
-      [5, 10],
-      [10, 20],
-      [20, 50],
-      [50, 100],
-      [100, 500],
-    ];
     return Wrap(
       spacing: 10,
       runSpacing: 10,
-      children: ranges.map((range) {
-        final isSelected =
-            _priceRange.start.round() == range[0] &&
-            _priceRange.end.round() == range[1];
+      children: _priceRanges.map((range) {
+        final isSelected = range == null
+            ? _priceRange == null
+            : (_priceRange != null &&
+                  _priceRange!.start.round() == range[0] &&
+                  _priceRange!.end.round() == range[1]);
         return GestureDetector(
-          onTap: () => setState(
-            () => _priceRange = RangeValues(
-              range[0].toDouble(),
-              range[1].toDouble(),
-            ),
-          ),
+          onTap: () => setState(() {
+            _priceRange = range == null
+                ? null
+                : RangeValues(range[0]!.toDouble(), range[1]!.toDouble());
+          }),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
@@ -338,7 +380,7 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
               ),
             ),
             child: Text(
-              "${range[0]}M - ${range[1]}M",
+              range == null ? "Any" : "${range[0]}M - ${range[1]}M",
               style: TextStyle(
                 color: isSelected ? Colors.black : textColor,
                 fontWeight: FontWeight.bold,
@@ -356,18 +398,30 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
     Color accentYellow,
     Color textColor,
   ) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [1, 2, 3, 4, "5+"].map((e) {
-        final isSelected =
-            _selectedBeds.toString() == e.toString() ||
-            (_selectedBeds == 5 && e == "5+");
+    // Wrap instead of a fixed Row so it doesn't overflow on smaller screens
+    // now that there are 6 options instead of 5.
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: <dynamic>[null, 1, 2, 3, 4, "5+"].map((e) {
+        final label = e == null ? "Any" : e.toString();
+        final isSelected = e == null
+            ? _selectedBeds == null
+            : (_selectedBeds != null &&
+                  (_selectedBeds.toString() == e.toString() ||
+                      (_selectedBeds == 5 && e == "5+")));
         return GestureDetector(
-          onTap: () => setState(
-            () => _selectedBeds = e == "5+" ? 5 : (e is int ? e : 5),
-          ),
+          onTap: () => setState(() {
+            if (e == null) {
+              _selectedBeds = null;
+            } else if (e == "5+") {
+              _selectedBeds = 5;
+            } else {
+              _selectedBeds = e as int;
+            }
+          }),
           child: Container(
-            width: 60,
+            width: 56,
             height: 45,
             decoration: BoxDecoration(
               color: isSelected ? accentYellow : theme.colorScheme.surface,
@@ -380,11 +434,11 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
             ),
             alignment: Alignment.center,
             child: Text(
-              e.toString(),
+              label,
               style: TextStyle(
                 color: isSelected ? Colors.black : textColor,
                 fontWeight: FontWeight.bold,
-                fontSize: 14,
+                fontSize: 13,
               ),
             ),
           ),
@@ -401,14 +455,17 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
         height: 52,
         child: ElevatedButton(
           onPressed: () {
-            String apiPurpose = _purpose == "Buy" ? "sale" : "rent";
+            final String apiPurpose = _purpose == "Buy" ? "sale" : "rent";
             Navigator.pop(context, {
               "purpose": apiPurpose,
-              "type": _selectedType.toLowerCase(),
+              if (_selectedType != "Any") "type": _selectedType.toLowerCase(),
               "city": _selectedCity,
-              "min_price": _priceRange.start * 1000000,
-              "max_price": _priceRange.end * 1000000,
-              "beds": _selectedBeds,
+              "query": _locationController.text.trim(),
+              if (_priceRange != null)
+                "min_price": (_priceRange!.start * 1000000).round(),
+              if (_priceRange != null)
+                "max_price": (_priceRange!.end * 1000000).round(),
+              if (_selectedBeds != null) "beds": _selectedBeds,
             });
           },
           style: ElevatedButton.styleFrom(

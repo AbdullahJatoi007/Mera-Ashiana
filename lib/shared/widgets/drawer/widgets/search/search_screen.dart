@@ -15,18 +15,29 @@ class SearchScreen extends StatefulWidget {
 }
 
 class _SearchScreenState extends State<SearchScreen> {
-  final ScrollController _scrollController =
-      ScrollController(); // ✅ Added scroll controller
+  final ScrollController _scrollController = ScrollController();
+
+  static const List<Map<String, String>> _quickFilters = [
+    {'label': 'All', 'value': 'all'},
+    {'label': 'House', 'value': 'house'},
+    {'label': 'Apartment/Flat', 'value': 'flat'},
+    {'label': 'Plot', 'value': 'plot'},
+    {'label': 'Commercial', 'value': 'commercial'},
+    {'label': 'Other', 'value': 'other'},
+  ];
 
   bool _hasSearchResults = false;
   bool _isSearching = false;
-  bool _isLoadingMore = false; // ✅ Track pagination loading states
-  bool _canLoadMore = true; // ✅ Stop requesting if backend runs out of items
+  bool _isLoadingMore = false;
+  bool _canLoadMore = true;
 
   String _selectedQuickFilter = "All";
   List<Listing> _searchResults = [];
   int _currentPage = 1;
-  Map<String, dynamic> _currentFilters = {}; // ✅ Keep track of active filters
+  Map<String, dynamic> _currentFilters = {};
+
+  // Guards against stale/out-of-order responses when filters change quickly.
+  int _searchRequestId = 0;
 
   @override
   void initState() {
@@ -41,7 +52,6 @@ class _SearchScreenState extends State<SearchScreen> {
     super.dispose();
   }
 
-  // ✅ Automatically fetch next page when user scrolls close to the bottom
   void _setupScrollController() {
     _scrollController.addListener(() {
       if (_scrollController.position.pixels >=
@@ -57,19 +67,48 @@ class _SearchScreenState extends State<SearchScreen> {
     });
   }
 
+  /// Merges `changes` into the currently active filters and re-runs the
+  /// search. Pass a `null` value to clear a key (e.g. {'type': null} to
+  /// clear the type filter). This is what keeps quick filters, the search
+  /// bar, and the full filter screen from stomping on each other's state.
+  void _applyPartialFilters(Map<String, dynamic> changes) {
+    final merged = Map<String, dynamic>.from(_currentFilters);
+    changes.forEach((key, value) {
+      if (value == null || value == '') {
+        merged.remove(key);
+      } else {
+        merged[key] = value;
+      }
+    });
+    _performSearch(merged, isInitial: true);
+  }
+
+  String _quickFilterLabelForType(String? type) {
+    if (type == null) return "All";
+    final match = _quickFilters.firstWhere(
+      (f) => f['value'] == type,
+      orElse: () => const {'label': 'All', 'value': 'all'},
+    );
+    return match['label']!;
+  }
+
   Future<void> _performSearch(
     Map<String, dynamic> filters, {
     int page = 1,
     bool isInitial = true,
   }) async {
     if (isInitial) {
+      _searchRequestId++;
+    }
+    final int requestId = _searchRequestId;
+
+    if (isInitial) {
       setState(() {
         _isSearching = true;
         _hasSearchResults = true;
         _currentPage = page;
         _currentFilters = filters;
-        _searchResults
-            .clear(); // Reset list on a brand new search configuration
+        _searchResults.clear();
         _canLoadMore = true;
       });
     } else {
@@ -82,23 +121,24 @@ class _SearchScreenState extends State<SearchScreen> {
     try {
       final results = await PropertyService.fetchProperties(
         page: _currentPage,
-        limit: 20, // Retains efficient chunk allocations
+        limit: 20,
         filters: filters,
       );
 
+      // If a newer search started while this one was in flight, discard
+      // this response so it can't corrupt the list with stale results.
+      if (requestId != _searchRequestId) return;
+
       setState(() {
         if (results.isEmpty || results.length < 20) {
-          _canLoadMore =
-              false; // Stop pagination loops if payload size tapers off
+          _canLoadMore = false;
         }
-
-        _searchResults.addAll(
-          results,
-        ); // ✅ Appends instead of replacing old elements
+        _searchResults.addAll(results);
         _isSearching = false;
         _isLoadingMore = false;
       });
     } catch (e) {
+      if (requestId != _searchRequestId) return;
       setState(() {
         _isSearching = false;
         _isLoadingMore = false;
@@ -169,9 +209,9 @@ class _SearchScreenState extends State<SearchScreen> {
                   height: 44,
                   child: TextField(
                     onSubmitted: (v) {
-                      if (v.isNotEmpty) {
-                        _performSearch({"query": v}, isInitial: true);
-                      }
+                      _applyPartialFilters({
+                        "query": v.trim().isEmpty ? null : v.trim(),
+                      });
                     },
                     style: TextStyle(color: theme.colorScheme.onSurface),
                     decoration: InputDecoration(
@@ -212,10 +252,18 @@ class _SearchScreenState extends State<SearchScreen> {
       onTap: () async {
         final Map<String, dynamic>? filters = await Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => const SearchFilterScreen()),
+          MaterialPageRoute(
+            builder: (context) =>
+                SearchFilterScreen(initialFilters: _currentFilters),
+          ),
         );
 
         if (filters != null) {
+          setState(() {
+            _selectedQuickFilter = _quickFilterLabelForType(
+              filters['type'] as String?,
+            );
+          });
           _performSearch(filters, isInitial: true);
         }
       },
@@ -232,15 +280,6 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Widget _buildQuickFilterRow(ThemeData theme, bool isDark) {
-    final List<Map<String, String>> filters = [
-      {'label': 'All', 'value': 'all'},
-      {'label': 'House', 'value': 'house'},
-      {'label': 'Apartment/Flat', 'value': 'flat'},
-      {'label': 'Plot', 'value': 'plot'},
-      {'label': 'Commercial', 'value': 'commercial'},
-      {'label': 'Other', 'value': 'other'},
-    ];
-
     final activeBg = isDark
         ? AppDarkColors.accentYellow
         : AppColors.accentYellow;
@@ -254,21 +293,17 @@ class _SearchScreenState extends State<SearchScreen> {
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: filters.length,
+        itemCount: _quickFilters.length,
         itemBuilder: (context, i) {
-          final filter = filters[i];
+          final filter = _quickFilters[i];
           bool isSelected = _selectedQuickFilter == filter['label'];
 
           return GestureDetector(
             onTap: () {
               setState(() => _selectedQuickFilter = filter['label']!);
-
-              Map<String, dynamic> searchParams = {};
-              if (filter['value'] != 'all') {
-                searchParams['type'] = filter['value'];
-              }
-
-              _performSearch(searchParams, isInitial: true);
+              _applyPartialFilters({
+                'type': filter['value'] == 'all' ? null : filter['value'],
+              });
             },
             child: Container(
               margin: const EdgeInsets.only(right: 8),
@@ -306,7 +341,6 @@ class _SearchScreenState extends State<SearchScreen> {
       );
     }
 
-    // ✅ Attach scroll controller here and append a loader tile at bottom if retrieving extra chunks
     return ListView.builder(
       controller: _scrollController,
       padding: const EdgeInsets.all(16),
@@ -361,7 +395,7 @@ class _SearchScreenState extends State<SearchScreen> {
     ),
     trailing: const Icon(Icons.north_west, size: 14),
     contentPadding: EdgeInsets.zero,
-    onTap: () => _performSearch({"query": t}, isInitial: true),
+    onTap: () => _applyPartialFilters({"query": t}),
   );
 
   Widget _buildPopularGrid(ThemeData theme) {
@@ -371,7 +405,7 @@ class _SearchScreenState extends State<SearchScreen> {
       children: ["Bahria", "DHA", "Clifton", "Gulshan"]
           .map(
             (e) => GestureDetector(
-              onTap: () => _performSearch({"city": e}, isInitial: true),
+              onTap: () => _applyPartialFilters({"city": e}),
               child: Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,

@@ -147,6 +147,16 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
     setState(() => isToggling = true);
     try {
       await FavoriteService.toggleFavorite(listing!.id, listingData: listing);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              "Couldn't update favorite. Please check your connection.",
+            ),
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => isToggling = false);
     }

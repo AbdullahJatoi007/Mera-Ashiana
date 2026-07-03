@@ -6,6 +6,7 @@ import 'package:mera_ashiana/core/theme/app_theme.dart';
 import 'package:mera_ashiana/features/auth/auth_state.dart';
 import 'core/routes/app_pages.dart';
 import 'core/routes/app_routes.dart';
+import 'data/services/FavoriteService.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -15,6 +16,7 @@ final ValueNotifier<ThemeMode> appThemeMode = ValueNotifier(ThemeMode.system);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await FavoriteService.initFavorites();
 
   await AuthState.initialize();
 

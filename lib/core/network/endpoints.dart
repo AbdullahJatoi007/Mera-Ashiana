@@ -49,12 +49,14 @@ class Endpoints {
   // ───────── LISTINGS ─────────
   static const String listings = "$apiBase/listings";
   static const String myListings = "$apiBase/listings/me";
+  static const String myFavorites = "$apiBase/listings/favorites";
 
   static String listing(int id) => "$apiBase/listings/$id";
 
   static String deleteListing(int id) => "$apiBase/listings/$id";
 
   static String likeListing(int id) => "$apiBase/listings/$id/like";
+
 
   // ───────── AGENCY ─────────
   static const String agency = "$apiBase/agencies";

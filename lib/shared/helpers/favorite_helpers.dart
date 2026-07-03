@@ -6,8 +6,50 @@ import 'package:mera_ashiana/data/services/FavoriteService.dart';
 import '../../core/theme/app_colors.dart';
 
 class FavoriteHelpers {
-  // ✅ UPDATED: now uses Listing
   static Widget buildFavoriteCard(BuildContext context, Listing item) {
+    return _FavoriteCard(item: item);
+  }
+}
+
+class _FavoriteCard extends StatefulWidget {
+  final Listing item;
+
+  const _FavoriteCard({required this.item});
+
+  @override
+  State<_FavoriteCard> createState() => _FavoriteCardState();
+}
+
+class _FavoriteCardState extends State<_FavoriteCard> {
+  bool _isToggling = false;
+
+  Future<void> _handleUnfavorite() async {
+    if (_isToggling) return;
+    setState(() => _isToggling = true);
+    try {
+      await FavoriteService.toggleFavorite(widget.item.id);
+      // On success the FavouritesScreen's ValueListenableBuilder (listening
+      // to FavoriteService.favoriteIds) rebuilds automatically and this
+      // card disappears from the list — no local state change needed here.
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              "Couldn't remove favorite. Please check your connection.",
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isToggling = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final item = widget.item;
+
     return Card(
       clipBehavior: Clip.antiAlias,
       margin: const EdgeInsets.only(bottom: 16),
@@ -85,19 +127,24 @@ class FavoriteHelpers {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          item.location ?? '',
+                          item.location,
                           style: const TextStyle(color: AppColors.textGrey),
                         ),
                       ],
                     ),
                   ),
 
-                  // ❤️ FAVORITE BUTTON
+                  // ❤️ FAVORITE BUTTON (always shown filled — every card in
+                  // this list is, by definition, already favorited)
                   IconButton(
-                    icon: const Icon(Icons.favorite, color: Colors.red),
-                    onPressed: () {
-                      FavoriteService.toggleFavorite(item.id);
-                    },
+                    icon: _isToggling
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.favorite, color: Colors.red),
+                    onPressed: _isToggling ? null : _handleUnfavorite,
                   ),
                 ],
               ),
