@@ -3,6 +3,7 @@ import 'package:mera_ashiana/data/models/listing_model.dart';
 import 'package:mera_ashiana/features/properties/screens/project_details_screen.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_colors_dark.dart';
+import '../../../core/utils/currency_formatter.dart';
 
 class PropertyListItem extends StatelessWidget {
   final Listing listing;
@@ -76,14 +77,16 @@ class PropertyListItem extends StatelessWidget {
                       color: theme.colorScheme.onSurface.withOpacity(0.6),
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
+                  // 🔧 Adjusted spacing for a cleaner list item row
                   Text(
-                    "PKR ${listing.price}",
-                    style: TextStyle(
+                    CurrencyFormatter.formatPakistaniPrice(listing.price),
+                    // ✨ Fixed: changed 'p' to 'listing'
+                    style: const TextStyle(
+                      fontSize: 15,
+                      // 🔧 Scaled beautifully for a list view row layout
                       fontWeight: FontWeight.bold,
-                      color: isDark
-                          ? AppDarkColors.accentYellow
-                          : AppColors.accentYellow,
+                      color: AppColors.accentYellow,
                     ),
                   ),
                 ],

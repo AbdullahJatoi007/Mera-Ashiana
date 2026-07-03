@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:mera_ashiana/data/models/listing_model.dart';
 import 'package:mera_ashiana/features/properties/screens/add_listing_screen.dart';
+import 'package:mera_ashiana/core/utils/currency_formatter.dart'; // 🌟 Added import
+import 'package:mera_ashiana/core/theme/app_colors.dart'; // 🌟 Added for consistent theme colors
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
@@ -81,18 +83,38 @@ class _ListingsScreenState extends State<ListingsScreen> {
     String imageUrl = 'https://via.placeholder.com/300x200?text=No+Image';
     if (listing.images.isNotEmpty) {
       String path = listing.images[0];
-      imageUrl = "$_imageBaseUrl${path.startsWith('/') ? '' : '/'}$path";
+      // 🔧 FIX: Check if it's already a full URL (like in your other screens)
+      // before manually appending the base URL string.
+      if (path.startsWith('http://') || path.startsWith('https://')) {
+        imageUrl = path;
+      } else {
+        imageUrl = "$_imageBaseUrl${path.startsWith('/') ? '' : '/'}$path";
+      }
     }
 
     return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-            child: Image.network(
-              imageUrl,
-              fit: BoxFit.cover,
-              width: double.infinity,
+            child: ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(12),
+              ),
+              child: Image.network(
+                imageUrl,
+                fit: BoxFit.cover,
+                width: double.infinity,
+                errorBuilder: (c, e, s) => Container(
+                  color: Colors.grey[200],
+                  child: const Icon(
+                    Icons.home_work_outlined,
+                    color: Colors.grey,
+                  ),
+                ),
+              ),
             ),
           ),
           Padding(
@@ -103,11 +125,22 @@ class _ListingsScreenState extends State<ListingsScreen> {
                 Text(
                   listing.title,
                   maxLines: 1,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
                 ),
+                const SizedBox(height: 4),
                 Text(
-                  "PKR ${listing.price.toInt()}",
-                  style: const TextStyle(color: Colors.blue),
+                  CurrencyFormatter.formatPakistaniPrice(listing.price),
+                  // ✨ Dynamic formatting
+                  style: const TextStyle(
+                    color: AppColors.accentYellow,
+                    // Matches your app's yellow accent brand theme
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
                 ),
               ],
             ),

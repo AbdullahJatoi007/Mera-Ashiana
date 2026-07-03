@@ -42,6 +42,13 @@ class _PropertiesScreenState extends State<PropertiesScreen> {
     });
   }
 
+  // 🔧 Clean up controllers when leaving the screen
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadInitial() async {
     _page = 1;
     _hasMore = true;
@@ -81,15 +88,47 @@ class _PropertiesScreenState extends State<PropertiesScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final contentColor = isDark ? Colors.white : AppColors.primaryNavy;
 
     return Scaffold(
       backgroundColor: isDark ? AppDarkColors.background : AppColors.background,
+      // 🔧 Fix: Only render this inner AppBar if the screen was pushed via Navigator.push()
+      appBar: Navigator.canPop(context)
+          ? AppBar(
+              title: Text(
+                widget.title ?? "Properties",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: contentColor,
+                ),
+              ),
+              centerTitle: true,
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              leading: IconButton(
+                icon: Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  size: 20,
+                  color: contentColor,
+                ),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            )
+          : null,
+      // 👈 No nested duplicate AppBar when viewing from the Bottom Navigation Tab!
       body: RefreshIndicator(
         color: AppColors.accentYellow,
         onRefresh: _refresh,
         child: ListView.separated(
           controller: _controller,
-          padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
+          // 🔧 Micro-UI optimization: Add top padding when inside the bottom nav tab bar layout
+          padding: EdgeInsets.fromLTRB(
+            16,
+            Navigator.canPop(context) ? 10 : 20,
+            16,
+            20,
+          ),
           itemCount: _listings.length + (_isLoading ? 1 : 0),
           separatorBuilder: (_, __) => const SizedBox(height: 24),
           itemBuilder: (context, index) {

@@ -13,8 +13,6 @@ class AccountSettingsScreen extends StatefulWidget {
 }
 
 class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
-  bool _notificationsEnabled = true;
-
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context)!;
@@ -67,22 +65,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
 
             const SizedBox(height: 25),
 
-            // 2. Notification Group
-            _buildSectionLabel(loc.notifications),
-            _SettingsGroup(
-              theme: theme,
-              children: [
-                _NotificationTile(
-                  loc: loc,
-                  value: _notificationsEnabled,
-                  onChanged: (v) => setState(() => _notificationsEnabled = v),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 25),
-
-            // 3. Account Actions
+            // 2. Account Actions
             _buildSectionLabel(loc.accountActions),
             _SettingsGroup(
               theme: theme,
@@ -270,44 +253,6 @@ class _ThemeTile extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-}
-
-class _NotificationTile extends StatelessWidget {
-  const _NotificationTile({
-    required this.loc,
-    required this.value,
-    required this.onChanged,
-  });
-
-  final AppLocalizations loc;
-  final bool value;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    return ListTile(
-      leading: Icon(
-        Icons.notifications_active_outlined,
-        color: isDark
-            ? const Color(0xFFFFD54F)
-            : Theme.of(context).colorScheme.primary,
-      ),
-      title: Text(
-        loc.notifications,
-        style: TextStyle(
-          color: isDark ? Colors.white : Colors.black87,
-          fontWeight: FontWeight.w600,
-          fontSize: 14,
-        ),
-      ),
-      trailing: Switch.adaptive(
-        value: value,
-        activeColor: const Color(0xFFFFD54F),
-        onChanged: onChanged,
-      ),
     );
   }
 }

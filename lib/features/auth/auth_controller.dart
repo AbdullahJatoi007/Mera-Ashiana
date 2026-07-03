@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mera_ashiana/data/services/auth/auth_service.dart';
 import 'package:mera_ashiana/data/services/google_login_service.dart';
 import 'package:mera_ashiana/features/auth/auth_state.dart';
+import 'package:mera_ashiana/features/auth/widgets/google_role_sheet.dart';
 import 'package:mera_ashiana/shared/helpers/loader_helper.dart';
 
 class AuthController {
@@ -78,6 +79,10 @@ class AuthController {
   ///                       auto-creating; use this if you add a Login-only
   ///                       Google button.
   ///   - 'register'     -> explicit register intent (same as null on the backend).
+  /// [mode] is optional and forwarded to the backend:
+  ///   - null (default) -> finds or creates the Google account.
+  ///   - 'login'        -> login only.
+  ///   - 'register'     -> register only.
   static Future<void> google(
     BuildContext context,
     VoidCallback onSuccess,
@@ -86,18 +91,49 @@ class AuthController {
     String? mode,
   }) async {
     setLoading(true);
+
     try {
       debugPrint('🟢 [GOOGLE] button tapped — starting sign-in');
-      final ok = await GoogleLoginService.signInWithGoogle(
-        role: isAgent ? 'agency' : 'user',
-        mode: mode,
-      );
-      if (!ok) {
-        debugPrint('🟡 [GOOGLE] returned false (treated as cancel)');
+
+      final result = await GoogleLoginService.startGoogleSignIn(mode: mode);
+
+      // Existing account → login success
+      if (result.loggedIn) {
+        debugPrint('✅ [GOOGLE] Existing account logged in.');
+        AuthState.isLoggedIn.value = true;
+        onSuccess();
         return;
       }
-      AuthState.isLoggedIn.value = true;
-      onSuccess();
+
+      // New Google account → complete registration
+      if (result.needsRegistration) {
+        debugPrint('📝 [GOOGLE] Registration required.');
+
+        final reg = await showGoogleRoleSheet(
+          context,
+          email: result.email,
+          name: result.name,
+        );
+
+        if (reg == null) {
+          debugPrint('🟡 [GOOGLE] Registration cancelled by user.');
+          return;
+        }
+
+        await GoogleLoginService.completeGoogleRegistration(
+          googleAccessToken: result.googleAccessToken!,
+          role: reg.$1, // 'user' | 'agency'
+          phone: reg.$2,
+        );
+
+        debugPrint('✅ [GOOGLE] Registration completed.');
+
+        AuthState.isLoggedIn.value = true;
+        onSuccess();
+        return;
+      }
+
+      debugPrint('🟡 [GOOGLE] Sign-in cancelled.');
     } catch (e, st) {
       debugPrint('❌ [GOOGLE] controller caught: $e');
       debugPrint('❌ [GOOGLE] $st');

@@ -6,6 +6,7 @@ import 'package:mera_ashiana/data/services/FavoriteService.dart';
 import 'package:mera_ashiana/core/theme/app_colors.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/network/endpoints.dart';
+import '../../../core/utils/currency_formatter.dart';
 
 class ProjectDetailsScreen extends StatefulWidget {
   // 🔧 Backend detail route is keyed by SLUG (`GET /listings/:slug`),
@@ -77,7 +78,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
 
       final response = await ApiClient.get(path);
       final dynamic rawData =
-      (response.data is Map && response.data.containsKey('data'))
+          (response.data is Map && response.data.containsKey('data'))
           ? response.data['data']
           : response.data;
 
@@ -268,7 +269,8 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
 
     // 🔧 FIX: gate the contact section on the fields the chips actually use
     // (contact_*), not on createdByPhone/Email which are absent in list data.
-    final hasContact = (p.contactPhone?.isNotEmpty ?? false) ||
+    final hasContact =
+        (p.contactPhone?.isNotEmpty ?? false) ||
         (p.contactWhatsapp?.isNotEmpty ?? false) ||
         (p.contactEmail?.isNotEmpty ?? false);
 
@@ -387,9 +389,10 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
             ),
           ],
         ),
+        // Find this section inside your _buildHeaderSection method:
         const SizedBox(height: 16),
         Text(
-          "PKR ${p.price.toStringAsFixed(0)}",
+          CurrencyFormatter.formatPakistaniPrice(p.price), // ✨ Updated code
           style: const TextStyle(
             fontSize: 22,
             fontWeight: FontWeight.bold,

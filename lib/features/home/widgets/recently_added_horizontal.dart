@@ -3,6 +3,7 @@ import 'package:mera_ashiana/data/models/listing_model.dart';
 import 'package:mera_ashiana/features/properties/screens/project_details_screen.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_colors_dark.dart';
+import '../../../core/utils/currency_formatter.dart';
 
 class RecentlyAddedHorizontal extends StatelessWidget {
   final List<Listing> listings;
@@ -94,15 +95,16 @@ class RecentlyAddedHorizontal extends StatelessWidget {
                             fontSize: 12,
                           ),
                         ),
-                        const SizedBox(height: 2),
+                        const SizedBox(height: 4),
+                        // 🔧 Reduced from 16 so it fits beautifully in the 160-height card
                         Text(
-                          "PKR ${listing.price}",
-                          style: TextStyle(
-                            color: isDark
-                                ? AppDarkColors.accentYellow
-                                : AppColors.accentYellow,
+                          CurrencyFormatter.formatPakistaniPrice(listing.price),
+                          // ✨ Fixed: changed 'p' to 'listing'
+                          style: const TextStyle(
+                            fontSize: 12,
+                            // 🔧 Scaled down from 22 to match the small card dimensions
                             fontWeight: FontWeight.bold,
-                            fontSize: 11,
+                            color: AppColors.accentYellow,
                           ),
                         ),
                       ],
