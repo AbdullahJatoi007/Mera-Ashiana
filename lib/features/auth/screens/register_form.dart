@@ -31,13 +31,39 @@ class _RegisterFormState extends State<RegisterForm> {
   final otpController = TextEditingController();
 
   bool _showOtpField = false;
+  bool _isLoading = false; // ⚡ Tracks active API operations
   bool agent = false;
   bool terms = false;
   bool obscurePass = true;
   bool obscureConfirm = true;
 
   @override
+  void initState() {
+    super.initState();
+    // Add listeners to all controllers to force a rebuild when text changes
+    name.addListener(_onTextChanged);
+    email.addListener(_onTextChanged);
+    phone.addListener(_onTextChanged);
+    pass.addListener(_onTextChanged);
+    confirm.addListener(_onTextChanged);
+    otpController.addListener(_onTextChanged);
+  }
+
+  void _onTextChanged() {
+    setState(
+      () {},
+    ); // Rebuilds the UI to instantly recalculate button enablement state
+  }
+
+  @override
   void dispose() {
+    name.removeListener(_onTextChanged);
+    email.removeListener(_onTextChanged);
+    phone.removeListener(_onTextChanged);
+    pass.removeListener(_onTextChanged);
+    confirm.removeListener(_onTextChanged);
+    otpController.removeListener(_onTextChanged);
+
     name.dispose();
     email.dispose();
     phone.dispose();
@@ -47,40 +73,57 @@ class _RegisterFormState extends State<RegisterForm> {
     super.dispose();
   }
 
+  // Determines if the form layout satisfies basic requirements to click send
+  bool _isSubmitEnabled() {
+    if (_isLoading) return false; // Always disable if an API call is running
+
+    if (!_showOtpField) {
+      return name.text.trim().isNotEmpty &&
+          email.text.trim().isNotEmpty &&
+          phone.text.trim().isNotEmpty &&
+          pass.text.isNotEmpty &&
+          confirm.text.isNotEmpty &&
+          terms; // Button remains locked until terms are ticked
+    } else {
+      return otpController.text.trim().length == 6;
+    }
+  }
+
   void _handleAction() async {
+    if (!_isSubmitEnabled()) return;
+
     FocusScope.of(context).unfocus();
     await Future.delayed(const Duration(milliseconds: 150));
 
-    if (!_showOtpField) {
-      if (!_formKey.currentState!.validate()) return;
-      if (!terms) {
-        AuthController.showError(
-          context,
-          "Please accept the Terms & Privacy Policy",
-        );
-        return;
-      }
+    setState(() => _isLoading = true); // 🔒 Turn loading state on immediately
 
-      final success = await AuthController.requestOtp(
-        context,
-        name.text.trim(),
-        email.text.trim(),
-        phone.text.trim(),
-        pass.text,
-        agent,
-      );
-      if (success) setState(() => _showOtpField = true);
-    } else {
-      if (otpController.text.length < 6) {
-        AuthController.showError(context, "Please enter the 6-digit code");
-        return;
+    try {
+      if (!_showOtpField) {
+        if (!_formKey.currentState!.validate()) {
+          setState(() => _isLoading = false);
+          return;
+        }
+
+        final success = await AuthController.requestOtp(
+          context,
+          name.text.trim(),
+          email.text.trim(),
+          phone.text.trim(),
+          pass.text,
+          agent,
+        );
+        if (success) setState(() => _showOtpField = true);
+      } else {
+        await AuthController.verifyAndRegister(
+          context,
+          email.text.trim(),
+          otpController.text.trim(),
+          widget.onSuccess,
+        );
       }
-      await AuthController.verifyAndRegister(
-        context,
-        email.text.trim(),
-        otpController.text.trim(),
-        widget.onSuccess,
-      );
+    } finally {
+      // Ensures loading turns back off even if the network fails or throws an exception
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -90,6 +133,7 @@ class _RegisterFormState extends State<RegisterForm> {
 
     return Form(
       key: _formKey,
+      autovalidateMode: AutovalidateMode.onUserInteraction,
       child: AnimatedSwitcher(
         duration: const Duration(milliseconds: 300),
         child: _showOtpField
@@ -125,13 +169,10 @@ class _RegisterFormState extends State<RegisterForm> {
           controller: phone,
           keyboardType: TextInputType.phone,
           maxLength: 13,
-          // 🔒 Physically stops typing at 13 characters max (accounts for +92 format)
           inputFormatters: [
-            // Only allow clean digits and a single leading '+' sign
             FilteringTextInputFormatter.allow(RegExp(r'^\+?\d*')),
           ],
-          validator: ValidationHelper
-              .validatePhone, // ⚡ Uses our updated 10-13 limit validation checker
+          validator: ValidationHelper.validatePhone,
         ),
         const SizedBox(height: 16),
         AuthTextField(
@@ -161,7 +202,10 @@ class _RegisterFormState extends State<RegisterForm> {
         ),
         AuthCheckbox(
           value: terms,
-          onChanged: (v) => setState(() => terms = v!),
+          onChanged: (v) => setState(() {
+            terms = v!;
+            _onTextChanged(); // Explicitly sync button state on checkbox tap
+          }),
           label: "",
           isTerms: true,
           isDark: isDark,
@@ -209,7 +253,9 @@ class _RegisterFormState extends State<RegisterForm> {
         const SizedBox(height: 25),
         _buildSubmitButton("VERIFY & CREATE ACCOUNT", isDark),
         TextButton(
-          onPressed: () => setState(() => _showOtpField = false),
+          onPressed: _isLoading
+              ? null
+              : () => setState(() => _showOtpField = false),
           child: const Text(
             "Edit registration details",
             style: TextStyle(color: AppColors.textGrey),
@@ -220,28 +266,45 @@ class _RegisterFormState extends State<RegisterForm> {
   }
 
   Widget _buildSubmitButton(String text, bool isDark) {
+    final enabled = _isSubmitEnabled();
+    final buttonColor = isDark
+        ? AppDarkColors.accentYellow
+        : AppColors.accentYellow;
+
     return SizedBox(
       width: double.infinity,
       height: 55,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          backgroundColor: isDark
-              ? AppDarkColors.accentYellow
-              : AppColors.accentYellow,
+          backgroundColor: buttonColor,
           foregroundColor: AppColors.primaryNavy,
+          disabledBackgroundColor: buttonColor.withOpacity(0.35),
+          disabledForegroundColor: AppColors.primaryNavy.withOpacity(0.5),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(15),
           ),
         ),
-        onPressed: _handleAction,
-        child: Text(text, style: const TextStyle(fontWeight: FontWeight.bold)),
+        onPressed: enabled ? _handleAction : null,
+        // 🔒 Flutter automatically disables button when onPressed is null
+        child: _isLoading
+            ? const SizedBox(
+                height: 24,
+                width: 24,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    AppColors.primaryNavy,
+                  ),
+                ),
+              )
+            : Text(text, style: const TextStyle(fontWeight: FontWeight.bold)),
       ),
     );
   }
 
   Widget _buildSwitchButton(bool isDark) {
     return TextButton(
-      onPressed: widget.onSwitch,
+      onPressed: _isLoading ? null : widget.onSwitch,
       child: Text(
         "Already have an account? Sign In",
         style: TextStyle(

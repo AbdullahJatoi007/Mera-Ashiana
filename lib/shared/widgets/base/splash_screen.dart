@@ -75,41 +75,10 @@ class _SplashScreenState extends State<SplashScreen>
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(25),
                   child: Image.asset(
-                    'assets/images/mera_ashiana_logo.jpeg',
-                    width: 160,
-                    height: 160,
+                    'assets/images/mera ashiana logo.jpeg',
+                    width: 200,
+                    height: 200,
                     fit: BoxFit.cover,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 40),
-              const Text(
-                "MERA ASHIANA",
-                style: TextStyle(
-                  color: AppColors.accentYellow,
-                  fontSize: 26,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 5.0,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                "Find Your Dream Home",
-                style: TextStyle(
-                  color: isDark ? Colors.white60 : Colors.black45,
-                  fontSize: 14,
-                  letterSpacing: 1.5,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 60),
-              const SizedBox(
-                width: 25,
-                height: 25,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    AppColors.accentYellow,
                   ),
                 ),
               ),

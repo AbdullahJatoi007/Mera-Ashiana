@@ -45,6 +45,5 @@ flutter:
   generate: true
   
   assets:
-    - assets/lottie/
     - assets/images/
     - assets/adi-registration.properties
