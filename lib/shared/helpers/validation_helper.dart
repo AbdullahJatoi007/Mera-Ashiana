@@ -58,16 +58,17 @@ class ValidationHelper {
     return null;
   }
 
-  // ✨ Whole number check — for counts like beds/baths.
-  // Rejects empty values, non-numeric input, negative numbers, and
-  // anything above [max] (default 50 — no realistic listing needs more).
+  // ✨ Whole number check — for counts like beds/baths, or optional fields
+  // like floor/total floors. Set required:false for optional fields —
+  // an empty value then passes silently instead of showing "required".
   static String? validateWholeNumber(
     String? value, {
     String fieldLabel = 'This field',
     int max = 50,
+    bool required = true,
   }) {
     if (value == null || value.trim().isEmpty) {
-      return '$fieldLabel is required';
+      return required ? '$fieldLabel is required' : null;
     }
     final n = int.tryParse(value.trim());
     if (n == null) {
@@ -82,17 +83,16 @@ class ValidationHelper {
     return null;
   }
 
-  // ✨ Decimal-friendly number check — for price/area.
-  // Rejects empty values, non-numeric input, zero/negative numbers, and
-  // anything above [max]. Caller supplies a sensible max per field, since
-  // "price" and "area" have very different realistic ranges.
+  // ✨ Decimal-friendly number check — for price/area, or optional
+  // numeric fields. Set required:false for optional fields.
   static String? validateDecimalNumber(
     String? value, {
     String fieldLabel = 'This field',
     double max = 999999999,
+    bool required = true,
   }) {
     if (value == null || value.trim().isEmpty) {
-      return '$fieldLabel is required';
+      return required ? '$fieldLabel is required' : null;
     }
     final n = double.tryParse(value.trim());
     if (n == null) {
@@ -103,6 +103,34 @@ class ValidationHelper {
     }
     if (n > max) {
       return '$fieldLabel is unrealistically large';
+    }
+    return null;
+  }
+
+  // ✨ Year Built — optional. Rejects non-numbers and anything outside a
+  // sane construction-year range.
+  static String? validateYear(String? value, {String fieldLabel = 'Year'}) {
+    if (value == null || value.trim().isEmpty) {
+      return null; // optional field
+    }
+    final n = int.tryParse(value.trim());
+    final currentYear = DateTime.now().year;
+    if (n == null) {
+      return 'Enter a valid year';
+    }
+    if (n < 1900 || n > currentYear + 1) {
+      return 'Enter a year between 1900 and ${currentYear + 1}';
+    }
+    return null;
+  }
+
+  // ✨ Pakistani postal/zip code — optional. 5 digits when provided.
+  static String? validateZipCode(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return null; // optional field
+    }
+    if (!RegExp(r'^\d{5}$').hasMatch(value.trim())) {
+      return 'Enter a valid 5-digit postal code';
     }
     return null;
   }

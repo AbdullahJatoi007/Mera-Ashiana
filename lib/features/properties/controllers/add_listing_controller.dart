@@ -1,8 +1,10 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../data/models/listing_model.dart';
 import '../../../data/services/listing_service.dart';
+import '../widgets/listing_dropdown.dart';
 
 /// Holds all form controllers and mutable state for the Add/Edit Listing
 /// screen, plus the submit logic. The screen owns an instance of this,
@@ -25,6 +27,35 @@ class AddListingController {
       selectedType = l.type;
       selectedStatus = l.status;
       existingImageUrls = List<String>.from(l.images);
+
+      neighborhoodController.text = l.neighborhood ?? '';
+      zipCodeController.text = l.zipCode ?? '';
+      floorController.text = l.floor?.toString() ?? '';
+      totalFloorsController.text = l.totalFloors?.toString() ?? '';
+      parkingSizeController.text = l.parkingSize ?? '';
+      yearBuiltController.text = l.yearBuilt?.toString() ?? '';
+      selectedAmenities = List<String>.from(l.amenities);
+      preferredContact = l.preferredContact ?? 'phone';
+
+      // City/Province: if the saved value matches one of our preset
+      // options, select it directly. Otherwise fall back to "Other" and
+      // pre-fill the manual-entry field with whatever was saved.
+      if (l.city != null && l.city!.isNotEmpty) {
+        if (majorCities.contains(l.city)) {
+          selectedCity = l.city;
+        } else {
+          selectedCity = kOtherOptionValue;
+          cityOtherController.text = l.city!;
+        }
+      }
+      if (l.province != null && l.province!.isNotEmpty) {
+        if (provinces.contains(l.province)) {
+          selectedProvince = l.province;
+        } else {
+          selectedProvince = kOtherOptionValue;
+          provinceOtherController.text = l.province!;
+        }
+      }
     }
   }
 
@@ -33,7 +64,7 @@ class AddListingController {
   // ── Text controllers ─────────────────────────────
   final titleController = TextEditingController();
   final priceController = TextEditingController();
-  final locationController = TextEditingController();
+  final locationController = TextEditingController(); // detailed address
   final descController = TextEditingController();
   final phoneController = TextEditingController();
   final emailController = TextEditingController();
@@ -41,9 +72,30 @@ class AddListingController {
   final bedsController = TextEditingController();
   final bathsController = TextEditingController();
 
+  // 👇 NEW: additional detail controllers
+  final neighborhoodController = TextEditingController();
+  final zipCodeController = TextEditingController();
+  final floorController = TextEditingController();
+  final totalFloorsController = TextEditingController();
+  final parkingSizeController = TextEditingController();
+  final yearBuiltController = TextEditingController();
+  final cityOtherController = TextEditingController();
+  final provinceOtherController = TextEditingController();
+
   // ── Dropdown state ───────────────────────────────
   String selectedType = 'house';
   String selectedStatus = 'sale';
+
+  // 👇 NEW: City / Province — either one of the preset options below, or
+  // kOtherOptionValue (in which case the *Other controllers hold the value)
+  String? selectedCity = majorCities.first;
+  String? selectedProvince = provinces.first;
+
+  // 👇 NEW: amenities the user has picked
+  List<String> selectedAmenities = [];
+
+  // 👇 NEW: preferred contact method
+  String preferredContact = 'phone';
 
   static const propertyTypes = [
     {'value': 'house', 'label': 'House'},
@@ -57,6 +109,77 @@ class AddListingController {
     {'value': 'sale', 'label': 'For Sale'},
     {'value': 'rent', 'label': 'For Rent'},
   ];
+
+  static const preferredContactOptions = [
+    {'value': 'phone', 'label': 'Phone Call'},
+    {'value': 'whatsapp', 'label': 'WhatsApp'},
+    {'value': 'email', 'label': 'Email'},
+  ];
+
+  // 👇 NEW: major Pakistani cities shown in the City dropdown, plus
+  // "Other" (added automatically by ListingDropdownWithOther).
+  // Adjust/reorder to match whatever the website's own list uses.
+  static const List<String> majorCities = [
+    'Karachi',
+    'Lahore',
+    'Islamabad',
+    'Rawalpindi',
+    'Faisalabad',
+    'Multan',
+    'Peshawar',
+    'Quetta',
+    'Hyderabad',
+    'Gujranwala',
+    'Sialkot',
+    'Sargodha',
+    'Bahawalpur',
+    'Sukkur',
+    'Larkana',
+    'Abbottabad',
+    'Gwadar',
+    'Mardan',
+  ];
+
+  // 👇 NEW: Pakistani provinces/territories shown in the Province dropdown.
+  static const List<String> provinces = [
+    'Sindh',
+    'Punjab',
+    'Khyber Pakhtunkhwa',
+    'Balochistan',
+    'Islamabad Capital Territory',
+    'Gilgit-Baltistan',
+    'Azad Kashmir',
+  ];
+
+  // 👇 NEW: predefined amenities shown in the Amenities picker.
+  static const List<String> amenitiesList = [
+    'Parking',
+    'Lift/Elevator',
+    'Security Guard',
+    'Backup Generator',
+    'Gas Connection',
+    'Water Supply',
+    'Internet/Wifi',
+    'Air Conditioning',
+    'Furnished',
+    'Swimming Pool',
+    'Gym',
+    'Garden/Lawn',
+    'Servant Quarters',
+    'Store Room',
+    'Balcony',
+    'CCTV Cameras',
+    'Intercom',
+    'Maintenance Staff',
+  ];
+
+  void addAmenity(String amenity) {
+    if (!selectedAmenities.contains(amenity)) {
+      selectedAmenities.add(amenity);
+    }
+  }
+
+  void removeAmenity(String amenity) => selectedAmenities.remove(amenity);
 
   // ── Image state ───────────────────────────────────
   final List<File> selectedImages = [];
@@ -80,44 +203,76 @@ class AddListingController {
       areaController,
       bedsController,
       bathsController,
+      neighborhoodController,
+      zipCodeController,
+      floorController,
+      totalFloorsController,
+      parkingSizeController,
+      yearBuiltController,
+      cityOtherController,
+      provinceOtherController,
     ]) {
       c.dispose();
     }
   }
 
   // ── Input formatters ─────────────────────────────
-  // These stay here (rather than in ValidationHelper) since they're
-  // Flutter-specific TextInputFormatters, not validation logic — they
-  // block invalid *keystrokes* at input time (both wrong characters and
-  // excessive length), as a first line of defense alongside the max-value
-  // checks in ValidationHelper. Length caps are chosen generously — they
-  // just stop absurd digit counts, the real range check happens on submit.
+  // Flutter-specific TextInputFormatters — block invalid keystrokes
+  // (wrong characters + excessive length) as a first line of defense
+  // alongside the max-value checks in ValidationHelper.
 
-  // Beds / baths: no realistic listing needs more than 2 digits (max 50).
   static final bedsBathsFormatters = <TextInputFormatter>[
     FilteringTextInputFormatter.digitsOnly,
     LengthLimitingTextInputFormatter(2),
   ];
 
-  // Price (PKR): allow up to 12 digits total (covers up to ~999 billion).
   static final priceFormatters = <TextInputFormatter>[
     FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
     LengthLimitingTextInputFormatter(12),
   ];
 
-  // Area: allow up to 7 digits (covers up to 9,999,999 sq ft / marla / etc).
   static final areaFormatters = <TextInputFormatter>[
     FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
     LengthLimitingTextInputFormatter(7),
   ];
 
-  // Phone: digits and a single leading '+' only. Capped at 13 characters,
-  // which covers both accepted formats —
-  // 03001234567 (11 digits) and +923001234567 (13 characters incl. '+').
   static final phoneFormatters = <TextInputFormatter>[
     FilteringTextInputFormatter.allow(RegExp(r'[0-9+]')),
     LengthLimitingTextInputFormatter(13),
   ];
+
+  // 👇 NEW: floor / total floors — small whole numbers.
+  static final floorFormatters = <TextInputFormatter>[
+    FilteringTextInputFormatter.digitsOnly,
+    LengthLimitingTextInputFormatter(3),
+  ];
+
+  // 👇 NEW: year built — exactly 4 digits.
+  static final yearFormatters = <TextInputFormatter>[
+    FilteringTextInputFormatter.digitsOnly,
+    LengthLimitingTextInputFormatter(4),
+  ];
+
+  // 👇 NEW: zip code — exactly 5 digits.
+  static final zipFormatters = <TextInputFormatter>[
+    FilteringTextInputFormatter.digitsOnly,
+    LengthLimitingTextInputFormatter(5),
+  ];
+
+  // 👇 NEW: free-text fields with a generous but sane length cap.
+  static final shortTextFormatters = <TextInputFormatter>[
+    LengthLimitingTextInputFormatter(60),
+  ];
+
+  // Resolves the effective City/Province value: the preset selection, or
+  // whatever was typed manually if "Other" was chosen.
+  String get effectiveCity => selectedCity == kOtherOptionValue
+      ? cityOtherController.text.trim()
+      : (selectedCity ?? '');
+
+  String get effectiveProvince => selectedProvince == kOtherOptionValue
+      ? provinceOtherController.text.trim()
+      : (selectedProvince ?? '');
 
   // ── Submit ────────────────────────────────────────
   Future<Map<String, dynamic>> submit() async {
@@ -133,6 +288,20 @@ class AddListingController {
       "bathrooms": bathsController.text.trim(),
       "type": selectedType,
       "status": selectedStatus,
+
+      // 👇 NEW fields
+      "city": effectiveCity,
+      "province": effectiveProvince,
+      "neighborhood": neighborhoodController.text.trim(),
+      "zip_code": zipCodeController.text.trim(),
+      "floor": floorController.text.trim(),
+      "total_floors": totalFloorsController.text.trim(),
+      "parking_size": parkingSizeController.text.trim(),
+      "year_built": yearBuiltController.text.trim(),
+      "preferred_contact": preferredContact,
+      // Sent as a JSON string, same pattern already used for
+      // keep_existing_image_ids — parse server-side into the Json column.
+      "amenities": jsonEncode(selectedAmenities),
     };
 
     if (isEditing) {
