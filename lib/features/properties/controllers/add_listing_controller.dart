@@ -88,14 +88,35 @@ class AddListingController {
   // ── Input formatters ─────────────────────────────
   // These stay here (rather than in ValidationHelper) since they're
   // Flutter-specific TextInputFormatters, not validation logic — they
-  // block invalid keystrokes at input time, as a first line of defense
-  // alongside the validators in ValidationHelper.
-  static final wholeNumberFormatters = <TextInputFormatter>[
+  // block invalid *keystrokes* at input time (both wrong characters and
+  // excessive length), as a first line of defense alongside the max-value
+  // checks in ValidationHelper. Length caps are chosen generously — they
+  // just stop absurd digit counts, the real range check happens on submit.
+
+  // Beds / baths: no realistic listing needs more than 2 digits (max 50).
+  static final bedsBathsFormatters = <TextInputFormatter>[
     FilteringTextInputFormatter.digitsOnly,
+    LengthLimitingTextInputFormatter(2),
   ];
 
-  static final decimalNumberFormatters = <TextInputFormatter>[
+  // Price (PKR): allow up to 12 digits total (covers up to ~999 billion).
+  static final priceFormatters = <TextInputFormatter>[
     FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+    LengthLimitingTextInputFormatter(12),
+  ];
+
+  // Area: allow up to 7 digits (covers up to 9,999,999 sq ft / marla / etc).
+  static final areaFormatters = <TextInputFormatter>[
+    FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+    LengthLimitingTextInputFormatter(7),
+  ];
+
+  // Phone: digits and a single leading '+' only. Capped at 13 characters,
+  // which covers both accepted formats —
+  // 03001234567 (11 digits) and +923001234567 (13 characters incl. '+').
+  static final phoneFormatters = <TextInputFormatter>[
+    FilteringTextInputFormatter.allow(RegExp(r'[0-9+]')),
+    LengthLimitingTextInputFormatter(13),
   ];
 
   // ── Submit ────────────────────────────────────────

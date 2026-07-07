@@ -59,10 +59,12 @@ class ValidationHelper {
   }
 
   // ✨ Whole number check — for counts like beds/baths.
-  // Rejects empty values, non-numeric input, and negative numbers.
+  // Rejects empty values, non-numeric input, negative numbers, and
+  // anything above [max] (default 50 — no realistic listing needs more).
   static String? validateWholeNumber(
     String? value, {
     String fieldLabel = 'This field',
+    int max = 50,
   }) {
     if (value == null || value.trim().isEmpty) {
       return '$fieldLabel is required';
@@ -74,14 +76,20 @@ class ValidationHelper {
     if (n < 0) {
       return 'Must be 0 or more';
     }
+    if (n > max) {
+      return '$fieldLabel can\'t exceed $max';
+    }
     return null;
   }
 
   // ✨ Decimal-friendly number check — for price/area.
-  // Rejects empty values, non-numeric input, and zero/negative numbers.
+  // Rejects empty values, non-numeric input, zero/negative numbers, and
+  // anything above [max]. Caller supplies a sensible max per field, since
+  // "price" and "area" have very different realistic ranges.
   static String? validateDecimalNumber(
     String? value, {
     String fieldLabel = 'This field',
+    double max = 999999999,
   }) {
     if (value == null || value.trim().isEmpty) {
       return '$fieldLabel is required';
@@ -92,6 +100,9 @@ class ValidationHelper {
     }
     if (n <= 0) {
       return 'Must be greater than 0';
+    }
+    if (n > max) {
+      return '$fieldLabel is unrealistically large';
     }
     return null;
   }

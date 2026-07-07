@@ -107,6 +107,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             : null;
         _isLoading = false;
       });
+
+      // Sync the "My Properties" count with the server here too — not just
+      // when MyListingsScreen happens to be opened — so the metric card
+      // is correct the first time the user ever sees this screen.
+      ListingService.refreshMyListingsCount();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -411,7 +416,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const AddListingScreen()),
-            ),
+            ).then((_) => ListingService.refreshMyListingsCount()),
           ),
 
           // THE KEY FIX: Checking for 'agency' instead of 'agent'

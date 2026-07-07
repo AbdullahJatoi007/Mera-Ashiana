@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:mera_ashiana/core/theme/app_colors.dart';
 import '../../../core/network/endpoints.dart';
 import '../../../core/theme/app_colors_dark.dart';
@@ -287,6 +288,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 isDark: isDark,
                 yellow: yellow,
                 keyboardType: TextInputType.phone,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[0-9+]')),
+                  LengthLimitingTextInputFormatter(13),
+                ],
+                validator: ValidationHelper.validatePhone,
               ),
               const SizedBox(height: 40),
               SizedBox(
@@ -370,12 +376,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     required Color yellow,
     bool enabled = true,
     TextInputType? keyboardType,
+    List<TextInputFormatter>? inputFormatters,
     String? Function(String?)? validator,
   }) {
     return TextFormField(
       controller: controller,
       enabled: enabled,
       keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
       validator: validator,
       style: TextStyle(
         fontSize: 15,

@@ -176,14 +176,14 @@ class _AddListingScreenState extends State<AddListingScreen> {
                         keyboardType: const TextInputType.numberWithOptions(
                           decimal: true,
                         ),
-                        inputFormatters:
-                            AddListingController.decimalNumberFormatters,
+                        inputFormatters: AddListingController.priceFormatters,
                         isDark: isDark,
                         yellow: yellow,
                         validator: (v) =>
                             ValidationHelper.validateDecimalNumber(
                               v,
                               fieldLabel: loc.price,
+                              max: 999999999999, // ~999 billion PKR ceiling
                             ),
                       ),
                     ),
@@ -196,14 +196,14 @@ class _AddListingScreenState extends State<AddListingScreen> {
                         keyboardType: const TextInputType.numberWithOptions(
                           decimal: true,
                         ),
-                        inputFormatters:
-                            AddListingController.decimalNumberFormatters,
+                        inputFormatters: AddListingController.areaFormatters,
                         isDark: isDark,
                         yellow: yellow,
                         validator: (v) =>
                             ValidationHelper.validateDecimalNumber(
                               v,
                               fieldLabel: loc.area,
+                              max: 9999999,
                             ),
                       ),
                     ),
@@ -219,12 +219,13 @@ class _AddListingScreenState extends State<AddListingScreen> {
                         icon: Icons.king_bed_outlined,
                         keyboardType: TextInputType.number,
                         inputFormatters:
-                            AddListingController.wholeNumberFormatters,
+                            AddListingController.bedsBathsFormatters,
                         isDark: isDark,
                         yellow: yellow,
                         validator: (v) => ValidationHelper.validateWholeNumber(
                           v,
                           fieldLabel: loc.beds,
+                          max: 20,
                         ),
                       ),
                     ),
@@ -236,12 +237,13 @@ class _AddListingScreenState extends State<AddListingScreen> {
                         icon: Icons.bathtub_outlined,
                         keyboardType: TextInputType.number,
                         inputFormatters:
-                            AddListingController.wholeNumberFormatters,
+                            AddListingController.bedsBathsFormatters,
                         isDark: isDark,
                         yellow: yellow,
                         validator: (v) => ValidationHelper.validateWholeNumber(
                           v,
                           fieldLabel: loc.baths,
+                          max: 20,
                         ),
                       ),
                     ),
@@ -282,6 +284,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                   label: loc.phone,
                   icon: Icons.phone_iphone,
                   keyboardType: TextInputType.phone,
+                  inputFormatters: AddListingController.phoneFormatters,
                   isDark: isDark,
                   yellow: yellow,
                   validator: ValidationHelper.validatePhone,
