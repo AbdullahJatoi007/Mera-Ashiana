@@ -24,16 +24,24 @@ class Agency {
   });
 
   factory Agency.fromJson(Map<String, dynamic> json) {
+    String? rawLogo = json['logo'];
+    String? resolvedLogo;
+    if (rawLogo != null && rawLogo.isNotEmpty) {
+      resolvedLogo = rawLogo.startsWith('http')
+          ? rawLogo
+          : 'https://img.mera-ashiana.com/$rawLogo';
+    }
+
     return Agency(
       id: json['id'] ?? 0,
       agencyName: json['agency_name'] ?? '',
-      logo: json['logo'],
+      logo: resolvedLogo,
       description: json['description'],
       phone: json['phone'],
       email: json['email'] ?? '',
       address: json['address'],
       status: json['status'] ?? 'pending',
-      userId: json['user_id'] ?? 0,  // safely defaults to 0 when missing
+      userId: json['user_id'] ?? 0,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
           : null,

@@ -79,7 +79,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return;
     }
 
-    if (mounted) {
+    // Only show the full-screen spinner the very first time (no cached user
+    // yet). On repeat visits / pull-to-refresh, keep showing the existing UI
+    // (with its already-cached avatar) and refresh quietly in the background.
+    if (mounted && _user == null) {
       setState(() {
         _isLoading = true;
         _hasError = false;
@@ -108,7 +111,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _hasError = true;
+        // Only show the error view if we have nothing at all to display.
+        // If a cached user already exists, keep showing it instead of
+        // wiping the screen on a transient network error.
+        _hasError = _user == null;
         _errorMsg = "Failed to load profile. Please check your session.";
       });
     }
@@ -152,7 +158,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           padding: EdgeInsets.zero,
           physics: const AlwaysScrollableScrollPhysics(),
           children: [
-            if (_isLoading)
+            if (_isLoading && _user == null)
               SizedBox(
                 height: MediaQuery.of(context).size.height - kToolbarHeight,
                 child: const Center(
@@ -161,7 +167,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
               )
-            else if (_hasError)
+            else if (_hasError && _user == null)
               _buildErrorView()
             else if (_user == null)
               SizedBox(

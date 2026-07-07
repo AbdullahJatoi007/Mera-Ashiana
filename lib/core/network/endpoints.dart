@@ -24,6 +24,7 @@ class Endpoints {
   // wherever the web identity router is mounted. Defaulting to /auth/identity;
   // the commented line is the other likely option. A wrong base → 404.
   static const String _webIdentityBase = "$apiBase/auth/identity";
+
   // static const String _webIdentityBase = "$apiBase/auth/web/identity";
 
   static const String forgotPasswordSendOtp =
@@ -43,6 +44,7 @@ class Endpoints {
   // Under ───────── PROFILE ─────────
   static const String sendEmailOtp = "$apiBase/auth/profile/email/send-otp";
   static const String verifyEmailChange = "$apiBase/auth/profile/email/verify";
+
   // ⚠️ CONFIRM against the web identity router. Web googleAuth accepts `phone`.
   static const String webGoogleAuth = "$_webIdentityBase/google";
 
@@ -56,7 +58,6 @@ class Endpoints {
   static String deleteListing(int id) => "$apiBase/listings/$id";
 
   static String likeListing(int id) => "$apiBase/listings/$id/like";
-
 
   // ───────── AGENCY ─────────
   static const String agency = "$apiBase/agencies";

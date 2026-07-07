@@ -16,9 +16,6 @@ class User {
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
-    const String baseUrl = "https://api.mera-ashiana.com";
-
-    // Backend uses 'profile_pic' in the database/model
     String? rawPath = json['profile_pic'];
 
     return User(
@@ -28,7 +25,9 @@ class User {
       type: json['type'] ?? 'user',
       phone: json['phone'],
       profileImage: (rawPath != null && rawPath.isNotEmpty)
-          ? "$baseUrl$rawPath"
+          ? (rawPath.startsWith('http')
+                ? rawPath
+                : "https://img.mera-ashiana.com$rawPath")
           : null,
     );
   }

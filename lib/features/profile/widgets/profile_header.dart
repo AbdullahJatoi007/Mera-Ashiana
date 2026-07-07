@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:mera_ashiana/core/theme/app_colors.dart';
 import '../../../data/models/user_model.dart';
 
@@ -31,24 +32,33 @@ class ProfileHeader extends StatelessWidget {
               color: Colors.white24,
               shape: BoxShape.circle,
             ),
-            child: CircleAvatar(
-              radius: 38,
-              backgroundColor: AppColors.accentYellow,
-              backgroundImage: hasImage
-                  ? NetworkImage(user.profileImage!)
-                  : null,
-              child: !hasImage
-                  ? Text(
-                      user.username.isNotEmpty
-                          ? user.username[0].toUpperCase()
-                          : 'U',
-                      style: const TextStyle(
-                        fontSize: 28,
-                        color: AppColors.primaryNavy,
-                        fontWeight: FontWeight.bold,
+            child: ClipOval(
+              child: hasImage
+                  ? CachedNetworkImage(
+                imageUrl: user.profileImage!,
+                width: 76,
+                height: 76,
+                fit: BoxFit.cover,
+                // Shown while the image loads (first time only — cached after)
+                placeholder: (context, url) =>
+                    Container(
+                      width: 76,
+                      height: 76,
+                      color: AppColors.accentYellow,
+                      alignment: Alignment.center,
+                      child: const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppColors.primaryNavy,
+                        ),
                       ),
-                    )
-                  : null,
+                    ),
+                // Shown if the URL fails to load (bad path, deleted file, offline, etc.)
+                errorWidget: (context, url, error) => _buildInitialAvatar(),
+              )
+                  : _buildInitialAvatar(),
             ),
           ),
           const SizedBox(width: 20),
@@ -97,6 +107,23 @@ class ProfileHeader extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildInitialAvatar() {
+    return Container(
+      width: 76,
+      height: 76,
+      color: AppColors.accentYellow,
+      alignment: Alignment.center,
+      child: Text(
+        user.username.isNotEmpty ? user.username[0].toUpperCase() : 'U',
+        style: const TextStyle(
+          fontSize: 28,
+          color: AppColors.primaryNavy,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }

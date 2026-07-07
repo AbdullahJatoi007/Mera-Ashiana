@@ -1,6 +1,8 @@
 import 'dart:io';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:mera_ashiana/core/theme/app_colors.dart';
+import '../../../core/network/endpoints.dart';
 import '../../../core/theme/app_colors_dark.dart';
 import '../../../data/models/user_model.dart';
 import '../../../data/services/profile_service.dart';
@@ -39,6 +41,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         _nameController.text = user.username;
         _phoneController.text = user.phone ?? '';
         _emailController.text = user.email;
+        _networkImageUrl = user.profileImage;
         _networkImageUrl = user.profileImage;
         _isLoading = false;
       });
@@ -271,9 +274,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     onPressed: _handleEmailChangeRequest,
                     icon: Icon(Icons.edit_outlined, size: 16),
                     label: const Text("Change Email"),
-                    style: TextButton.styleFrom(
-                      foregroundColor: yellow,
-                    ),
+                    style: TextButton.styleFrom(foregroundColor: yellow),
                   ),
                 ],
               ),
@@ -312,25 +313,37 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   // ... (Keep your _buildAvatar and _buildModernField methods as they were)
   Widget _buildAvatar(bool isDark, Color yellow, Color navy) {
-    ImageProvider? imageProvider;
-    if (_localImage != null) {
-      imageProvider = FileImage(_localImage!);
-    } else if (_networkImageUrl != null) {
-      imageProvider = NetworkImage(_networkImageUrl!);
-    }
-
     return Center(
       child: Stack(
         children: [
-          CircleAvatar(
-            radius: 55,
-            backgroundColor: isDark
-                ? AppDarkColors.surface
-                : Colors.grey.shade200,
-            backgroundImage: imageProvider,
-            child: imageProvider == null
-                ? const Icon(Icons.person, size: 55)
-                : null,
+          Container(
+            width: 110,
+            height: 110,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: isDark ? AppDarkColors.surface : Colors.grey.shade200,
+            ),
+            child: ClipOval(
+              child: _localImage != null
+                  ? Image.file(_localImage!, fit: BoxFit.cover)
+                  : (_networkImageUrl != null
+                        ? CachedNetworkImage(
+                            imageUrl: _networkImageUrl!,
+                            fit: BoxFit.cover,
+                            placeholder: (context, url) => const Center(
+                              child: SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                            ),
+                            errorWidget: (context, url, error) =>
+                                const Icon(Icons.person, size: 55),
+                          )
+                        : const Icon(Icons.person, size: 55)),
+            ),
           ),
           Positioned(
             bottom: 0,

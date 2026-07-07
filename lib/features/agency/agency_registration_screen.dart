@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -231,22 +232,34 @@ class _RealEstateRegistrationScreenState
     return Center(
       child: Stack(
         children: [
-          CircleAvatar(
-            radius: 55,
-            backgroundColor: isDark
-                ? AppDarkColors.surface
-                : AppColors.borderGrey,
-            backgroundImage: _selectedLogo != null
-                ? FileImage(_selectedLogo!)
-                : (widget.agency?.logo != null
-                      ? NetworkImage(
-                              'https://api-staging.mera-ashiana.com/${widget.agency!.logo}',
-                            )
-                            as ImageProvider
-                      : null),
-            child: (_selectedLogo == null && widget.agency?.logo == null)
-                ? const Icon(Icons.store_rounded, size: 45)
-                : null,
+          Container(
+            width: 110,
+            height: 110,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: isDark ? AppDarkColors.surface : AppColors.borderGrey,
+            ),
+            child: ClipOval(
+              child: _selectedLogo != null
+                  ? Image.file(_selectedLogo!, fit: BoxFit.cover)
+                  : (widget.agency?.logo != null
+                        ? CachedNetworkImage(
+                            imageUrl: widget.agency!.logo!,
+                            fit: BoxFit.cover,
+                            placeholder: (context, url) => const Center(
+                              child: SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                            ),
+                            errorWidget: (context, url, error) =>
+                                const Icon(Icons.store_rounded, size: 45),
+                          )
+                        : const Icon(Icons.store_rounded, size: 45)),
+            ),
           ),
           Positioned(
             bottom: 0,
