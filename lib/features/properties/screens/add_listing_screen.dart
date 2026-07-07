@@ -1,11 +1,14 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:mera_ashiana/core/l10n/app_localizations.dart';
 import 'package:mera_ashiana/core/theme/app_colors.dart';
 import '../../../core/theme/app_colors_dark.dart';
 import '../../../data/models/listing_model.dart';
-import '../../../data/services/listing_service.dart';
+import '../../../shared/helpers/validation_helper.dart';
+import '../controllers/add_listing_controller.dart';
+import '../widgets/image_picker_section.dart';
+import '../widgets/listing_dropdown.dart';
+import '../widgets/listing_section.dart';
+import '../widgets/listing_text_field.dart';
 
 class AddListingScreen extends StatefulWidget {
   final Listing? listing; // null = create, non-null = edit
@@ -17,94 +20,25 @@ class AddListingScreen extends StatefulWidget {
 
 class _AddListingScreenState extends State<AddListingScreen> {
   final _formKey = GlobalKey<FormState>();
-  final ImagePicker _picker = ImagePicker();
+  late final AddListingController _controller;
   bool _isSubmitting = false;
-
-  // Image State
-  final List<File> _selectedImages = []; // New local files
-  List<String> _existingImageUrls = []; // URLs from server (for display)
-  List<int> _keepImageIds = []; // IDs to send back to server
-
-  // Dropdown State
-  String _selectedType = 'house';
-  String _selectedStatus = 'sale';
-
-  final List<Map<String, String>> _propertyTypes = [
-    {'value': 'house', 'label': 'House'},
-    {'value': 'apartment', 'label': 'Apartment'},
-    {'value': 'plot', 'label': 'Plot'},
-    {'value': 'commercial', 'label': 'Commercial'},
-    {'value': 'other', 'label': 'Other'},
-  ];
-
-  final List<Map<String, String>> _propertyStatuses = [
-    {'value': 'sale', 'label': 'For Sale'},
-    {'value': 'rent', 'label': 'For Rent'},
-  ];
-
-  // Controllers
-  final _titleController = TextEditingController();
-  final _priceController = TextEditingController();
-  final _locationController = TextEditingController();
-  final _descController = TextEditingController();
-  final _phoneController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _areaController = TextEditingController();
-  final _bedsController = TextEditingController();
-  final _bathsController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    final l = widget.listing;
-    if (l != null) {
-      _titleController.text = l.title;
-      _priceController.text = l.price.toStringAsFixed(0);
-      _locationController.text = l.location;
-      _descController.text = l.description;
-      _phoneController.text = l.contactPhone ?? '';
-      _emailController.text = l.contactEmail ?? '';
-      _areaController.text = l.area ?? '';
-      _bedsController.text = l.bedrooms.toString();
-      _bathsController.text = l.bathrooms.toString();
-      _selectedType = l.type;
-      _selectedStatus = l.status;
-
-      // Load existing images (Assuming the backend/model provides image objects with IDs for tracking)
-      // If your 'images' list is just strings, we map them here.
-      _existingImageUrls = List<String>.from(l.images);
-
-      // Note: If your backend needs specific IDs to keep,
-      // you would ideally have a List<ListingImage> in your model.
-      // For now, we'll treat them as existing based on index or URL if necessary.
-    }
+    _controller = AddListingController(existingListing: widget.listing);
   }
 
   @override
   void dispose() {
-    for (var c in [
-      _titleController,
-      _priceController,
-      _locationController,
-      _descController,
-      _phoneController,
-      _emailController,
-      _areaController,
-      _bedsController,
-      _bathsController,
-    ]) {
-      c.dispose();
-    }
+    _controller.dispose();
     super.dispose();
   }
 
-  Future<void> _submitData(AppLocalizations loc) async {
+  Future<void> _handleSubmit(AppLocalizations loc) async {
     if (!_formKey.currentState!.validate()) return;
 
-    final isEditing = widget.listing != null;
-
-    // Requirement: Must have at least one image (either existing or new)
-    if (!isEditing && _selectedImages.isEmpty) {
+    if (!_controller.isEditing && _controller.selectedImages.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(loc.photoError),
@@ -116,43 +50,15 @@ class _AddListingScreenState extends State<AddListingScreen> {
 
     setState(() => _isSubmitting = true);
     try {
-      final data = {
-        "title": _titleController.text.trim(),
-        "price": _priceController.text.trim(),
-        "location": _locationController.text.trim(),
-        "description": _descController.text.trim(),
-        "contact_phone": _phoneController.text.trim(),
-        "contact_email": _emailController.text.trim(),
-        "area": _areaController.text.trim(),
-        "bedrooms": _bedsController.text.trim(),
-        "bathrooms": _bathsController.text.trim(),
-        "type": _selectedType,
-        "status": _selectedStatus,
-      };
-
-      Map<String, dynamic> result;
-
-      if (isEditing) {
-        result = await ListingService.updateListing(
-          id: widget.listing!.id,
-          data: data,
-          newImageFiles: _selectedImages,
-          // If your backend tracks images by URL or Index, adjust this list:
-          keepExistingImageIds: _keepImageIds,
-        );
-      } else {
-        result = await ListingService.createListing(
-          data: data,
-          imageFiles: _selectedImages,
-        );
-      }
-
+      final result = await _controller.submit();
       if (!mounted) return;
 
       if (result['success'] == true) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(isEditing ? "Listing updated!" : "Listing posted!"),
+            content: Text(
+              _controller.isEditing ? "Listing updated!" : "Listing posted!",
+            ),
             backgroundColor: Colors.green,
           ),
         );
@@ -181,16 +87,14 @@ class _AddListingScreenState extends State<AddListingScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final Color yellow = isDark
-        ? AppDarkColors.accentYellow
-        : AppColors.accentYellow;
+    final yellow = isDark ? AppDarkColors.accentYellow : AppColors.accentYellow;
     final loc = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: isDark ? AppDarkColors.background : AppColors.background,
       appBar: AppBar(
         title: Text(
-          widget.listing != null ? 'Edit Property' : loc.postProperty,
+          _controller.isEditing ? 'Edit Property' : loc.postProperty,
           style: const TextStyle(
             fontWeight: FontWeight.bold,
             color: Colors.white,
@@ -204,145 +108,199 @@ class _AddListingScreenState extends State<AddListingScreen> {
         child: ListView(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
           children: [
-            _buildImagePicker(isDark, yellow, loc),
+            ImagePickerSection(
+              existingImageUrls: _controller.existingImageUrls,
+              selectedImages: _controller.selectedImages,
+              isDark: isDark,
+              accent: yellow,
+              loc: loc,
+              onImagesPicked: (files) =>
+                  setState(() => _controller.addImages(files)),
+              onRemoveNew: (i) => setState(() => _controller.removeNewImage(i)),
+              onRemoveExisting: (i) =>
+                  setState(() => _controller.removeExistingImage(i)),
+            ),
             const SizedBox(height: 20),
-            _buildSection(loc.generalDetails, isDark, [
-              _buildModernField(
-                controller: _titleController,
-                label: loc.title,
-                icon: Icons.title,
-                errorMsg: loc.requiredError,
-                isDark: isDark,
-                yellow: yellow,
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildDropdown(
-                      label: 'Type',
-                      icon: Icons.home_work_outlined,
-                      value: _selectedType,
-                      items: _propertyTypes,
-                      onChanged: (v) => setState(() => _selectedType = v!),
-                      isDark: isDark,
-                      yellow: yellow,
+            ListingSection(
+              title: loc.generalDetails,
+              isDark: isDark,
+              children: [
+                ListingTextField(
+                  controller: _controller.titleController,
+                  label: loc.title,
+                  icon: Icons.title,
+                  isDark: isDark,
+                  yellow: yellow,
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? loc.requiredError
+                      : null,
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ListingDropdown(
+                        label: 'Type',
+                        icon: Icons.home_work_outlined,
+                        value: _controller.selectedType,
+                        items: AddListingController.propertyTypes,
+                        onChanged: (v) =>
+                            setState(() => _controller.selectedType = v!),
+                        isDark: isDark,
+                        yellow: yellow,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildDropdown(
-                      label: 'Purpose',
-                      icon: Icons.sell_outlined,
-                      value: _selectedStatus,
-                      items: _propertyStatuses,
-                      onChanged: (v) => setState(() => _selectedStatus = v!),
-                      isDark: isDark,
-                      yellow: yellow,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ListingDropdown(
+                        label: 'Purpose',
+                        icon: Icons.sell_outlined,
+                        value: _controller.selectedStatus,
+                        items: AddListingController.propertyStatuses,
+                        onChanged: (v) =>
+                            setState(() => _controller.selectedStatus = v!),
+                        isDark: isDark,
+                        yellow: yellow,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildModernField(
-                      controller: _priceController,
-                      label: loc.price,
-                      icon: Icons.payments_outlined,
-                      isNumber: true,
-                      errorMsg: loc.requiredError,
-                      isDark: isDark,
-                      yellow: yellow,
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ListingTextField(
+                        controller: _controller.priceController,
+                        label: loc.price,
+                        icon: Icons.payments_outlined,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        inputFormatters:
+                            AddListingController.decimalNumberFormatters,
+                        isDark: isDark,
+                        yellow: yellow,
+                        validator: (v) =>
+                            ValidationHelper.validateDecimalNumber(
+                              v,
+                              fieldLabel: loc.price,
+                            ),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildModernField(
-                      controller: _areaController,
-                      label: loc.area,
-                      icon: Icons.straighten,
-                      errorMsg: loc.requiredError,
-                      isDark: isDark,
-                      yellow: yellow,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ListingTextField(
+                        controller: _controller.areaController,
+                        label: loc.area,
+                        icon: Icons.straighten,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        inputFormatters:
+                            AddListingController.decimalNumberFormatters,
+                        isDark: isDark,
+                        yellow: yellow,
+                        validator: (v) =>
+                            ValidationHelper.validateDecimalNumber(
+                              v,
+                              fieldLabel: loc.area,
+                            ),
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildModernField(
-                      controller: _bedsController,
-                      label: loc.beds,
-                      icon: Icons.king_bed_outlined,
-                      isNumber: true,
-                      errorMsg: loc.requiredError,
-                      isDark: isDark,
-                      yellow: yellow,
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ListingTextField(
+                        controller: _controller.bedsController,
+                        label: loc.beds,
+                        icon: Icons.king_bed_outlined,
+                        keyboardType: TextInputType.number,
+                        inputFormatters:
+                            AddListingController.wholeNumberFormatters,
+                        isDark: isDark,
+                        yellow: yellow,
+                        validator: (v) => ValidationHelper.validateWholeNumber(
+                          v,
+                          fieldLabel: loc.beds,
+                        ),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildModernField(
-                      controller: _bathsController,
-                      label: loc.baths,
-                      icon: Icons.bathtub_outlined,
-                      isNumber: true,
-                      errorMsg: loc.requiredError,
-                      isDark: isDark,
-                      yellow: yellow,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ListingTextField(
+                        controller: _controller.bathsController,
+                        label: loc.baths,
+                        icon: Icons.bathtub_outlined,
+                        keyboardType: TextInputType.number,
+                        inputFormatters:
+                            AddListingController.wholeNumberFormatters,
+                        isDark: isDark,
+                        yellow: yellow,
+                        validator: (v) => ValidationHelper.validateWholeNumber(
+                          v,
+                          fieldLabel: loc.baths,
+                        ),
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              _buildModernField(
-                controller: _locationController,
-                label: loc.location,
-                icon: Icons.place_outlined,
-                errorMsg: loc.requiredError,
-                isDark: isDark,
-                yellow: yellow,
-              ),
-              const SizedBox(height: 12),
-              _buildModernField(
-                controller: _descController,
-                label: loc.description,
-                icon: Icons.notes,
-                maxLines: 3,
-                errorMsg: loc.requiredError,
-                isDark: isDark,
-                yellow: yellow,
-              ),
-            ]),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                ListingTextField(
+                  controller: _controller.locationController,
+                  label: loc.location,
+                  icon: Icons.place_outlined,
+                  isDark: isDark,
+                  yellow: yellow,
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? loc.requiredError
+                      : null,
+                ),
+                const SizedBox(height: 12),
+                ListingTextField(
+                  controller: _controller.descController,
+                  label: loc.description,
+                  icon: Icons.notes,
+                  maxLines: 3,
+                  isDark: isDark,
+                  yellow: yellow,
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? loc.requiredError
+                      : null,
+                ),
+              ],
+            ),
             const SizedBox(height: 20),
-            _buildSection(loc.contactInformation, isDark, [
-              _buildModernField(
-                controller: _phoneController,
-                label: loc.phone,
-                icon: Icons.phone_iphone,
-                isNumber: true,
-                errorMsg: loc.requiredError,
-                isDark: isDark,
-                yellow: yellow,
-              ),
-              const SizedBox(height: 12),
-              _buildModernField(
-                controller: _emailController,
-                label: loc.email,
-                icon: Icons.email_outlined,
-                isEmail: true,
-                errorMsg: loc.requiredError,
-                isDark: isDark,
-                yellow: yellow,
-              ),
-            ]),
+            ListingSection(
+              title: loc.contactInformation,
+              isDark: isDark,
+              children: [
+                ListingTextField(
+                  controller: _controller.phoneController,
+                  label: loc.phone,
+                  icon: Icons.phone_iphone,
+                  keyboardType: TextInputType.phone,
+                  isDark: isDark,
+                  yellow: yellow,
+                  validator: ValidationHelper.validatePhone,
+                ),
+                const SizedBox(height: 12),
+                ListingTextField(
+                  controller: _controller.emailController,
+                  label: loc.email,
+                  icon: Icons.email_outlined,
+                  keyboardType: TextInputType.emailAddress,
+                  isDark: isDark,
+                  yellow: yellow,
+                  validator: ValidationHelper.validateEmail,
+                ),
+              ],
+            ),
             const SizedBox(height: 32),
             ElevatedButton(
-              onPressed: _isSubmitting ? null : () => _submitData(loc),
+              onPressed: _isSubmitting ? null : () => _handleSubmit(loc),
               style: ElevatedButton.styleFrom(
                 minimumSize: const Size(double.infinity, 50),
                 backgroundColor: yellow,
@@ -361,7 +319,7 @@ class _AddListingScreenState extends State<AddListingScreen> {
                       ),
                     )
                   : Text(
-                      widget.listing != null
+                      _controller.isEditing
                           ? 'SAVE CHANGES'
                           : loc.submitAd.toUpperCase(),
                       style: const TextStyle(fontWeight: FontWeight.bold),
@@ -371,292 +329,6 @@ class _AddListingScreenState extends State<AddListingScreen> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildImagePicker(bool isDark, Color accent, AppLocalizations loc) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 8),
-          child: Text(
-            loc.propertyPhotos,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white70 : AppColors.primaryNavy,
-            ),
-          ),
-        ),
-        SizedBox(
-          height: 90,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            children: [
-              // 1. Existing network images
-              ..._existingImageUrls.asMap().entries.map((entry) {
-                return _buildExistingImageThumbnail(entry.key, entry.value);
-              }),
-              // 2. New local images
-              ..._selectedImages.asMap().entries.map((entry) {
-                return _buildImageThumbnail(entry.key);
-              }),
-              // 3. Add Button
-              _buildAddImageButton(isDark, accent, loc),
-            ],
-          ),
-        ),
-        if (_existingImageUrls.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 6, left: 4),
-            child: Text(
-              'Tap × to remove saved images',
-              style: TextStyle(
-                fontSize: 11,
-                color: isDark ? Colors.white38 : Colors.black38,
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildExistingImageThumbnail(int index, String url) {
-    return Container(
-      width: 90,
-      margin: const EdgeInsets.only(right: 10),
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                url,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const Icon(Icons.broken_image),
-              ),
-            ),
-          ),
-          Positioned(
-            top: 4,
-            right: 4,
-            child: GestureDetector(
-              onTap: () => setState(() => _existingImageUrls.removeAt(index)),
-              child: Container(
-                padding: const EdgeInsets.all(2),
-                decoration: const BoxDecoration(
-                  color: Colors.black54,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.close, color: Colors.white, size: 14),
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: 4,
-            left: 4,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.black54,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: const Text(
-                'saved',
-                style: TextStyle(color: Colors.white, fontSize: 8),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildImageThumbnail(int index) {
-    return Container(
-      width: 90,
-      margin: const EdgeInsets.only(right: 10),
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.file(_selectedImages[index], fit: BoxFit.cover),
-            ),
-          ),
-          Positioned(
-            top: 4,
-            right: 4,
-            child: GestureDetector(
-              onTap: () => setState(() => _selectedImages.removeAt(index)),
-              child: Container(
-                padding: const EdgeInsets.all(2),
-                decoration: const BoxDecoration(
-                  color: Colors.black54,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.close, color: Colors.white, size: 14),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAddImageButton(bool isDark, Color accent, AppLocalizations loc) {
-    return GestureDetector(
-      onTap: () async {
-        final pics = await _picker.pickMultiImage();
-        if (pics.isNotEmpty)
-          setState(() => _selectedImages.addAll(pics.map((e) => File(e.path))));
-      },
-      child: Container(
-        width: 90,
-        decoration: BoxDecoration(
-          color: isDark ? AppDarkColors.surface : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isDark ? Colors.white10 : AppColors.borderGrey,
-          ),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.add_a_photo_outlined, color: accent, size: 24),
-            const SizedBox(height: 4),
-            Text(
-              loc.add,
-              style: TextStyle(
-                fontSize: 11,
-                color: isDark ? Colors.white60 : Colors.black54,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDropdown({
-    required String label,
-    required IconData icon,
-    required String value,
-    required List<Map<String, String>> items,
-    required ValueChanged<String?> onChanged,
-    required bool isDark,
-    required Color yellow,
-  }) {
-    return DropdownButtonFormField<String>(
-      value: value,
-      onChanged: onChanged,
-      dropdownColor: isDark ? AppDarkColors.surface : Colors.white,
-      style: TextStyle(
-        fontSize: 14,
-        color: isDark ? Colors.white : AppColors.textDark,
-      ),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: TextStyle(
-          fontSize: 13,
-          color: isDark ? Colors.white60 : Colors.black54,
-        ),
-        prefixIcon: Icon(icon, color: yellow, size: 20),
-        filled: true,
-        fillColor: isDark ? AppDarkColors.surface : Colors.white,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 12,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: isDark ? Colors.white10 : AppColors.borderGrey,
-          ),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: yellow, width: 1.5),
-        ),
-      ),
-      items: items
-          .map(
-            (item) => DropdownMenuItem(
-              value: item['value'],
-              child: Text(item['label']!),
-            ),
-          )
-          .toList(),
-    );
-  }
-
-  Widget _buildSection(String title, bool isDark, List<Widget> children) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 8),
-          child: Text(
-            title,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white70 : AppColors.primaryNavy,
-            ),
-          ),
-        ),
-        ...children,
-      ],
-    );
-  }
-
-  Widget _buildModernField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    required String errorMsg,
-    required bool isDark,
-    required Color yellow,
-    bool isNumber = false,
-    bool isEmail = false,
-    int maxLines = 1,
-  }) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: isNumber
-          ? TextInputType.number
-          : (isEmail ? TextInputType.emailAddress : TextInputType.text),
-      maxLines: maxLines,
-      style: TextStyle(
-        fontSize: 14,
-        color: isDark ? Colors.white : AppColors.textDark,
-      ),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: TextStyle(
-          fontSize: 13,
-          color: isDark ? Colors.white60 : Colors.black54,
-        ),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 12,
-        ),
-        prefixIcon: Icon(icon, color: yellow, size: 20),
-        filled: true,
-        fillColor: isDark ? AppDarkColors.surface : Colors.white,
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: isDark ? Colors.white10 : AppColors.borderGrey,
-          ),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: yellow, width: 1.5),
-        ),
-      ),
-      validator: (v) => (v == null || v.trim().isEmpty) ? errorMsg : null,
     );
   }
 }
