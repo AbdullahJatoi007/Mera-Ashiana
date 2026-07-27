@@ -45,9 +45,6 @@ class Endpoints {
   static const String sendEmailOtp = "$apiBase/auth/profile/email/send-otp";
   static const String verifyEmailChange = "$apiBase/auth/profile/email/verify";
 
-  // ⚠️ CONFIRM against the web identity router. Web googleAuth accepts `phone`.
-  static const String webGoogleAuth = "$_webIdentityBase/google";
-
   // ───────── LISTINGS ─────────
   static const String listings = "$apiBase/listings";
   static const String myListings = "$apiBase/listings/me";

@@ -73,29 +73,20 @@ class AuthController {
     }
   }
 
-  /// [mode] is optional and forwarded to the backend:
-  ///   - null (default) -> finds or creates the Google account (one-button flow).
-  ///   - 'login'        -> backend returns "No account found..." instead of
-  ///                       auto-creating; use this if you add a Login-only
-  ///                       Google button.
-  ///   - 'register'     -> explicit register intent (same as null on the backend).
-  /// [mode] is optional and forwarded to the backend:
-  ///   - null (default) -> finds or creates the Google account.
-  ///   - 'login'        -> login only.
-  ///   - 'register'     -> register only.
+  /// One Google button: try login with the Google ID token, and if no account
+  /// exists yet, collect role + phone and finish registration on the same
+  /// mobile endpoint.
   static Future<void> google(
     BuildContext context,
     VoidCallback onSuccess,
-    Function(bool) setLoading, {
-    bool isAgent = false,
-    String? mode,
-  }) async {
+    Function(bool) setLoading,
+  ) async {
     setLoading(true);
 
     try {
       debugPrint('🟢 [GOOGLE] button tapped — starting sign-in');
 
-      final result = await GoogleLoginService.startGoogleSignIn(mode: mode);
+      final result = await GoogleLoginService.startGoogleSignIn();
 
       // Existing account → login success
       if (result.loggedIn) {
@@ -121,7 +112,7 @@ class AuthController {
         }
 
         await GoogleLoginService.completeGoogleRegistration(
-          googleAccessToken: result.googleAccessToken!,
+          idToken: result.idToken!,
           role: reg.$1, // 'user' | 'agency'
           phone: reg.$2,
         );

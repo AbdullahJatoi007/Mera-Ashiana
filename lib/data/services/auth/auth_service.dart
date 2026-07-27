@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:mera_ashiana/core/network/api_client.dart';
 import 'package:mera_ashiana/data/services/auth/secure_storage_service.dart';
+import 'package:mera_ashiana/data/services/google_login_service.dart';
 import '../../../core/network/endpoints.dart';
 
 class AuthService {
@@ -174,5 +175,8 @@ class AuthService {
 
     await SecureStorageService.delete(key: 'access_token');
     await SecureStorageService.delete(key: 'refresh_token');
+
+    // Drop the Google session too, so the account picker reappears next login.
+    await GoogleLoginService.signOut();
   }
 }

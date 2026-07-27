@@ -50,3 +50,8 @@ android/key.properties
 *.properties
 # App secrets
 lib/core/config/secrets.dart
+
+
+
+#claude 
+/claude
