@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart'; // Added for ScrollDirection
-import 'package:mera_ashiana/features/properties/screens/properties_screen.dart';
+import 'package:mera_ashiana/controllers/home_scroll_snap_mixin.dart';
 import 'package:mera_ashiana/data/models/listing_model.dart';
+import 'package:mera_ashiana/data/models/property_category.dart';
+import 'package:mera_ashiana/features/properties/screens/properties_screen.dart';
 import 'package:mera_ashiana/features/home/widgets/home_top_section.dart';
+import 'package:mera_ashiana/features/home/widgets/category_list.dart';
+import 'package:mera_ashiana/features/home/widgets/section_header.dart';
+import 'package:mera_ashiana/features/home/widgets/home_loading_view.dart';
+import 'package:mera_ashiana/features/home/widgets/home_error_view.dart';
+import 'package:mera_ashiana/features/home/widgets/recently_added_horizontal.dart';
+import 'package:mera_ashiana/features/properties/widgets/property_list_item.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_colors_dark.dart';
 import '../../../data/services/property_service.dart';
-import '../widgets/category_list.dart';
-import '../../properties/widgets/property_list_item.dart';
-import '../widgets/recently_added_horizontal.dart';
+import 'package:mera_ashiana/data/models/property_category.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -17,66 +22,29 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
-  // ── State ────────────────────────────────────────────────────────────────────
+class _HomeScreenState extends State<HomeScreen> with HomeScrollSnapMixin {
   String _selectedOption = 'BUY';
   int _selectedCategoryIndex = 0;
   bool _isLoading = true;
   bool _hasError = false;
+  bool _isFetchingMore = false;
+  bool _hasMorePages = true;
+  int _currentPage = 1;
   List<Listing> _listings = [];
 
-  final ScrollController _scrollController = ScrollController();
+  static const int _pageSize = 30;
+  static const int _minListingsPerCategory = 20;
+  static const int _maxPagesToFetch =
+      6; // safety cap, avoids unbounded fetching
 
-  final List<Map<String, dynamic>> _categories = const [
-    {'name': 'All', 'icon': Icons.grid_view_rounded},
-    {'name': 'House', 'icon': Icons.home_rounded},
-    {'name': 'Apartment', 'icon': Icons.apartment_rounded},
-    {'name': 'Plot', 'icon': Icons.landscape_rounded},
-    {'name': 'Commercial', 'icon': Icons.storefront_rounded},
-  ];
+  final List<PropertyCategory> _categories = PropertyCategory.all;
 
-  // The full collapsible range of the header (content height only, not status bar)
-  double get _snapRange => 95.0;
-
-  // ── Lifecycle ────────────────────────────────────────────────────────────────
   @override
   void initState() {
     super.initState();
     _fetchProperties();
   }
 
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  // ── Snap Logic ───────────────────────────────────────────────────────────────
-  void _handleSnap() {
-    if (!_scrollController.hasClients) return;
-
-    // Use a slight delay so we don't fight Flutter's internal scroll momentum physics
-    Future.delayed(const Duration(milliseconds: 50), () {
-      if (!mounted || !_scrollController.hasClients) return;
-
-      final double offset = _scrollController.offset;
-
-      // Already at a settled position — nothing to do
-      if (offset <= 0.0 || offset >= _snapRange) return;
-
-      // Snap to whichever extreme is closer
-      final double target = offset > (_snapRange / 2.0) ? _snapRange : 0.0;
-
-      // Ensure we aren't already animating
-      _scrollController.animateTo(
-        target,
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOutCubic,
-      );
-    });
-  }
-
-  // ── Filtering ────────────────────────────────────────────────────────────────
   List<Listing> get _filteredListings {
     final String targetPurpose = _selectedOption == 'BUY' ? 'sale' : 'rent';
 
@@ -84,58 +52,107 @@ class _HomeScreenState extends State<HomeScreen> {
         .where((l) => (l.status ?? '').toLowerCase() == targetPurpose)
         .toList();
 
-    if (_selectedCategoryIndex == 0) return byPurpose;
-
-    final String categoryName =
-        _categories[_selectedCategoryIndex]['name'] as String;
-
-    return byPurpose
-        .where(
-          (l) => (l.type ?? '').toLowerCase() == categoryName.toLowerCase(),
-        )
-        .toList();
-  }
-
-  // ── Actions ──────────────────────────────────────────────────────────────────
-  void _updateSearchOption(String value) {
-    if (_selectedOption == value) return;
-    setState(() => _selectedOption = value);
-
-    if (_scrollController.hasClients) {
-      _scrollController.animateTo(
-        0,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOutQuad,
-      );
-    }
+    final PropertyCategory selectedCategory =
+        _categories[_selectedCategoryIndex];
+    return byPurpose.where((l) => selectedCategory.matches(l.type)).toList();
   }
 
   Future<void> _fetchProperties({bool isRefresh = false}) async {
     if (!isRefresh) setState(() => _isLoading = true);
+    _currentPage = 1;
+    _hasMorePages = true;
 
     try {
       final listings = await PropertyService.fetchProperties(
-        page: 1,
-        limit: 30,
+        page: _currentPage,
+        limit: _pageSize,
       );
-
       if (!mounted) return;
 
       setState(() {
         _listings = listings;
         _isLoading = false;
         _hasError = false;
+        _hasMorePages = listings.length == _pageSize;
       });
+
+      // Top up if the currently selected category is under-filled
+      await _ensureMinimumListingsForSelectedCategory();
     } catch (_) {
       if (!mounted) return;
-
       setState(() {
         _hasError = true;
         _isLoading = false;
       });
     }
   }
-  // ── Build ────────────────────────────────────────────────────────────────────
+
+  /// Keeps fetching subsequent pages (appending to _listings) until the
+  /// currently selected category has at least [_minListingsPerCategory]
+  /// matches, the backend has no more pages, or the safety cap is hit.
+  Future<void> _ensureMinimumListingsForSelectedCategory() async {
+    if (_isFetchingMore) return;
+
+    while (_hasMorePages &&
+        _currentPage < _maxPagesToFetch &&
+        _filteredListings.length < _minListingsPerCategory) {
+      setState(() => _isFetchingMore = true);
+
+      try {
+        final nextPage = _currentPage + 1;
+        final more = await PropertyService.fetchProperties(
+          page: nextPage,
+          limit: _pageSize,
+        );
+
+        if (!mounted) return;
+
+        setState(() {
+          _currentPage = nextPage;
+          _listings = [..._listings, ...more];
+          _hasMorePages = more.length == _pageSize;
+        });
+      } catch (_) {
+        // Stop trying silently — whatever we already have will just be shown.
+        break;
+      }
+    }
+
+    if (mounted) setState(() => _isFetchingMore = false);
+  }
+
+  void _onCategorySelected(int index) {
+    setState(() => _selectedCategoryIndex = index);
+    _ensureMinimumListingsForSelectedCategory();
+  }
+
+  void _updateSearchOption(String value) {
+    if (_selectedOption == value) return;
+    setState(() => _selectedOption = value);
+
+    if (scrollController.hasClients) {
+      scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutQuad,
+      );
+    }
+
+    _ensureMinimumListingsForSelectedCategory();
+  }
+
+  void _pushPropertiesScreen({
+    required List<Listing> listings,
+    required String title,
+  }) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PropertiesScreen(listings: listings, title: title),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
@@ -145,67 +162,21 @@ class _HomeScreenState extends State<HomeScreen> {
         ? AppDarkColors.background
         : AppColors.background;
 
-    if (_isLoading) {
-      return Scaffold(
+    if (_isLoading) return HomeLoadingView(backgroundColor: scaffoldBg);
+    if (_hasError) {
+      return HomeErrorView(
         backgroundColor: scaffoldBg,
-        body: const Center(
-          child: CircularProgressIndicator(color: AppColors.accentYellow),
-        ),
+        onRetry: _fetchProperties,
       );
     }
 
-    if (_hasError) {
-      return Scaffold(
-        backgroundColor: scaffoldBg,
-        // ... (Error UI remains unchanged)
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  Icons.wifi_off_rounded,
-                  size: 64,
-                  color: Colors.grey,
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Check your connection and try again',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 16),
-                ),
-                const SizedBox(height: 20),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.accentYellow,
-                    foregroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 32,
-                      vertical: 12,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  onPressed: _fetchProperties,
-                  child: const Text(
-                    'Retry',
-                    style: TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
+    final PropertyCategory selectedCategory =
+        _categories[_selectedCategoryIndex];
 
     return Scaffold(
       backgroundColor: scaffoldBg,
       body: Stack(
         children: [
-          // Navy blue background fix for iOS/Android overscroll bouncing
           Positioned(
             top: 0,
             left: 0,
@@ -213,25 +184,13 @@ class _HomeScreenState extends State<HomeScreen> {
             height: statusBarHeight + 100,
             child: Container(color: scaffoldBg),
           ),
-
           NotificationListener<ScrollNotification>(
-            onNotification: (ScrollNotification notification) {
-              // Trigger snap when scrolling comes to a complete stop
-              if (notification is ScrollEndNotification) {
-                _handleSnap();
-              }
-              // Trigger snap when user lifts their finger (idle direction)
-              else if (notification is UserScrollNotification &&
-                  notification.direction == ScrollDirection.idle) {
-                _handleSnap();
-              }
-              return false; // Allow events to bubble up to RefreshIndicator
-            },
+            onNotification: handleScrollNotification,
             child: RefreshIndicator(
               color: AppColors.accentYellow,
               onRefresh: () => _fetchProperties(isRefresh: true),
               child: CustomScrollView(
-                controller: _scrollController,
+                controller: scrollController,
                 physics: const BouncingScrollPhysics(
                   parent: AlwaysScrollableScrollPhysics(),
                 ),
@@ -241,23 +200,18 @@ class _HomeScreenState extends State<HomeScreen> {
                     statusBarHeight: statusBarHeight,
                     onOptionSelected: _updateSearchOption,
                   ),
-
-                  // Category chips
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.only(top: 8),
                       child: CategoryList(
                         categories: _categories,
                         selectedIndex: _selectedCategoryIndex,
-                        onSelected: (index) =>
-                            setState(() => _selectedCategoryIndex = index),
+                        onSelected: _onCategorySelected,
                       ),
                     ),
                   ),
-
-                  // Recently Added
                   SliverToBoxAdapter(
-                    child: _SectionHeader(
+                    child: SectionHeader(
                       title: 'Recently Added',
                       theme: theme,
                       onSeeAll: () => _pushPropertiesScreen(
@@ -273,22 +227,16 @@ class _HomeScreenState extends State<HomeScreen> {
                       isDark: isDark,
                     ),
                   ),
-
-                  // Listings header
                   SliverToBoxAdapter(
-                    child: _SectionHeader(
-                      title:
-                          '${_categories[_selectedCategoryIndex]['name']} Listings',
+                    child: SectionHeader(
+                      title: '${selectedCategory.label} Listings',
                       theme: theme,
                       onSeeAll: () => _pushPropertiesScreen(
                         listings: _filteredListings,
-                        title:
-                            '${_categories[_selectedCategoryIndex]['name']} Properties',
+                        title: '${selectedCategory.label} Properties',
                       ),
                     ),
                   ),
-
-                  // Vertical property list
                   SliverPadding(
                     padding: const EdgeInsets.only(bottom: 30),
                     sliver: _filteredListings.isEmpty
@@ -311,73 +259,21 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           ),
                   ),
+                  if (_isFetchingMore)
+                    const SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        child: Center(
+                          child: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _pushPropertiesScreen({
-    required List<Listing> listings,
-    required String title,
-  }) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => PropertiesScreen(listings: listings, title: title),
-      ),
-    );
-  }
-}
-
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({
-    required this.title,
-    required this.theme,
-    required this.onSeeAll,
-  });
-
-  final String title;
-  final ThemeData theme;
-  final VoidCallback onSeeAll;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 12, 10),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.5,
-            ),
-          ),
-          TextButton(
-            onPressed: onSeeAll,
-            style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'See All',
-                  style: TextStyle(
-                    color: theme.colorScheme.secondary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                Icon(
-                  Icons.chevron_right_rounded,
-                  size: 18,
-                  color: theme.colorScheme.secondary,
-                ),
-              ],
             ),
           ),
         ],

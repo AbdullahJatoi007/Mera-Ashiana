@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:mera_ashiana/data/models/property_category.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_colors_dark.dart';
 
 class CategoryList extends StatelessWidget {
-  final List<Map<String, dynamic>> categories;
+  final List<PropertyCategory> categories;
   final int selectedIndex;
   final ValueChanged<int> onSelected;
 
@@ -26,14 +27,15 @@ class CategoryList extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16),
         itemCount: categories.length,
         itemBuilder: (context, index) {
-          bool isSelected = selectedIndex == index;
+          final category = categories[index];
+          final bool isSelected = selectedIndex == index;
           return Padding(
             padding: const EdgeInsets.only(right: 10),
             child: FilterChip(
               showCheckmark: false,
-              label: Text(categories[index]['name'] as String),
+              label: Text(category.label),
               avatar: Icon(
-                categories[index]['icon'] as IconData,
+                category.icon,
                 size: 16,
                 color: isSelected
                     ? Colors.white
