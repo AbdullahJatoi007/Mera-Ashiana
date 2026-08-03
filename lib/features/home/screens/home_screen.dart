@@ -13,7 +13,6 @@ import 'package:mera_ashiana/features/properties/widgets/property_list_item.dart
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_colors_dark.dart';
 import '../../../data/services/property_service.dart';
-import 'package:mera_ashiana/data/models/property_category.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -27,17 +26,19 @@ class _HomeScreenState extends State<HomeScreen> with HomeScrollSnapMixin {
   int _selectedCategoryIndex = 0;
   bool _isLoading = true;
   bool _hasError = false;
-  bool _isFetchingMore = false;
-  bool _hasMorePages = true;
-  int _currentPage = 1;
-  List<Listing> _listings = [];
+  bool _isCategoryLoading = false;
+  List<Listing> _listings = []; // general "Recently Added" / "All" feed
 
-  static const int _pageSize = 30;
   static const int _minListingsPerCategory = 20;
-  static const int _maxPagesToFetch =
-      6; // safety cap, avoids unbounded fetching
 
   final List<PropertyCategory> _categories = PropertyCategory.all;
+
+  /// Per (category, buy/rent) results fetched via server-side `type`
+  /// filtering — same query shape the website uses. Keyed so switching
+  /// back and forth doesn't refetch unnecessarily.
+  final Map<String, List<Listing>> _categoryListingsCache = {};
+
+  String get _cacheKey => '$_selectedCategoryIndex-$_selectedOption';
 
   @override
   void initState() {
@@ -45,39 +46,35 @@ class _HomeScreenState extends State<HomeScreen> with HomeScrollSnapMixin {
     _fetchProperties();
   }
 
+  String get _targetStatus => _selectedOption == 'BUY' ? 'sale' : 'rent';
+
   List<Listing> get _filteredListings {
-    final String targetPurpose = _selectedOption == 'BUY' ? 'sale' : 'rent';
-
-    final List<Listing> byPurpose = _listings
-        .where((l) => (l.status ?? '').toLowerCase() == targetPurpose)
-        .toList();
-
-    final PropertyCategory selectedCategory =
-        _categories[_selectedCategoryIndex];
-    return byPurpose.where((l) => selectedCategory.matches(l.type)).toList();
+    if (_selectedCategoryIndex == 0) {
+      // "All" — just the general feed, filtered by buy/rent
+      return _listings
+          .where((l) => (l.status ?? '').toLowerCase() == _targetStatus)
+          .toList();
+    }
+    return _categoryListingsCache[_cacheKey] ?? [];
   }
 
   Future<void> _fetchProperties({bool isRefresh = false}) async {
     if (!isRefresh) setState(() => _isLoading = true);
-    _currentPage = 1;
-    _hasMorePages = true;
 
     try {
       final listings = await PropertyService.fetchProperties(
-        page: _currentPage,
-        limit: _pageSize,
+        page: 1,
+        limit: 30,
       );
       if (!mounted) return;
-
       setState(() {
         _listings = listings;
         _isLoading = false;
         _hasError = false;
-        _hasMorePages = listings.length == _pageSize;
       });
 
-      // Top up if the currently selected category is under-filled
-      await _ensureMinimumListingsForSelectedCategory();
+      if (isRefresh) _categoryListingsCache.clear();
+      await _loadCategoryListingsIfNeeded();
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -87,43 +84,54 @@ class _HomeScreenState extends State<HomeScreen> with HomeScrollSnapMixin {
     }
   }
 
-  /// Keeps fetching subsequent pages (appending to _listings) until the
-  /// currently selected category has at least [_minListingsPerCategory]
-  /// matches, the backend has no more pages, or the safety cap is hit.
-  Future<void> _ensureMinimumListingsForSelectedCategory() async {
-    if (_isFetchingMore) return;
+  /// Fetches listings for the currently selected category directly from
+  /// the API, filtered server-side by `type` (+ `status`) — one request
+  /// per underlying type the category maps to, merged and de-duplicated.
+  /// This mirrors exactly how the website's /properties?type=... filter
+  /// works, so results match what's actually in the database instead of
+  /// hoping enough matches turn up in generically-paginated results.
+  Future<void> _loadCategoryListingsIfNeeded() async {
+    if (_selectedCategoryIndex == 0) return; // "All" needs no extra fetch
 
-    while (_hasMorePages &&
-        _currentPage < _maxPagesToFetch &&
-        _filteredListings.length < _minListingsPerCategory) {
-      setState(() => _isFetchingMore = true);
+    final key = _cacheKey;
+    if (_categoryListingsCache.containsKey(key)) return; // already cached
 
-      try {
-        final nextPage = _currentPage + 1;
-        final more = await PropertyService.fetchProperties(
-          page: nextPage,
-          limit: _pageSize,
-        );
+    setState(() => _isCategoryLoading = true);
 
-        if (!mounted) return;
+    final category = _categories[_selectedCategoryIndex];
 
-        setState(() {
-          _currentPage = nextPage;
-          _listings = [..._listings, ...more];
-          _hasMorePages = more.length == _pageSize;
-        });
-      } catch (_) {
-        // Stop trying silently — whatever we already have will just be shown.
-        break;
+    try {
+      final results = await Future.wait(
+        category.matchingTypes.map(
+          (type) => PropertyService.fetchProperties(
+            page: 1,
+            limit: _minListingsPerCategory,
+            filters: {'type': type, 'status': _targetStatus},
+          ),
+        ),
+      );
+
+      final merged = <int, Listing>{};
+      for (final list in results) {
+        for (final listing in list) {
+          merged[listing.id] = listing;
+        }
       }
-    }
 
-    if (mounted) setState(() => _isFetchingMore = false);
+      if (!mounted) return;
+      setState(() {
+        _categoryListingsCache[key] = merged.values.toList();
+        _isCategoryLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isCategoryLoading = false);
+    }
   }
 
   void _onCategorySelected(int index) {
     setState(() => _selectedCategoryIndex = index);
-    _ensureMinimumListingsForSelectedCategory();
+    _loadCategoryListingsIfNeeded();
   }
 
   void _updateSearchOption(String value) {
@@ -138,7 +146,7 @@ class _HomeScreenState extends State<HomeScreen> with HomeScrollSnapMixin {
       );
     }
 
-    _ensureMinimumListingsForSelectedCategory();
+    _loadCategoryListingsIfNeeded();
   }
 
   void _pushPropertiesScreen({
@@ -237,40 +245,35 @@ class _HomeScreenState extends State<HomeScreen> with HomeScrollSnapMixin {
                       ),
                     ),
                   ),
-                  SliverPadding(
-                    padding: const EdgeInsets.only(bottom: 30),
-                    sliver: _filteredListings.isEmpty
-                        ? const SliverFillRemaining(
-                            hasScrollBody: false,
-                            child: Center(
-                              child: Text(
-                                'No properties found in this category.',
-                              ),
-                            ),
-                          )
-                        : SliverList(
-                            delegate: SliverChildBuilderDelegate(
-                              (context, index) => PropertyListItem(
-                                listing: _filteredListings[index],
-                                theme: theme,
-                                isDark: isDark,
-                              ),
-                              childCount: _filteredListings.length,
-                            ),
-                          ),
-                  ),
-                  if (_isFetchingMore)
+                  if (_isCategoryLoading)
                     const SliverToBoxAdapter(
                       child: Padding(
-                        padding: EdgeInsets.symmetric(vertical: 16),
-                        child: Center(
-                          child: SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                        ),
+                        padding: EdgeInsets.symmetric(vertical: 24),
+                        child: Center(child: CircularProgressIndicator()),
                       ),
+                    )
+                  else
+                    SliverPadding(
+                      padding: const EdgeInsets.only(bottom: 30),
+                      sliver: _filteredListings.isEmpty
+                          ? const SliverFillRemaining(
+                              hasScrollBody: false,
+                              child: Center(
+                                child: Text(
+                                  'No properties found in this category.',
+                                ),
+                              ),
+                            )
+                          : SliverList(
+                              delegate: SliverChildBuilderDelegate(
+                                (context, index) => PropertyListItem(
+                                  listing: _filteredListings[index],
+                                  theme: theme,
+                                  isDark: isDark,
+                                ),
+                                childCount: _filteredListings.length,
+                              ),
+                            ),
                     ),
                 ],
               ),

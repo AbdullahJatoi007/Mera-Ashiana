@@ -7,6 +7,7 @@ import 'package:mera_ashiana/core/theme/app_colors.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/network/endpoints.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/utils/favorite_auth_guard.dart';
 
 class ProjectDetailsScreen extends StatefulWidget {
   // 🔧 Backend detail route is keyed by SLUG (`GET /listings/:slug`),
@@ -143,23 +144,32 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
 
   Future<void> _handleFavoriteToggle() async {
     if (isToggling || listing == null) return;
-    HapticFeedback.mediumImpact();
-    setState(() => isToggling = true);
-    try {
-      await FavoriteService.toggleFavorite(listing!.id, listingData: listing);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              "Couldn't update favorite. Please check your connection.",
-            ),
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => isToggling = false);
-    }
+
+    await runIfLoggedIn(
+      context,
+      action: () async {
+        HapticFeedback.mediumImpact();
+        setState(() => isToggling = true);
+        try {
+          await FavoriteService.toggleFavorite(
+            listing!.id,
+            listingData: listing,
+          );
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  "Couldn't update favorite. Please check your connection.",
+                ),
+              ),
+            );
+          }
+        } finally {
+          if (mounted) setState(() => isToggling = false);
+        }
+      },
+    );
   }
 
   // ==================== UI Widgets ====================

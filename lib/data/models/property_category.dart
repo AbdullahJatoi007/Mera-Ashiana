@@ -1,4 +1,4 @@
-// lib/features/home/models/property_category.dart
+// lib/data/models/property_category.dart
 
 import 'package:flutter/material.dart';
 
@@ -48,30 +48,9 @@ class PropertyCategory {
       matchingTypes: ['apartment', 'flat', 'penthouse', 'room'],
     ),
     PropertyCategory(
-      label: 'Plot',
-      icon: Icons.landscape_rounded,
-      matchingTypes: [
-        'plot',
-        'residential_plot',
-        'commercial_plot',
-        'agricultural_land',
-        'industrial_land',
-        'plot_file',
-        'plot_form',
-      ],
-    ),
-    PropertyCategory(
-      label: 'Commercial',
-      icon: Icons.storefront_rounded,
-      matchingTypes: [
-        'commercial',
-        'commercial_plot',
-        'office',
-        'shop',
-        'warehouse',
-        'factory',
-        'building',
-      ],
+      label: 'Commercial Plot',
+      icon: Icons.business_rounded,
+      matchingTypes: ['commercial_plot'],
     ),
   ];
 }

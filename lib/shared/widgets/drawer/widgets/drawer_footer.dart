@@ -41,15 +41,6 @@ class DrawerFooter extends StatelessWidget {
             ),
 
           if (!isGuest) const SizedBox(height: 16),
-
-          Text(
-            'Version 1.0.0',
-            style: TextStyle(
-              color: Colors.grey.shade600,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
         ],
       ),
     );

@@ -26,15 +26,24 @@ class _SearchScreenState extends State<SearchScreen> {
     {'label': 'Other', 'value': 'other'},
   ];
 
+  // The backend has no free-text search param (confirmed: getAll.ts only
+  // reads city/province/type/status/area/minArea/maxArea/minPrice/maxPrice/
+  // bedrooms/bathrooms/sortBy/page/limit — no `query`/`q`/`keyword`).
+  // So any typed text (entered via SearchFilterScreen's location field,
+  // which already returns it as `filters['query']`) is matched client-side
+  // against fetched listings, auto-paginating until enough matches are found.
+  static const int _minQueryMatches = 15;
+  static const int _maxQueryPagesToFetch = 8; // safety cap
+
   bool _hasSearchResults = false;
   bool _isSearching = false;
   bool _isLoadingMore = false;
   bool _canLoadMore = true;
 
   String _selectedQuickFilter = "All";
-  List<Listing> _searchResults = [];
+  List<Listing> _searchResults = []; // what's actually shown (post text-filter)
   int _currentPage = 1;
-  Map<String, dynamic> _currentFilters = {};
+  Map<String, dynamic> _currentFilters = {}; // may include 'query'
 
   // Guards against stale/out-of-order responses when filters change quickly.
   int _searchRequestId = 0;
@@ -69,8 +78,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
   /// Merges `changes` into the currently active filters and re-runs the
   /// search. Pass a `null` value to clear a key (e.g. {'type': null} to
-  /// clear the type filter). This is what keeps quick filters, the search
-  /// bar, and the full filter screen from stomping on each other's state.
+  /// clear the type filter).
   void _applyPartialFilters(Map<String, dynamic> changes) {
     final merged = Map<String, dynamic>.from(_currentFilters);
     changes.forEach((key, value) {
@@ -92,6 +100,22 @@ class _SearchScreenState extends State<SearchScreen> {
     return match['label']!;
   }
 
+  /// Whether a listing matches the typed free-text query. Checked against
+  /// every field a user would plausibly type: title, location, city,
+  /// province, neighborhood, and type — case-insensitive substring match.
+  bool _matchesTextQuery(Listing listing, String query) {
+    final q = query.toLowerCase();
+    final haystacks = [
+      listing.title,
+      listing.location,
+      listing.city,
+      listing.province,
+      listing.neighborhood,
+      listing.type,
+    ];
+    return haystacks.any((field) => (field ?? '').toLowerCase().contains(q));
+  }
+
   Future<void> _performSearch(
     Map<String, dynamic> filters, {
     int page = 1,
@@ -101,6 +125,12 @@ class _SearchScreenState extends State<SearchScreen> {
       _searchRequestId++;
     }
     final int requestId = _searchRequestId;
+
+    // 'query' is a client-only concept — the backend doesn't recognize it,
+    // so it's stripped before hitting the API and applied locally instead.
+    final String? textQuery = (filters['query'] as String?)?.trim();
+    final Map<String, dynamic> apiFilters = Map<String, dynamic>.from(filters)
+      ..remove('query');
 
     if (isInitial) {
       setState(() {
@@ -119,32 +149,104 @@ class _SearchScreenState extends State<SearchScreen> {
     }
 
     try {
-      final results = await PropertyService.fetchProperties(
-        page: _currentPage,
-        limit: 20,
-        filters: filters,
-      );
+      final List<Listing> collected = isInitial ? [] : List.of(_searchResults);
+      int pagesFetchedThisRun = 0;
+      int workingPage = _currentPage;
+      bool canLoadMore = true;
 
-      // If a newer search started while this one was in flight, discard
-      // this response so it can't corrupt the list with stale results.
+      while (true) {
+        final results = await PropertyService.fetchProperties(
+          page: workingPage,
+          limit: 20,
+          filters: apiFilters,
+        );
+
+        if (requestId != _searchRequestId) return; // superseded — bail out
+
+        pagesFetchedThisRun++;
+        canLoadMore = results.length >= 20;
+
+        final matched = (textQuery == null || textQuery.isEmpty)
+            ? results
+            : results.where((l) => _matchesTextQuery(l, textQuery)).toList();
+
+        collected.addAll(matched);
+
+        final bool needMore =
+            textQuery != null &&
+            textQuery.isNotEmpty &&
+            collected.length < _minQueryMatches &&
+            canLoadMore &&
+            pagesFetchedThisRun < _maxQueryPagesToFetch;
+
+        if (!needMore) break;
+        workingPage++;
+      }
+
       if (requestId != _searchRequestId) return;
 
       setState(() {
-        if (results.isEmpty || results.length < 20) {
-          _canLoadMore = false;
-        }
-        _searchResults.addAll(results);
+        _searchResults = collected;
+        _currentPage = workingPage;
+        _canLoadMore = canLoadMore;
         _isSearching = false;
         _isLoadingMore = false;
       });
     } catch (e) {
       if (requestId != _searchRequestId) return;
+      // 🔧 FIX: never leave the screen stuck mid-search on failure — fall
+      // back to whatever was already loaded (or empty on first load) so
+      // the user always sees *something* actionable instead of a frozen
+      // spinner.
       setState(() {
         _isSearching = false;
         _isLoadingMore = false;
+        _canLoadMore = false;
       });
       debugPrint("Search Error: $e");
     }
+  }
+
+  /// Opens the full filter/search screen (which owns the actual text-entry
+  /// field for area/city/project name), pre-filled with whatever's active,
+  /// and applies whatever comes back — including an empty result, which
+  /// correctly resets everything to the default unfiltered listing feed.
+  Future<void> _openFilterScreen() async {
+    final Map<String, dynamic>? filters = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            SearchFilterScreen(initialFilters: _currentFilters),
+      ),
+    );
+
+    // User backed out without applying — leave current results untouched.
+    if (filters == null) return;
+
+    setState(() {
+      _selectedQuickFilter = _quickFilterLabelForType(
+        filters['type'] as String?,
+      );
+    });
+    _performSearch(filters, isInitial: true);
+  }
+
+  /// Clears every active filter/query and returns to the default,
+  /// unfiltered listing feed — used by the "x" shown once a search is active.
+  void _clearSearch() {
+    setState(() => _selectedQuickFilter = "All");
+    _performSearch({}, isInitial: true);
+  }
+
+  /// Human-readable summary of whatever's currently searched/filtered,
+  /// shown inside the tappable search box instead of raw typing.
+  String? get _activeSearchSummary {
+    final parts = <String>[];
+    final query = _currentFilters['query'] as String?;
+    final city = _currentFilters['city'] as String?;
+    if (query != null && query.isNotEmpty) parts.add(query);
+    if (city != null && city.isNotEmpty && city != query) parts.add(city);
+    return parts.isEmpty ? null : parts.join(' • ');
   }
 
   @override
@@ -178,6 +280,7 @@ class _SearchScreenState extends State<SearchScreen> {
     final searchIconColor = isDark
         ? AppDarkColors.accentYellow
         : theme.colorScheme.primary;
+    final summary = _activeSearchSummary;
 
     return Container(
       padding: EdgeInsets.fromLTRB(
@@ -205,33 +308,50 @@ class _SearchScreenState extends State<SearchScreen> {
           Row(
             children: [
               Expanded(
-                child: SizedBox(
-                  height: 44,
-                  child: TextField(
-                    onSubmitted: (v) {
-                      _applyPartialFilters({
-                        "query": v.trim().isEmpty ? null : v.trim(),
-                      });
-                    },
-                    style: TextStyle(color: theme.colorScheme.onSurface),
-                    decoration: InputDecoration(
-                      hintText: "Area, City or Project...",
-                      hintStyle: TextStyle(
-                        fontSize: 14,
-                        color: theme.colorScheme.onSurface.withOpacity(0.5),
-                      ),
-                      prefixIcon: Icon(
-                        Icons.search,
-                        color: searchIconColor,
-                        size: 20,
-                      ),
-                      filled: true,
-                      fillColor: theme.scaffoldBackgroundColor,
-                      contentPadding: EdgeInsets.zero,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide.none,
-                      ),
+                child: InkWell(
+                  onTap: _openFilterScreen,
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    height: 44,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: theme.scaffoldBackgroundColor,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.search, color: searchIconColor, size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            summary ?? "Area, City or Project...",
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: summary != null
+                                  ? theme.colorScheme.onSurface
+                                  : theme.colorScheme.onSurface.withOpacity(
+                                      0.5,
+                                    ),
+                              fontWeight: summary != null
+                                  ? FontWeight.w600
+                                  : FontWeight.normal,
+                            ),
+                          ),
+                        ),
+                        if (summary != null)
+                          GestureDetector(
+                            onTap: _clearSearch,
+                            child: Icon(
+                              Icons.close_rounded,
+                              size: 18,
+                              color: theme.colorScheme.onSurface.withOpacity(
+                                0.5,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                 ),
@@ -249,24 +369,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Widget _buildFilterButton(ThemeData theme) {
     return GestureDetector(
-      onTap: () async {
-        final Map<String, dynamic>? filters = await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) =>
-                SearchFilterScreen(initialFilters: _currentFilters),
-          ),
-        );
-
-        if (filters != null) {
-          setState(() {
-            _selectedQuickFilter = _quickFilterLabelForType(
-              filters['type'] as String?,
-            );
-          });
-          _performSearch(filters, isInitial: true);
-        }
-      },
+      onTap: _openFilterScreen,
       child: Container(
         height: 44,
         width: 44,

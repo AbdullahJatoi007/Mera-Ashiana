@@ -14,18 +14,30 @@ class CurrencyFormatter {
 
     // 2. Format exactly like the website (e.g., PKR 4.15 Crore)
     if (price >= 10000000) {
-      // 1 Crore = 10,000,000
-      double crore = price / 10000000;
-      String formatted = crore.toStringAsFixed(crore == crore.toInt() ? 0 : 2);
-      return "PKR $formatted Crore";
+      // 1 Crore = 10,000,000 — always show 2 decimals, e.g. "1.00 Crore"
+      final double crore = price / 10000000;
+      return "PKR ${crore.toStringAsFixed(2)} Crore";
     } else if (price >= 100000) {
-      // 1 Lakh = 100,000
-      double lakh = price / 100000;
-      String formatted = lakh.toStringAsFixed(lakh == lakh.toInt() ? 0 : 2);
-      return "PKR $formatted Lac";
+      // 1 Lakh = 100,000 — always show 2 decimals, e.g. "1.00 Lac"
+      final double lakh = price / 100000;
+      return "PKR ${lakh.toStringAsFixed(2)} Lac";
     } else {
-      // Fallback for smaller listings
-      return "PKR ${price.toStringAsFixed(0)}";
+      // Fallback for smaller listings — add thousand separators, e.g. "50,000"
+      return "PKR ${_addThousandSeparators(price.toStringAsFixed(0))}";
     }
+  }
+
+  /// Inserts commas as thousand separators into a plain digit string.
+  /// e.g. "50000" -> "50,000", "1234567" -> "1,234,567"
+  static String _addThousandSeparators(String digits) {
+    final buffer = StringBuffer();
+    final reversed = digits.split('').reversed.toList();
+
+    for (int i = 0; i < reversed.length; i++) {
+      if (i != 0 && i % 3 == 0) buffer.write(',');
+      buffer.write(reversed[i]);
+    }
+
+    return buffer.toString().split('').reversed.join();
   }
 }
