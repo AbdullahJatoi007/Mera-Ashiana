@@ -69,7 +69,7 @@ class PropertyListItem extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    listing.location ?? '',
+                    listing.location,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -78,16 +78,30 @@ class PropertyListItem extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  // 🔧 Adjusted spacing for a cleaner list item row
-                  Text(
-                    CurrencyFormatter.formatPakistaniPrice(listing.price),
-                    // ✨ Fixed: changed 'p' to 'listing'
-                    style: const TextStyle(
-                      fontSize: 15,
-                      // 🔧 Scaled beautifully for a list view row layout
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.accentYellow,
-                    ),
+                  // 🔧 Price on the left, city on the right — opposite ends
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        CurrencyFormatter.formatPakistaniPrice(listing.price),
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.accentYellow,
+                        ),
+                      ),
+                      if ((listing.city ?? '').isNotEmpty)
+                        Text(
+                          listing.city!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: theme.colorScheme.onSurface.withOpacity(0.6),
+                          ),
+                        ),
+                    ],
                   ),
                 ],
               ),
