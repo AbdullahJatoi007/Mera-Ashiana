@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:mera_ashiana/core/l10n/app_localizations.dart';
 import 'package:mera_ashiana/shared/widgets/drawer/widgets/search/search_filter_screen.dart';
+import 'package:mera_ashiana/shared/widgets/property_type_field.dart';
+import 'package:mera_ashiana/shared/widgets/city_field.dart';
 import 'package:mera_ashiana/data/models/listing_model.dart';
+import 'package:mera_ashiana/data/models/property_type.dart';
 import 'package:mera_ashiana/data/services/property_service.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/app_colors_dark.dart';
@@ -17,15 +20,6 @@ class SearchScreen extends StatefulWidget {
 class _SearchScreenState extends State<SearchScreen> {
   final ScrollController _scrollController = ScrollController();
 
-  static const List<Map<String, String>> _quickFilters = [
-    {'label': 'All', 'value': 'all'},
-    {'label': 'House', 'value': 'house'},
-    {'label': 'Apartment/Flat', 'value': 'flat'},
-    {'label': 'Plot', 'value': 'plot'},
-    {'label': 'Commercial', 'value': 'commercial'},
-    {'label': 'Other', 'value': 'other'},
-  ];
-
   // The backend has no free-text search param (confirmed: getAll.ts only
   // reads city/province/type/status/area/minArea/maxArea/minPrice/maxPrice/
   // bedrooms/bathrooms/sortBy/page/limit — no `query`/`q`/`keyword`).
@@ -40,7 +34,6 @@ class _SearchScreenState extends State<SearchScreen> {
   bool _isLoadingMore = false;
   bool _canLoadMore = true;
 
-  String _selectedQuickFilter = "All";
   List<Listing> _searchResults = []; // what's actually shown (post text-filter)
   int _currentPage = 1;
   Map<String, dynamic> _currentFilters = {}; // may include 'query'
@@ -89,15 +82,6 @@ class _SearchScreenState extends State<SearchScreen> {
       }
     });
     _performSearch(merged, isInitial: true);
-  }
-
-  String _quickFilterLabelForType(String? type) {
-    if (type == null) return "All";
-    final match = _quickFilters.firstWhere(
-      (f) => f['value'] == type,
-      orElse: () => const {'label': 'All', 'value': 'all'},
-    );
-    return match['label']!;
   }
 
   /// Whether a listing matches the typed free-text query. Checked against
@@ -194,10 +178,6 @@ class _SearchScreenState extends State<SearchScreen> {
       });
     } catch (e) {
       if (requestId != _searchRequestId) return;
-      // 🔧 FIX: never leave the screen stuck mid-search on failure — fall
-      // back to whatever was already loaded (or empty on first load) so
-      // the user always sees *something* actionable instead of a frozen
-      // spinner.
       setState(() {
         _isSearching = false;
         _isLoadingMore = false;
@@ -220,21 +200,35 @@ class _SearchScreenState extends State<SearchScreen> {
       ),
     );
 
-    // User backed out without applying — leave current results untouched.
-    if (filters == null) return;
-
-    setState(() {
-      _selectedQuickFilter = _quickFilterLabelForType(
-        filters['type'] as String?,
-      );
-    });
+    if (filters == null) return; // user backed out — leave results untouched
     _performSearch(filters, isInitial: true);
+  }
+
+  /// Opens the property-type picker sheet directly from the search screen —
+  /// replaces the old fixed 6-item quick filter row (which couldn't
+  /// represent all 20+ backend types).
+  Future<void> _openTypePicker() async {
+    final result = await PropertyTypeField.showPicker(
+      context,
+      selectedValue: _currentFilters['type'] as String?,
+    );
+    if (!result.changed) return; // sheet dismissed without a pick
+    _applyPartialFilters({'type': result.value});
+  }
+
+  /// Opens the searchable city picker sheet directly from the search screen.
+  Future<void> _openCityPicker() async {
+    final result = await CityField.showPicker(
+      context,
+      selectedValue: _currentFilters['city'] as String?,
+    );
+    if (!result.changed) return; // sheet dismissed without a pick
+    _applyPartialFilters({'city': result.value});
   }
 
   /// Clears every active filter/query and returns to the default,
   /// unfiltered listing feed — used by the "x" shown once a search is active.
   void _clearSearch() {
-    setState(() => _selectedQuickFilter = "All");
     _performSearch({}, isInitial: true);
   }
 
@@ -281,6 +275,8 @@ class _SearchScreenState extends State<SearchScreen> {
         ? AppDarkColors.accentYellow
         : theme.colorScheme.primary;
     final summary = _activeSearchSummary;
+    final String? activeType = _currentFilters['type'] as String?;
+    final String? activeCity = _currentFilters['city'] as String?;
 
     return Container(
       padding: EdgeInsets.fromLTRB(
@@ -361,7 +357,20 @@ class _SearchScreenState extends State<SearchScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          _buildQuickFilterRow(theme, isDark),
+          // 🔧 Type + City filter buttons side by side, both opening their
+          // own searchable bottom-sheet pickers, replacing the old fixed
+          // 6-item quick filter chip row.
+          Row(
+            children: [
+              Expanded(
+                child: _buildTypeFilterButton(theme, isDark, activeType),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _buildCityFilterButton(theme, isDark, activeCity),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -382,7 +391,12 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  Widget _buildQuickFilterRow(ThemeData theme, bool isDark) {
+  Widget _buildTypeFilterButton(
+    ThemeData theme,
+    bool isDark,
+    String? activeType,
+  ) {
+    final bool hasType = activeType != null;
     final activeBg = isDark
         ? AppDarkColors.accentYellow
         : AppColors.accentYellow;
@@ -391,45 +405,120 @@ class _SearchScreenState extends State<SearchScreen> {
         ? AppDarkColors.borderGrey
         : AppColors.borderGrey;
 
-    return SizedBox(
-      height: 35,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: _quickFilters.length,
-        itemBuilder: (context, i) {
-          final filter = _quickFilters[i];
-          bool isSelected = _selectedQuickFilter == filter['label'];
-
-          return GestureDetector(
-            onTap: () {
-              setState(() => _selectedQuickFilter = filter['label']!);
-              _applyPartialFilters({
-                'type': filter['value'] == 'all' ? null : filter['value'],
-              });
-            },
-            child: Container(
-              margin: const EdgeInsets.only(right: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: isSelected ? activeBg : theme.colorScheme.surface,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: isSelected ? activeBg : borderThemeColor,
-                ),
-              ),
-              alignment: Alignment.center,
+    return GestureDetector(
+      onTap: _openTypePicker,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: hasType ? activeBg : theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: hasType ? activeBg : borderThemeColor),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.home_work_outlined,
+              size: 16,
+              color: hasType ? Colors.white : unselectedText,
+            ),
+            const SizedBox(width: 6),
+            Expanded(
               child: Text(
-                filter['label']!,
+                hasType ? PropertyType.labelFor(activeType) : "Type",
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: isSelected ? Colors.white : unselectedText,
+                  color: hasType ? Colors.white : unselectedText,
                   fontSize: 12,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  fontWeight: hasType ? FontWeight.bold : FontWeight.w500,
                 ),
               ),
             ),
-          );
-        },
+            Icon(
+              Icons.keyboard_arrow_down_rounded,
+              size: 16,
+              color: hasType ? Colors.white : unselectedText,
+            ),
+            if (hasType) ...[
+              const SizedBox(width: 4),
+              GestureDetector(
+                onTap: () => _applyPartialFilters({'type': null}),
+                child: const Icon(
+                  Icons.close_rounded,
+                  size: 14,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCityFilterButton(
+    ThemeData theme,
+    bool isDark,
+    String? activeCity,
+  ) {
+    final bool hasCity = activeCity != null;
+    final activeBg = isDark
+        ? AppDarkColors.accentYellow
+        : AppColors.accentYellow;
+    final unselectedText = isDark ? AppDarkColors.textDark : AppColors.textDark;
+    final borderThemeColor = isDark
+        ? AppDarkColors.borderGrey
+        : AppColors.borderGrey;
+
+    return GestureDetector(
+      onTap: _openCityPicker,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: hasCity ? activeBg : theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: hasCity ? activeBg : borderThemeColor),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.location_city_rounded,
+              size: 16,
+              color: hasCity ? Colors.white : unselectedText,
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                hasCity ? activeCity : "City",
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: hasCity ? Colors.white : unselectedText,
+                  fontSize: 12,
+                  fontWeight: hasCity ? FontWeight.bold : FontWeight.w500,
+                ),
+              ),
+            ),
+            Icon(
+              Icons.keyboard_arrow_down_rounded,
+              size: 16,
+              color: hasCity ? Colors.white : unselectedText,
+            ),
+            if (hasCity) ...[
+              const SizedBox(width: 4),
+              GestureDetector(
+                onTap: () => _applyPartialFilters({'city': null}),
+                child: const Icon(
+                  Icons.close_rounded,
+                  size: 14,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:mera_ashiana/core/theme/app_colors.dart';
 import 'package:mera_ashiana/core/theme/app_colors_dark.dart';
+import 'package:mera_ashiana/shared/widgets/property_type_field.dart';
+import 'package:mera_ashiana/shared/widgets/city_field.dart';
 
 class SearchFilterScreen extends StatefulWidget {
   final Map<String, dynamic>? initialFilters;
@@ -14,29 +16,14 @@ class SearchFilterScreen extends StatefulWidget {
 class _SearchFilterScreenState extends State<SearchFilterScreen> {
   final TextEditingController _locationController = TextEditingController();
 
+  // "Buy" | "Rent" | "Both" — "Both" means no status filter is sent at all,
+  // since the backend's listings_status enum only has sale/rent, no
+  // combined value exists to send.
   late String _purpose;
-  late String _selectedType;
-  late String _selectedCity;
+  String? _selectedTypeValue; // raw backend value, null = "Any"
+  String? _selectedCity; // null = "Any City"
   RangeValues? _priceRange; // null = "Any"
   int? _selectedBeds; // null = "Any"
-
-  final List<String> _cities = [
-    "Karachi",
-    "Lahore",
-    "Islamabad",
-    "Rawalpindi",
-    "Peshawar",
-  ];
-
-  // "Any" added so users can explicitly clear the type filter from this screen
-  final List<String> _propertyTypes = [
-    "Any",
-    "House",
-    "Flat",
-    "Plot",
-    "Commercial",
-    "Other",
-  ];
 
   final List<List<int>?> _priceRanges = [
     null, // Any
@@ -57,14 +44,19 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
   void _initializeValues() {
     final filters = widget.initialFilters;
 
-    _purpose = (filters?["purpose"] == "rent") ? "Rent" : "Buy";
+    // 🔧 FIX: backend reads `status`, not `purpose` — the old key name
+    // meant Buy/Rent was silently never applied server-side. Reading the
+    // correct key here too, so re-opening the filter screen reflects
+    // whatever's actually active.
+    final rawStatus = filters?["status"] as String?;
+    _purpose = rawStatus == "rent"
+        ? "Rent"
+        : rawStatus == "sale"
+        ? "Buy"
+        : "Both"; // no status key present = Both
 
-    final rawType = filters?["type"] as String?;
-    _selectedType = rawType != null
-        ? "${rawType[0].toUpperCase()}${rawType.substring(1)}"
-        : "Any";
-
-    _selectedCity = filters?["city"] as String? ?? "Karachi";
+    _selectedTypeValue = filters?["type"] as String?;
+    _selectedCity = filters?["city"] as String?;
     _locationController.text = filters?["query"] as String? ?? "";
 
     final minPrice = filters?["min_price"];
@@ -143,10 +135,14 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 10),
-                  _buildSectionTitle(theme, "Location"),
+                  _buildSectionTitle(theme, "Area / Project"),
                   _buildCitySearchField(theme, textColor),
-                  const SizedBox(height: 12),
-                  _buildCityChips(theme, accentYellow, textColor),
+                  const SizedBox(height: 16),
+                  _buildSectionTitle(theme, "City"),
+                  CityField(
+                    selectedValue: _selectedCity,
+                    onChanged: (value) => setState(() => _selectedCity = value),
+                  ),
                   Divider(
                     height: 40,
                     thickness: 0.5,
@@ -156,7 +152,11 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
                   _buildPurposeToggle(theme, accentYellow, textColor),
                   const SizedBox(height: 24),
                   _buildSectionTitle(theme, "Property Type"),
-                  _buildTypeGrid(theme, accentYellow, textColor),
+                  PropertyTypeField(
+                    selectedValue: _selectedTypeValue,
+                    onChanged: (value) =>
+                        setState(() => _selectedTypeValue = value),
+                  ),
                   Divider(
                     height: 40,
                     thickness: 0.5,
@@ -196,9 +196,11 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
 
   void _resetFilters() {
     setState(() {
-      _purpose = "Buy";
-      _selectedType = "Any";
-      _selectedCity = "Karachi";
+      // 🔧 Reset now goes to "Both" (no status filter) rather than
+      // silently forcing Buy — matches what "reset" should actually mean.
+      _purpose = "Both";
+      _selectedTypeValue = null;
+      _selectedCity = null;
       _locationController.clear();
       _priceRange = null;
       _selectedBeds = null;
@@ -241,39 +243,7 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
     );
   }
 
-  Widget _buildCityChips(ThemeData theme, Color accentYellow, Color textColor) {
-    return SizedBox(
-      height: 38,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: _cities.length,
-        itemBuilder: (context, index) {
-          final city = _cities[index];
-          final isSelected = _selectedCity == city;
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: ChoiceChip(
-              label: Text(city),
-              selected: isSelected,
-              onSelected: (_) => setState(() => _selectedCity = city),
-              selectedColor: accentYellow,
-              backgroundColor: theme.colorScheme.surface,
-              labelStyle: TextStyle(
-                color: isSelected ? Colors.black : textColor,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-                side: BorderSide(color: theme.dividerColor.withOpacity(0.1)),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
+  // 🔧 Now a 3-way toggle: Buy / Rent / Both.
   Widget _buildPurposeToggle(
     ThemeData theme,
     Color accentYellow,
@@ -287,7 +257,7 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
-        children: ["Buy", "Rent"].map((label) {
+        children: ["Buy", "Rent", "Both"].map((label) {
           final isSelected = _purpose == label;
           return Expanded(
             child: GestureDetector(
@@ -312,39 +282,6 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
           );
         }).toList(),
       ),
-    );
-  }
-
-  Widget _buildTypeGrid(ThemeData theme, Color accentYellow, Color textColor) {
-    return Wrap(
-      spacing: 10,
-      runSpacing: 10,
-      children: _propertyTypes.map((type) {
-        final isSelected = _selectedType == type;
-        return GestureDetector(
-          onTap: () => setState(() => _selectedType = type),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: BoxDecoration(
-              color: isSelected ? accentYellow : theme.colorScheme.surface,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: isSelected
-                    ? accentYellow
-                    : theme.dividerColor.withOpacity(0.2),
-              ),
-            ),
-            child: Text(
-              type,
-              style: TextStyle(
-                color: isSelected ? Colors.black : textColor,
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
-              ),
-            ),
-          ),
-        );
-      }).toList(),
     );
   }
 
@@ -398,8 +335,6 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
     Color accentYellow,
     Color textColor,
   ) {
-    // Wrap instead of a fixed Row so it doesn't overflow on smaller screens
-    // now that there are 6 options instead of 5.
     return Wrap(
       spacing: 8,
       runSpacing: 8,
@@ -455,11 +390,20 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
         height: 52,
         child: ElevatedButton(
           onPressed: () {
-            final String apiPurpose = _purpose == "Buy" ? "sale" : "rent";
+            // 🔧 FIX: correct key is `status` (not `purpose`, which the
+            // backend never read). "Both" omits the key entirely — there's
+            // no combined enum value on the backend, so "no filter" is
+            // the correct way to request both sale and rent listings.
+            final String? apiStatus = _purpose == "Buy"
+                ? "sale"
+                : _purpose == "Rent"
+                ? "rent"
+                : null;
+
             Navigator.pop(context, {
-              "purpose": apiPurpose,
-              if (_selectedType != "Any") "type": _selectedType.toLowerCase(),
-              "city": _selectedCity,
+              if (apiStatus != null) "status": apiStatus,
+              if (_selectedTypeValue != null) "type": _selectedTypeValue,
+              if (_selectedCity != null) "city": _selectedCity,
               "query": _locationController.text.trim(),
               if (_priceRange != null)
                 "min_price": (_priceRange!.start * 1000000).round(),
